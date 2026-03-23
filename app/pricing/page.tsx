@@ -116,29 +116,31 @@ export default function PricingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0A0F1E] text-white overflow-x-hidden">
+    <main className="min-h-screen bg-[#F7F8FA] text-[#111827] overflow-x-hidden">
 
       {/* Top nav */}
-      <nav className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-        <OneLinkLogo iconSize={26} textSize="text-[15px]" />
-        <a href="/auth/login" className="h-8 px-4 rounded-lg border border-white/20 text-[12px] font-medium text-white/70 hover:text-white hover:border-white/40 transition-colors flex items-center">
-          Zaloguj się
-        </a>
+      <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <OneLinkLogo iconSize={26} textSize="text-[15px]" dark={false} />
+          <a href="/auth/login" className="h-9 px-4 rounded-lg border border-[#E5E7EB] text-[12px] font-medium text-[#6B7280] hover:text-[#111827] hover:border-[#D1D5DB] transition-colors flex items-center bg-white shadow-sm">
+            Zaloguj się
+          </a>
+        </div>
       </nav>
 
       {/* Hero */}
       <section className="max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
-        <div className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-white/10 border border-white/15 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-8">
-          <Zap className="w-3 h-3 text-amber-400" />
+        <div className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-[#F3F4F6] border border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-widest text-[#6B7280] mb-8">
+          <Zap className="w-3 h-3 text-amber-500" />
           7 dni za darmo · trial z kartą Stripe
         </div>
-        <h1 className="text-[48px] md:text-[64px] font-black tracking-tight leading-[1.05] mb-6">
-          Restauracja pod{" "}
+        <h1 className="text-[48px] md:text-[64px] font-black tracking-tight leading-[1.05] mb-6 text-[#111827]">
+          Twój lokal gastronomiczny{" "}
           <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-            pełną kontrolą
+            pod pełną kontrolą
           </span>
         </h1>
-        <p className="text-[17px] text-white/55 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-[17px] text-[#6B7280] max-w-2xl mx-auto leading-relaxed">
           Jeden panel do zarządzania sprzedażą, food costem, magazynem i fakturami. Widzisz zysk każdego dnia — nie dopiero na koniec miesiąca.
         </p>
       </section>
@@ -147,20 +149,21 @@ export default function PricingPage() {
       <section className="max-w-5xl mx-auto px-6 mb-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {METRICS.map((m, i) => (
-            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center backdrop-blur-sm">
-              <div className="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center" style={{ background: `${m.color}20` }}>
+            <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 text-center shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center" style={{ background: `${m.color}15` }}>
                 <m.icon className="w-5 h-5" style={{ color: m.color }} />
               </div>
               <p className="text-[26px] font-black" style={{ color: m.color }}>{m.value}</p>
-              <p className="text-[11px] text-white/40 mt-1 font-medium leading-tight">{m.label}</p>
+              <p className="text-[11px] text-[#6B7280] mt-1 font-medium leading-tight">{m.label}</p>
             </div>
           ))}
         </div>
+        <p className="text-center text-[11px] text-[#9CA3AF] mt-4">* Średnie wyniki wśród klientów OneLink w pierwszych 90 dniach od wdrożenia</p>
       </section>
 
       {/* Mock dashboard preview */}
       <section className="max-w-5xl mx-auto px-6 mb-24">
-        <div className="relative rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(16,185,129,0.05) 100%)' }}>
+        <div className="relative rounded-2xl overflow-hidden border border-[#1e2d4a] shadow-2xl shadow-black/20" style={{ background: '#0D1628' }}>
           {/* Fake browser bar */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
             <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
@@ -232,8 +235,8 @@ export default function PricingPage() {
       {/* Pricing cards */}
       <section className="max-w-5xl mx-auto px-6 mb-20">
         <div className="text-center mb-12">
-          <h2 className="text-[36px] font-black tracking-tight mb-3">Prosty cennik, zero niespodzianek</h2>
-          <p className="text-[15px] text-white/45">7 dni bezpłatnie na każdym planie. Anuluj w dowolnym momencie.</p>
+          <h2 className="text-[36px] font-black tracking-tight mb-3 text-[#111827]">Prosty cennik, zero niespodzianek</h2>
+          <p className="text-[15px] text-[#6B7280]">7 dni bezpłatnie na każdym planie. Anuluj w dowolnym momencie.</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-5">
@@ -242,8 +245,8 @@ export default function PricingPage() {
               key={plan.id}
               className={`relative flex flex-col rounded-2xl p-6 transition-all ${
                 plan.popular
-                  ? "bg-white text-[#111827] ring-0 shadow-2xl shadow-amber-500/20 scale-[1.03]"
-                  : "bg-white/5 border border-white/12 text-white hover:bg-white/8"
+                  ? "bg-[#111827] text-white ring-0 shadow-2xl shadow-black/20 scale-[1.03]"
+                  : "bg-white border border-[#E5E7EB] text-[#111827] hover:shadow-md shadow-sm"
               }`}
             >
               {plan.popular && (
@@ -253,30 +256,30 @@ export default function PricingPage() {
               )}
 
               <div className="mb-5">
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3 ${plan.popular ? 'bg-amber-50 text-amber-700' : 'bg-white/10 text-white/60'}`}>
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3 ${plan.popular ? 'bg-white/10 text-white/70' : 'bg-[#F3F4F6] text-[#6B7280]'}`}>
                   {plan.id === 'plan1' && <Building2 className="w-3 h-3" />}
                   {plan.id === 'plan2' && <TrendingUp className="w-3 h-3" />}
                   {plan.id === 'plan3' && <Globe className="w-3 h-3" />}
                   {plan.subtitle}
                 </div>
-                <h3 className={`text-[26px] font-black tracking-tight mb-1 ${plan.popular ? 'text-[#111827]' : 'text-white'}`}>
+                <h3 className={`text-[26px] font-black tracking-tight mb-1 ${plan.popular ? 'text-white' : 'text-[#111827]'}`}>
                   {plan.name}
                 </h3>
-                <p className={`text-[13px] leading-relaxed ${plan.popular ? 'text-[#6B7280]' : 'text-white/45'}`}>
+                <p className={`text-[13px] leading-relaxed ${plan.popular ? 'text-white/55' : 'text-[#6B7280]'}`}>
                   {plan.description}
                 </p>
               </div>
 
               <div className="mb-6">
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`text-[44px] font-black leading-none ${plan.popular ? 'text-[#111827]' : 'text-white'}`}>
+                  <span className={`text-[44px] font-black leading-none ${plan.popular ? 'text-white' : 'text-[#111827]'}`}>
                     {plan.price}
                   </span>
-                  <span className={`text-[13px] font-medium ${plan.popular ? 'text-[#9CA3AF]' : 'text-white/40'}`}>
+                  <span className={`text-[13px] font-medium ${plan.popular ? 'text-white/50' : 'text-[#9CA3AF]'}`}>
                     zł{plan.period}
                   </span>
                 </div>
-                <p className={`text-[12px] mt-1 ${plan.popular ? 'text-[#9CA3AF]' : 'text-white/35'}`}>
+                <p className={`text-[12px] mt-1 ${plan.popular ? 'text-white/40' : 'text-[#9CA3AF]'}`}>
                   + VAT · po 7-dniowym trialu
                 </p>
               </div>
@@ -284,8 +287,8 @@ export default function PricingPage() {
               <ul className="space-y-2.5 mb-8 flex-1">
                 {plan.features.map((f, i) => (
                   <li key={i} className="flex items-start gap-2.5">
-                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.popular ? 'text-[#16A34A]' : 'text-white/40'}`} />
-                    <span className={`text-[13px] ${plan.popular ? 'text-[#374151]' : 'text-white/65'}`}>{f}</span>
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.popular ? 'text-green-400' : 'text-green-600'}`} />
+                    <span className={`text-[13px] ${plan.popular ? 'text-white/80' : 'text-[#374151]'}`}>{f}</span>
                   </li>
                 ))}
               </ul>
@@ -296,7 +299,7 @@ export default function PricingPage() {
                 className={`w-full h-11 rounded-xl font-bold text-[14px] transition-all disabled:opacity-60 ${
                   plan.popular
                     ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30"
-                    : "bg-white/10 border border-white/20 text-white hover:bg-white/15"
+                    : "bg-[#111827] text-white hover:bg-[#1F2937]"
                 }`}
               >
                 {loading ? "Przekierowanie..." : plan.cta}
@@ -306,24 +309,24 @@ export default function PricingPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-400 text-center mt-6">{error}</p>
+          <p className="text-sm text-red-500 text-center mt-6">{error}</p>
         )}
       </section>
 
       {/* Features grid */}
       <section className="max-w-5xl mx-auto px-6 mb-24">
         <div className="text-center mb-12">
-          <h2 className="text-[30px] font-black tracking-tight mb-3">Wszystko w jednym miejscu</h2>
-          <p className="text-[14px] text-white/45">Zaprojektowane specjalnie dla branży restauracyjnej</p>
+          <h2 className="text-[30px] font-black tracking-tight mb-3 text-[#111827]">Wszystko w jednym miejscu</h2>
+          <p className="text-[14px] text-[#6B7280]">Dla restauracji, piekarni, kawiarni i sieci gastronomicznych</p>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
           {FEATURES.map((f, i) => (
-            <div key={i} className="bg-white/4 border border-white/10 rounded-2xl p-5 hover:bg-white/7 transition-colors">
-              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                <f.icon className="w-4.5 h-4.5 text-white/70" />
+            <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-9 h-9 rounded-xl bg-[#F3F4F6] flex items-center justify-center mb-4">
+                <f.icon className="w-4.5 h-4.5 text-[#6B7280]" />
               </div>
-              <h3 className="text-[14px] font-bold text-white mb-1.5">{f.title}</h3>
-              <p className="text-[13px] text-white/45 leading-relaxed">{f.desc}</p>
+              <h3 className="text-[14px] font-bold text-[#111827] mb-1.5">{f.title}</h3>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
@@ -332,9 +335,9 @@ export default function PricingPage() {
       {/* Bottom CTA */}
       <section className="max-w-2xl mx-auto px-6 pb-24 text-center">
         <div className="bg-gradient-to-r from-[#1e3a8a] to-[#1e40af] rounded-3xl p-10 border border-blue-500/30">
-          <h2 className="text-[28px] font-black tracking-tight mb-3">Gotowy zacząć?</h2>
+          <h2 className="text-[28px] font-black tracking-tight mb-3 text-white">Gotowy zacząć?</h2>
           <p className="text-[14px] text-blue-200 mb-8 leading-relaxed">
-            7 dni za darmo, bez podania karty. Po trialu wybierz plan który odpowiada Twojej skali.
+            7 dni za darmo — karta Stripe wymagana do aktywacji, żadna opłata przez 7 dni. Anuluj kiedy chcesz.
           </p>
           <button
             onClick={() => handleSubscribe(PLANS[1])}
@@ -348,8 +351,18 @@ export default function PricingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/8 py-8">
-        <p className="text-center text-[12px] text-white/25">© 2026 OneLink · Dla właścicieli restauracji</p>
+      <footer className="border-t border-[#E5E7EB] py-8 px-6 bg-white">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-[12px] text-[#9CA3AF]">© 2026 OneLink · InnowacyjneAI sp. z o.o.</p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <a href="/" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Strona główna</a>
+            <a href="/about" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">O nas</a>
+            <a href="/contact" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Kontakt</a>
+            <a href="/security" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Bezpieczeństwo</a>
+            <a href="/privacy" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Polityka Prywatności</a>
+            <a href="/terms" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Regulamin</a>
+          </div>
+        </div>
       </footer>
     </main>
   );

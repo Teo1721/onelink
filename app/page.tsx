@@ -6,12 +6,12 @@ import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   TrendingUp, BarChart3, Package, Receipt, ShieldCheck,
   ChevronRight, Check, ArrowRight, Zap, Star,
-  Clock, PieChart, FileText, ChevronDown,
+  Clock, PieChart, FileText, ChevronDown, CheckCircle,
 } from "lucide-react";
 
 /* ── tiny helpers ── */
 const Pill = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/8 border border-white/12 text-[11px] font-semibold uppercase tracking-widest text-white/50">
+  <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-[#F3F4F6] border border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-widest text-[#6B7280]">
     {children}
   </span>
 );
@@ -76,27 +76,66 @@ const HOW_IT_WORKS = [
 
 /* ── FAQ data ── */
 const FAQ_ITEMS = [
-  { q: "Co to jest OneLink i dla kogo jest przeznaczony?", a: "OneLink to system zarządzania małym biznesem, który pozwala właścicielom kontrolować P&L, koszty, magazyn i faktury z jednego panelu — w czasie rzeczywistym. Przeznaczony dla właścicieli restauracji, piekarni, cukierni, delikatesów i każdego biznesu, który chce widzieć swoje liczby na bieżąco." },
-  { q: "Czy muszę podawać kartę kredytową przy rejestracji?", a: "Tak, przy rejestracji prosimy o dane karty przez Stripe. Nie pobieramy żadnej opłaty przez 7 dni. Karta jest potrzebna do natychmiastowej aktywacji konta i zabezpieczenia Twoich danych po zakończeniu trialu. Możesz anulować w dowolnym momencie przed upływem 7 dni — żadna płatność nie zostanie pobrana." },
-  { q: "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", a: "Plany zaczynają się od 299 zł miesięcznie. Szczegóły wszystkich planów znajdziesz na stronie /pricing. Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." },
+  { q: "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", a: "Plany zaczynają się od 19,99 zł miesięcznie netto (+ VAT). Szczegóły wszystkich planów znajdziesz na stronie /pricing. Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." },
+  { q: "Czy muszę podawać kartę kredytową przy rejestracji?", a: "Tak, przy rejestracji prosimy o dane karty przez Stripe. Nie pobieramy żadnej opłaty przez 7 dni trialu. Karta jest potrzebna do aktywacji konta — możesz anulować w dowolnym momencie przed upływem 7 dni i nie zostanie pobrana żadna opłata." },
   { q: "Jak długo trwa wdrożenie i konfiguracja systemu?", a: "Pierwsze konto jest gotowe w około 3 minuty. Pełna konfiguracja z zaproszeniem managerów i połączeniem danych zajmuje do 20 minut. Nie potrzebujesz działu IT ani technicznej wiedzy." },
-  { q: "Czy OneLink integruje się z moim systemem kasowym lub POS?", a: "Tak. OneLink obsługuje import danych z popularnych systemów kasowych oraz import plików CSV. Jeśli korzystasz z konkretnego systemu POS, skontaktuj się z nami — aktywnie rozwijamy integracje." },
-  { q: "Czy managerowie muszą instalować aplikację?", a: "Nie. Managerowie korzystają z aplikacji webowej dostępnej przez przeglądarkę na telefonie lub tablecie — bez instalacji. Dostępna jest też wersja mobilna w App Store i Google Play (wkrótce)." },
   { q: "Jak działa kontrola food cost w OneLink?", a: "OneLink śledzi zużycie teoretyczne składników (na podstawie receptur i sprzedaży) i porównuje je z rzeczywistymi stanami magazynowymi. Odchylenia są automatycznie wykrywane i sygnalizowane alertem. Dzięki temu wiesz, gdzie znika towar — zanim zorientujesz się na koniec miesiąca." },
   { q: "Czy mogę zarządzać kilkoma lokalami z jednego konta?", a: "Tak. OneLink jest zaprojektowany do zarządzania wieloma lokalizacjami z jednego panelu właściciela. Możesz porównywać wyniki, transferować stany między lokalami i zatwierdzać faktury z każdego z nich." },
-  { q: "Czy moje dane są bezpieczne?", a: "Tak. Dane są szyfrowane i przechowywane na bezpiecznych serwerach. Płatności obsługuje Stripe — jeden z najbardziej zaufanych procesorów płatności na świecie. Nie udostępniamy danych podmiotom trzecim." },
-  { q: "Jak działa workflow zatwierdzania faktur?", a: "Manager przesyła fakturę (zdjęcie lub PDF) przez aplikację. Ty otrzymujesz powiadomienie, przeglądasz fakturę i zatwierdzasz lub odrzucasz jednym kliknięciem. Pełna historia zatwierdzeń jest dostępna w każdej chwili i gotowa do eksportu do księgowości." },
-  { q: "Czy OneLink działa dla piekarni, cukierni albo delikatesów — nie tylko restauracji?", a: "Tak. OneLink działa dla każdego małego biznesu, który zarządza kosztami surowców, stanami magazynowymi i fakturami. Piekarnie, cukiernie, delikatesy, kawiarnie, catering — wszystkie te biznesy korzystają z tych samych funkcji." },
-  { q: "Co to jest P&L i po co mi to?", a: "P&L (Profit & Loss, rachunek zysków i strat) pokazuje Twoje przychody minus wszystkie koszty = zysk netto. W OneLink widzisz P&L każdego dnia, a nie raz w miesiącu na spotkaniu z księgową. Dzięki temu możesz reagować na bieżąco." },
-  { q: "Czy mogę eksportować dane do programu księgowego?", a: "Tak. OneLink umożliwia eksport faktur i zestawień kosztów w formatach kompatybilnych z popularnymi programami księgowymi. Szczegółowy wykaz formatów dostępny po zalogowaniu." },
-  { q: "Jak OneLink pomaga obniżyć food cost?", a: "System automatycznie wykrywa odchylenia między zużyciem teoretycznym a rzeczywistym. Gdy składnik 'znika' ponad normę — system wysyła alert. Nasi klienci odnotowują średnio 2–4 pp. obniżenia food cost w ciągu 90 dni od wdrożeniu." },
-  { q: "Czy jest wsparcie techniczne po polsku?", a: "Tak. Wsparcie techniczne jest dostępne w języku polskim — przez czat, e-mail i telefon. Czas odpowiedzi w godzinach roboczych: do 4 godzin." },
+  { q: "Czy moje dane są bezpieczne?", a: "Tak. Dane są szyfrowane i przechowywane na serwerach w UE (Supabase). Płatności obsługuje Stripe — jeden z najbardziej zaufanych procesorów płatności na świecie. Danych kart nie przechowujemy — Stripe ma PCI DSS Level 1. Nie udostępniamy danych podmiotom trzecim." },
   { q: "Co się stanie z moimi danymi po anulowaniu subskrypcji?", a: "Twoje dane są przechowywane przez 30 dni po anulowaniu. W tym czasie możesz je wyeksportować. Po upływie 30 dni dane są trwale usuwane z naszych serwerów." },
-  { q: "Ile kont managerów mogę dodać?", a: "Liczba kont zależy od planu. Plan Starter zawiera 2 konta managerów, plan Business — bez ograniczeń. Szczegóły na stronie cennika." },
-  { q: "Czy mogę zmienić plan w trakcie subskrypcji?", a: "Tak. Możesz zmienić plan w dowolnym momencie — zarówno na wyższy, jak i niższy. Zmiana wchodzi w życie od następnego okresu rozliczeniowego. Nie ma żadnych kar za zmianę." },
   { q: "Jak OneLink porównuje się do arkuszy Excel?", a: "Excel wymaga ręcznego wprowadzania danych, formuł i nie daje alertów w czasie rzeczywistym. OneLink automatyzuje zbieranie danych od managerów, oblicza P&L na bieżąco i alarmuje przy odchyleniach — bez żadnych formuł. Zamknięcie dnia trwa 10 minut zamiast godziny." },
-  { q: "Czy OneLink działa na telefonie?", a: "Tak. Panel właściciela działa w przeglądarce na telefonie, tablecie i komputerze. Aplikacja mobilna dla pracowników (iOS i Android) jest dostępna wkrótce — już teraz działa jako wersja webowa pod adresem /employee." },
 ];
+
+/* ── Lead Capture ── */
+function LeadCapture() {
+  const [email, setEmail] = useState('');
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDone(true);
+  };
+
+  return (
+    <section className="relative max-w-2xl mx-auto px-6 pb-20">
+      <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-green-50 p-8 text-center shadow-sm">
+        {done ? (
+          <>
+            <p className="text-[22px] font-bold text-[#111827] mb-2">Dziękujemy! 🎉</p>
+            <p className="text-[14px] text-[#6B7280]">Wyślemy Ci praktyczny poradnik wkrótce.</p>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-3">Nie gotowy na trial?</p>
+            <h2 className="text-[22px] font-black text-[#111827] mb-2 leading-tight">
+              Pobierz bezpłatny kalkulator food cost
+            </h2>
+            <p className="text-[14px] text-[#6B7280] mb-6 leading-relaxed">
+              Arkusz Excel gotowy do użycia — oblicz food cost każdego dania i znajdź gdzie tracisz marżę. Bez rejestracji.
+            </p>
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="Twój adres e-mail"
+                className="flex-1 h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-blue-400 shadow-sm transition-all"
+              />
+              <button
+                type="submit"
+                className="h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all whitespace-nowrap shadow-sm"
+              >
+                Wyślij mi arkusz
+              </button>
+            </form>
+            <p className="text-[11px] text-[#9CA3AF] mt-3">Bez spamu. Jeden e-mail z arkuszem.</p>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
 
 /* ── FAQ Section component ── */
 function FAQSection() {
@@ -105,31 +144,31 @@ function FAQSection() {
   return (
     <section id="faq" className="relative max-w-3xl mx-auto px-6 pb-24">
       <div className="text-center mb-14">
-        <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4">
+        <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4 text-[#111827]">
           Często zadawane pytania
         </h2>
-        <p className="text-[16px] text-white/40">Wszystko co chcesz wiedzieć przed startem trialu</p>
+        <p className="text-[16px] text-[#6B7280]">Wszystko co chcesz wiedzieć przed startem trialu</p>
       </div>
 
       <div className="space-y-2">
         {FAQ_ITEMS.map((item, i) => (
           <div
             key={i}
-            className={`border rounded-2xl overflow-hidden transition-colors ${openIndex === i ? 'border-white/20 bg-white/5' : 'border-white/8 bg-white/3 hover:bg-white/4'}`}
+            className={`border rounded-2xl overflow-hidden transition-all ${openIndex === i ? 'border-[#D1D5DB] bg-white shadow-sm' : 'border-[#E5E7EB] bg-white hover:shadow-sm'}`}
           >
             <button
               className="w-full flex items-center justify-between px-6 py-4 text-left gap-4"
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
               aria-expanded={openIndex === i}
             >
-              <span className="text-[15px] font-semibold text-white leading-snug">{item.q}</span>
-              <ChevronDown className={`w-4 h-4 shrink-0 text-white/40 transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`} />
+              <span className="text-[15px] font-semibold text-[#111827] leading-snug">{item.q}</span>
+              <ChevronDown className={`w-4 h-4 shrink-0 text-[#9CA3AF] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`} />
             </button>
             <div
               className="overflow-hidden transition-all duration-300"
               style={{ maxHeight: openIndex === i ? '400px' : '0px' }}
             >
-              <p className="px-6 pb-5 text-[14px] text-white/50 leading-relaxed">{item.a}</p>
+              <p className="px-6 pb-5 text-[14px] text-[#6B7280] leading-relaxed">{item.a}</p>
             </div>
           </div>
         ))}
@@ -138,8 +177,8 @@ function FAQSection() {
   );
 }
 
-/* ── Sticky Mobile CTA ── */
-function StickyMobileCTA() {
+/* ── Sticky CTA (mobile bottom bar + desktop top bar) ── */
+function StickyCTA() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -148,13 +187,11 @@ function StickyMobileCTA() {
       const faqEl = document.getElementById('faq');
       const footerEl = document.querySelector('footer');
 
-      if (scrollY < 300) {
-        setVisible(false);
-        return;
-      }
+      if (scrollY < 400) { setVisible(false); return; }
 
       if (faqEl || footerEl) {
-        const threshold = (faqEl || footerEl)!.getBoundingClientRect().top + window.scrollY - 200;
+        const el = faqEl || footerEl;
+        const threshold = el!.getBoundingClientRect().top + window.scrollY - 200;
         setVisible(scrollY < threshold);
       } else {
         setVisible(true);
@@ -166,20 +203,45 @@ function StickyMobileCTA() {
   }, []);
 
   return (
-    <div
-      className={`md:hidden fixed bottom-0 left-0 right-0 z-[9999] transition-transform duration-300 ${visible ? 'translate-y-0' : 'translate-y-full'}`}
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      <div className="mx-3 mb-3 rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
-        <Link
-          href="/auth/sign-up"
-          className="flex flex-col items-center justify-center py-4 bg-gradient-to-r from-amber-400 to-orange-500 active:from-amber-500 active:to-orange-600 transition-all"
-        >
-          <span className="text-[15px] font-bold text-white">Zacznij za darmo — 7 dni bez opłat</span>
-          <span className="text-[11px] text-white/75 mt-0.5">🔒 Bezpieczna płatność Stripe</span>
-        </Link>
+    <>
+      {/* Mobile bottom bar */}
+      <div
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-[9999] transition-transform duration-300 ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="mx-3 mb-3 rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
+          <Link
+            href="/auth/sign-up"
+            className="flex flex-col items-center justify-center py-4 bg-gradient-to-r from-amber-400 to-orange-500 active:from-amber-500 active:to-orange-600 transition-all"
+          >
+            <span className="text-[15px] font-bold text-white">Zacznij za darmo — 7 dni bez opłat</span>
+            <span className="text-[11px] text-white/75 mt-0.5">🔒 Bezpieczna płatność Stripe</span>
+          </Link>
+        </div>
       </div>
-    </div>
+
+      {/* Desktop floating CTA bar */}
+      <div
+        className={`hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+      >
+        <div className="flex items-center gap-4 px-5 py-3 rounded-2xl border border-[#E5E7EB] bg-white/95 backdrop-blur-md shadow-xl shadow-black/10">
+          <div className="flex items-center gap-2">
+            {['#F59E0B','#3B82F6','#8B5CF6'].map((c,i) => (
+              <div key={i} className="w-6 h-6 rounded-full border-2 border-white" style={{ background: c }} />
+            ))}
+            <span className="text-[12px] text-[#6B7280] ml-1">50+ restauratorów</span>
+          </div>
+          <div className="w-px h-5 bg-[#E5E7EB]" />
+          <Link
+            href="/auth/sign-up"
+            className="h-9 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[13px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30 flex items-center gap-1.5"
+          >
+            Zacznij bezpłatny trial
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -303,25 +365,15 @@ function DashboardMockup() {
 /* ── Main component ── */
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#060B18] text-white overflow-x-hidden">
-
-      {/* Background grid pattern */}
-      <div className="fixed inset-0 pointer-events-none" style={{
-        backgroundImage: `radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px)`,
-        backgroundSize: '32px 32px',
-      }} />
-
-      {/* Top glow */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.15) 0%, transparent 65%)' }} />
+    <main className="min-h-screen bg-[#F7F8FA] text-[#111827] overflow-x-hidden">
 
       {/* ── TOP BANNER — Made by InnowacyjneAI ── */}
-      <div className="relative z-50 w-full border-b border-violet-500/15" style={{ background: 'linear-gradient(90deg, rgba(139,92,246,0.12) 0%, rgba(59,130,246,0.08) 50%, rgba(139,92,246,0.12) 100%)' }}>
+      <div className="relative z-50 w-full border-b border-[#E5E7EB] bg-white">
         <a
           href="https://innowacyjneai.pl/"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2.5 py-2.5 hover:opacity-80 transition-opacity"
+          className="flex items-center justify-center gap-2.5 py-2 hover:opacity-75 transition-opacity"
         >
           <div className="flex items-center justify-center w-4 h-4 rounded-sm" style={{ background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)' }}>
             <svg viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5 text-white" stroke="currentColor" strokeWidth="1.5">
@@ -329,51 +381,58 @@ export default function HomePage() {
               <path d="M6 1v2M6 9v2M1 6h2M9 6h2" />
             </svg>
           </div>
-          <span className="text-[12px] font-medium text-white/50">
+          <span className="text-[12px] font-medium text-[#6B7280]">
             Zaprojektowane i zbudowane przez
           </span>
-          <span className="text-[12px] font-bold" style={{ background: 'linear-gradient(90deg, #A78BFA, #60A5FA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          <span className="text-[12px] font-bold" style={{ background: 'linear-gradient(90deg, #8B5CF6, #3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             InnowacyjneAI
           </span>
-          <span className="text-[11px] text-violet-400/50">→ innowacyjneai.pl</span>
+          <span className="text-[11px] text-[#9CA3AF]">→ innowacyjneai.pl</span>
         </a>
       </div>
 
       {/* ── NAV ── */}
-      <nav className="relative z-50 max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+      <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <OneLinkLogo iconSize={28} textSize="text-[15px]" />
         <div className="hidden md:flex items-center gap-6">
-          {[['Funkcje', '#features'], ['Jak działa', '#how'], ['Cennik', '/pricing']].map(([label, href]) => (
-            <a key={label} href={href} className="text-[13px] text-white/50 hover:text-white transition-colors font-medium">
+          {[['Funkcje', '#features'], ['Jak działa', '#how'], ['Cennik', '/pricing'], ['O nas', '/about']].map(([label, href]) => (
+            <a key={label} href={href} className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors font-medium">
               {label}
             </a>
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/auth/login" className="text-[13px] text-white/50 hover:text-white transition-colors font-medium">
+          <Link href="/auth/login" className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors font-medium">
             Zaloguj
           </Link>
           <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[13px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center shadow-lg shadow-amber-500/25">
             Zacznij za darmo
           </Link>
         </div>
+      </div>
       </nav>
 
       {/* ── HERO ── */}
       <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-8 text-center">
-        <Pill>
-          <Zap className="w-3 h-3 text-amber-400" />
-          7 dni za darmo · karta potrzebna tylko do aktywacji
-        </Pill>
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <Pill>
+            <Zap className="w-3 h-3 text-amber-400" />
+            7 dni za darmo · karta potrzebna tylko do aktywacji
+          </Pill>
+          <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-red-500/10 border border-red-500/25 text-[11px] font-semibold text-red-400">
+            ⏰ Ceny Early Adopter — tylko do końca marca
+          </span>
+        </div>
 
-        <h1 className="mt-8 text-[52px] md:text-[76px] font-black tracking-[-0.03em] leading-[1.0] mb-6 max-w-4xl mx-auto">
+        <h1 className="mt-4 text-[52px] md:text-[76px] font-black tracking-[-0.03em] leading-[1.0] mb-6 max-w-4xl mx-auto text-[#111827]">
           Wiesz ile zarobiłeś{" "}
           <br className="hidden md:block" />
           <GradientText>dzisiaj?</GradientText>
         </h1>
 
-        <p className="text-[18px] text-white/45 max-w-2xl mx-auto leading-relaxed mb-10">
-          Jeden panel do P&amp;L, kosztów, magazynu i faktur — dla właścicieli małego biznesu, którzy chcą wiedzieć co się dzieje, nie dopiero na koniec miesiąca.
+        <p className="text-[18px] text-[#6B7280] max-w-2xl mx-auto leading-relaxed mb-10">
+          Restauratorzy, którzy używają OneLink, zamykają dzień w 10 minut i widzą swój P&amp;L na żywo — zamiast dowiadywać się o stracie dopiero na koniec miesiąca.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
@@ -381,40 +440,38 @@ export default function HomePage() {
             Zacznij bezpłatny trial
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <Link href="#features" className="h-13 px-8 rounded-2xl border border-white/15 text-[15px] font-semibold text-white/70 hover:text-white hover:border-white/30 transition-all flex items-center gap-2" style={{ height: 52 }}>
+          <Link href="#features" className="h-13 px-8 rounded-2xl border border-[#E5E7EB] bg-white text-[15px] font-semibold text-[#6B7280] hover:text-[#111827] hover:border-[#D1D5DB] transition-all flex items-center gap-2 shadow-sm" style={{ height: 52 }}>
             Zobacz jak działa
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
 
         {/* Reassurance bar */}
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-12 text-[12px] text-white/35">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-12 text-[12px] text-[#9CA3AF]">
           <span className="flex items-center gap-1.5">🔒 Bezpieczna płatność Stripe</span>
-          <span className="text-white/15">·</span>
+          <span className="text-[#D1D5DB]">·</span>
           <span>Anuluj kiedy chcesz</span>
-          <span className="text-white/15">·</span>
+          <span className="text-[#D1D5DB]">·</span>
           <span>Pełny dostęp przez 7 dni</span>
         </div>
 
         {/* Social proof bar */}
         <div className="flex flex-col items-center gap-4 mb-12">
           <div className="flex items-center gap-3">
-            <div className="flex -space-x-2">
-              {['#F59E0B','#3B82F6','#8B5CF6','#10B981','#EF4444'].map((c, i) => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-[#060B18] flex items-center justify-center text-[10px] font-bold text-white" style={{ background: c }}>
-                  {['M','A','T','P','K'][i]}
-                </div>
+            <div className="flex gap-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
               ))}
             </div>
-            <p className="text-[13px] text-white/45">
-              Dołącz do <span className="text-white font-bold">50+</span> właścicieli małych biznesów, którzy widzą swoje liczby na żywo
+            <p className="text-[13px] text-[#6B7280]">
+              Ponad <span className="text-[#111827] font-bold">50 restauratorów</span> widzi swoje liczby na żywo
             </p>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <p className="text-[10px] uppercase tracking-widest text-white/25 font-semibold">Zaufali nam:</p>
+            <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-semibold">Zaufali nam:</p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {['Fabryka Pączków', 'Piekarnia Matusik', 'Swojska Spiżarnia'].map(name => (
-                <span key={name} className="px-3 py-1 rounded-full text-[11px] font-medium text-white/50 bg-white/6 border border-white/10">
+                <span key={name} className="px-3 py-1 rounded-full text-[11px] font-medium text-[#6B7280] bg-white border border-[#E5E7EB] shadow-sm">
                   {name}
                 </span>
               ))}
@@ -435,11 +492,36 @@ export default function HomePage() {
       <section className="relative max-w-5xl mx-auto px-6 py-24">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {STATS.map((s, i) => (
-            <div key={i} className="bg-white/4 border border-white/8 rounded-2xl p-6 text-center hover:bg-white/6 transition-colors">
+            <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition-shadow">
               <p className="text-[36px] font-black leading-none mb-2" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[12px] text-white/40 font-medium leading-snug">{s.label}</p>
+              <p className="text-[12px] text-[#6B7280] font-medium leading-snug">{s.label}</p>
             </div>
           ))}
+        </div>
+        <p className="text-center text-[11px] text-[#9CA3AF] mt-4">* Średnie wyniki wśród klientów OneLink w pierwszych 90 dniach od wdrożenia</p>
+      </section>
+
+      {/* ── INTEGRATIONS STRIP ── */}
+      <section className="relative max-w-5xl mx-auto px-6 pb-20">
+        <p className="text-center text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-6">Integruje się z</p>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {[
+            { name: 'Stripe', desc: 'Płatności', color: '#635BFF' },
+            { name: 'CSV Import', desc: 'Dowolny system POS', color: '#10B981' },
+            { name: 'Supabase', desc: 'Bezpieczna baza EU', color: '#3ECF8E' },
+            { name: 'Każdy system kasowy', desc: 'przez CSV', color: '#F59E0B' },
+          ].map(s => (
+            <div key={s.name} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-[#E5E7EB] bg-white shadow-sm hover:shadow transition-shadow">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <div>
+                <p className="text-[12px] font-bold text-[#374151]">{s.name}</p>
+                <p className="text-[10px] text-[#9CA3AF]">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#E5E7EB] bg-white">
+            <span className="text-[12px] text-[#9CA3AF]">+ Więcej integracji w planach</span>
+          </div>
         </div>
       </section>
 
@@ -447,28 +529,28 @@ export default function HomePage() {
       <section id="features" className="relative max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-16">
           <Pill><Star className="w-3 h-3 text-amber-400" />Funkcje</Pill>
-          <h2 className="text-[40px] md:text-[52px] font-black tracking-tight mt-6 mb-4">
+          <h2 className="text-[40px] md:text-[52px] font-black tracking-tight mt-6 mb-4 text-[#111827]">
             Wszystko co potrzebuje<br />
-            <GradientText>właściciel małego biznesu</GradientText>
+            <GradientText>właściciel restauracji i lokalu gastronomicznego</GradientText>
           </h2>
-          <p className="text-[16px] text-white/40 max-w-xl mx-auto">
-            Zaprojektowane dla małych biznesów — nie korporacyjny software dostosowany na siłę.
+          <p className="text-[16px] text-[#6B7280] max-w-xl mx-auto">
+            Zaprojektowane dla gastronomii — nie korporacyjny software dostosowany na siłę.
           </p>
         </div>
 
         <div className="space-y-5">
           {FEATURES.map((f, i) => (
-            <div key={i} className={`grid md:grid-cols-2 gap-6 items-center rounded-3xl p-8 border border-white/8 bg-white/3 hover:bg-white/5 transition-colors ${i % 2 === 1 ? '' : ''}`}>
+            <div key={i} className={`grid md:grid-cols-2 gap-6 items-center rounded-3xl p-8 border border-[#E5E7EB] bg-white shadow-sm hover:shadow-md transition-shadow`}>
               {/* Text side */}
               <div className={i % 2 === 1 ? 'md:order-2' : ''}>
-                <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-5" style={{ background: `${f.color}20` }}>
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-5" style={{ background: `${f.color}15` }}>
                   <f.icon className="w-5 h-5" style={{ color: f.color }} />
                 </div>
-                <h3 className="text-[22px] font-bold text-white mb-3 leading-snug">{f.title}</h3>
-                <p className="text-[14px] text-white/45 leading-relaxed mb-5">{f.desc}</p>
+                <h3 className="text-[22px] font-bold text-[#111827] mb-3 leading-snug">{f.title}</h3>
+                <p className="text-[14px] text-[#6B7280] leading-relaxed mb-5">{f.desc}</p>
                 <ul className="space-y-2">
                   {f.items.map((item, j) => (
-                    <li key={j} className="flex items-center gap-2.5 text-[13px] text-white/60">
+                    <li key={j} className="flex items-center gap-2.5 text-[13px] text-[#4B5563]">
                       <Check className="w-4 h-4 shrink-0" style={{ color: f.color }} />
                       {item}
                     </li>
@@ -476,8 +558,8 @@ export default function HomePage() {
                 </ul>
               </div>
 
-              {/* Visual side */}
-              <div className={`rounded-2xl overflow-hidden border border-white/8 ${i % 2 === 1 ? 'md:order-1' : ''}`} style={{ background: '#0D1628' }}>
+              {/* Visual side — dark mockup intentional */}
+              <div className={`rounded-2xl overflow-hidden border border-[#1E293B]/30 shadow-lg ${i % 2 === 1 ? 'md:order-1' : ''}`} style={{ background: '#0D1628' }}>
                 <div className="p-5 space-y-3">
                   {i === 0 && (
                     <>
@@ -574,33 +656,53 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+
+        {/* Inline CTA after features */}
+        <div className="mt-12 text-center">
+          <p className="text-[14px] text-[#6B7280] mb-4">Gotowy żeby zobaczyć to na żywo w swoim lokalu?</p>
+          <Link href="/auth/sign-up" className="inline-flex items-center gap-2 h-11 px-7 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/25">
+            Zacznij bezpłatny trial — 7 dni za darmo
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </section>
 
       {/* ── HOW IT WORKS ── */}
       <section id="how" className="relative max-w-5xl mx-auto px-6 pb-24">
         <div className="text-center mb-14">
-          <Pill><Clock className="w-3 h-3 text-blue-400" />Jak działa</Pill>
-          <h2 className="text-[36px] md:text-[48px] font-black tracking-tight mt-6 mb-4">
+          <Pill><Clock className="w-3 h-3 text-blue-500" />Jak działa</Pill>
+          <h2 className="text-[36px] md:text-[48px] font-black tracking-tight mt-6 mb-4 text-[#111827]">
             Gotowy w <GradientText>20 minut</GradientText>. Zero IT, zero szkoleń.
           </h2>
-          <p className="text-[15px] text-white/40">Konto w 3 minuty. Pierwsze dane dziś.</p>
+          <p className="text-[15px] text-[#6B7280]">Konto w 3 minuty. Pierwsze dane dziś.</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {HOW_IT_WORKS.map((step, i) => (
-            <div key={i} className="relative bg-white/3 border border-white/8 rounded-2xl p-7 hover:bg-white/5 transition-colors">
-              <div className="text-[52px] font-black leading-none mb-5" style={{ color: 'rgba(255,255,255,0.06)' }}>
+            <div key={i} className="relative bg-white border border-[#E5E7EB] rounded-2xl p-7 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-[52px] font-black leading-none mb-5 text-[#F3F4F6]">
                 {step.step}
               </div>
-              <h3 className="text-[18px] font-bold text-white mb-2">{step.title}</h3>
-              <p className="text-[13px] text-white/40 leading-relaxed">{step.desc}</p>
+              <h3 className="text-[18px] font-bold text-[#111827] mb-2">{step.title}</h3>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">{step.desc}</p>
               {i < 3 && (
-                <div className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#1E40AF] border border-blue-500/40 items-center justify-center z-10">
-                  <ChevronRight className="w-3 h-3 text-blue-300" />
+                <div className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#EFF6FF] border border-blue-200 items-center justify-center z-10">
+                  <ChevronRight className="w-3 h-3 text-blue-500" />
                 </div>
               )}
             </div>
           ))}
+        </div>
+
+        {/* Inline CTA after How it works */}
+        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link href="/auth/sign-up" className="h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/25">
+            Wypróbuj przez 7 dni za darmo
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link href="/contact" className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">
+            Wolisz najpierw zobaczyć demo? →
+          </Link>
         </div>
       </section>
 
@@ -608,26 +710,92 @@ export default function HomePage() {
       <section className="relative max-w-5xl mx-auto px-6 pb-24">
         <div className="text-center mb-14">
           <Pill><Star className="w-3 h-3 text-amber-400" />Opinie</Pill>
-          <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mt-6 mb-4">
-            Właściciele małych biznesów już korzystają
+          <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mt-6 mb-4 text-[#111827]">
+            Restauratorzy i właściciele lokali gastronomicznych już korzystają
           </h2>
         </div>
 
         <div className="grid md:grid-cols-3 gap-5">
           {TESTIMONIALS.map((t, i) => (
-            <div key={i} className="bg-white/4 border border-white/8 rounded-2xl p-6 hover:bg-white/6 transition-colors">
+            <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex mb-4">
                 {[...Array(5)].map((_, j) => (
                   <Star key={j} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 ))}
               </div>
-              <p className="text-[14px] text-white/60 leading-relaxed mb-5 italic">&ldquo;{t.text}&rdquo;</p>
-              <div>
-                <p className="text-[13px] font-bold text-white">{t.name}</p>
-                <p className="text-[11px] text-white/35 mt-0.5">{t.role}</p>
+              <p className="text-[14px] text-[#4B5563] leading-relaxed mb-5 italic">&ldquo;{t.text}&rdquo;</p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[13px] font-bold text-[#111827]">{t.name}</p>
+                  <p className="text-[11px] text-[#9CA3AF] mt-0.5">{t.role}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-[10px] font-semibold text-green-700 shrink-0">
+                  <CheckCircle className="w-3 h-3" />
+                  Klient
+                </span>
               </div>
             </div>
           ))}
+        </div>
+        <p className="text-center text-[11px] text-[#9CA3AF] mt-6">Opinie wczesnych użytkowników OneLink. Wyniki indywidualne mogą się różnić.</p>
+
+        {/* Inline CTA after testimonials */}
+        <div className="mt-10 text-center">
+          <p className="text-[15px] text-[#6B7280] mb-4">Gotowy żeby zobaczyć swoje liczby tak jak Marek czy Agnieszka?</p>
+          <Link href="/auth/sign-up" className="inline-flex items-center gap-2 h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-xl shadow-amber-500/25">
+            Zacznij bezpłatny trial →
+          </Link>
+        </div>
+      </section>
+
+      {/* ── COMPARISON TABLE ── */}
+      <section className="relative max-w-4xl mx-auto px-6 pb-24">
+        <div className="text-center mb-10">
+          <Pill><ShieldCheck className="w-3 h-3 text-green-500" />Porównanie</Pill>
+          <h2 className="text-[28px] md:text-[36px] font-black tracking-tight mt-6 mb-3 text-[#111827]">
+            OneLink vs. alternatywy
+          </h2>
+          <p className="text-[14px] text-[#6B7280]">Wiemy, że porównujesz — więc zrobiliśmy to za Ciebie</p>
+        </div>
+
+        <div className="overflow-x-auto bg-white border border-[#E5E7EB] rounded-2xl shadow-sm">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#E5E7EB]">
+                <th className="text-[12px] font-bold uppercase tracking-widest text-[#9CA3AF] py-4 px-6 w-[40%]">Funkcja</th>
+                <th className="text-[13px] font-bold text-amber-500 py-4 px-6 text-center bg-amber-50">OneLink</th>
+                <th className="text-[13px] font-bold text-[#6B7280] py-4 px-6 text-center">Arkusz Excel</th>
+                <th className="text-[13px] font-bold text-[#6B7280] py-4 px-6 text-center">Systemy ERP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['P&L w czasie rzeczywistym', true, false, true],
+                ['Konfiguracja w 20 minut', true, true, false],
+                ['Food cost i odchylenia', true, false, false],
+                ['Alerty automatyczne', true, false, true],
+                ['Moduł magazynowy', true, false, true],
+                ['Wiele lokalizacji', true, false, true],
+                ['Cena dla 1 lokalu', '19,99 zł/mies.', '0 zł', '500+ zł/mies.'],
+                ['Wsparcie po polsku', true, false, false],
+              ].map(([feature, onelink, excel, erp], i) => (
+                <tr key={i} className={`border-t border-[#F3F4F6] ${i % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'}`}>
+                  <td className="py-3.5 px-6 text-[13px] text-[#374151] font-medium">{feature as string}</td>
+                  {[onelink, excel, erp].map((val, j) => (
+                    <td key={j} className={`py-3.5 px-6 text-center ${j === 0 ? 'bg-amber-50/50' : ''}`}>
+                      {typeof val === 'boolean' ? (
+                        val
+                          ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100"><Check className="w-3.5 h-3.5 text-green-600" /></span>
+                          : <span className="text-[#D1D5DB] text-lg leading-none">—</span>
+                      ) : (
+                        <span className={`text-[12px] font-semibold ${j === 0 ? 'text-amber-600' : 'text-[#9CA3AF]'}`}>{val as string}</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -640,22 +808,36 @@ export default function HomePage() {
               Cennik
             </Pill>
             <h2 className="text-[36px] md:text-[52px] font-black tracking-tight mt-6 mb-4">
-              Od <GradientText>299 zł</GradientText> miesięcznie
+              Od <GradientText>19,99 zł</GradientText> miesięcznie
             </h2>
             <p className="text-[15px] text-white/45 max-w-lg mx-auto mb-8 leading-relaxed">
-              7 dni za darmo, bez podania karty. Wybierz plan który pasuje do skali Twojego biznesu — i anuluj kiedy chcesz.
+              7 dni za darmo — karta Stripe wymagana do aktywacji, żadna opłata przez 7 dni. Anuluj kiedy chcesz.
             </p>
+
+            {/* Mini plan overview */}
+            <div className="grid grid-cols-3 gap-3 mb-8 text-left">
+              {[
+                { name: 'Start', price: '19,99 zł', sub: '1 lokal · 1 manager' },
+                { name: 'Rozwój', price: '39,99 zł', sub: '2 lokale · 2 managerów', popular: true },
+                { name: 'Sieć', price: '59,99 zł', sub: '5 lokali · 5 managerów' },
+              ].map(p => (
+                <div key={p.name} className={`rounded-xl p-3 border ${p.popular ? 'border-amber-400/40 bg-amber-400/8' : 'border-white/10 bg-white/4'}`}>
+                  <p className={`text-[11px] font-bold mb-1 ${p.popular ? 'text-amber-400' : 'text-white/50'}`}>{p.name}{p.popular ? ' ★' : ''}</p>
+                  <p className="text-[18px] font-black text-white leading-none">{p.price}</p>
+                  <p className="text-[10px] text-white/35 mt-1">/ mies. + VAT</p>
+                  <p className="text-[10px] text-white/40 mt-1">{p.sub}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
               <Link href="/pricing" className="h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/30">
-                Porównaj plany
+                Zacznij bezpłatny trial
                 <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link href="/auth/login" className="text-[13px] text-white/40 hover:text-white/70 transition-colors">
-                Masz już konto? Zaloguj się →
               </Link>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-5">
-              {['Bez karty do trialu', 'Anuluj kiedy chcesz', 'Pełny dostęp przez 7 dni', 'Wsparcie w języku polskim'].map(item => (
+              {['Karta Stripe do aktywacji', 'Anuluj kiedy chcesz', 'Pełny dostęp przez 7 dni', 'Wsparcie w języku polskim'].map(item => (
                 <div key={item} className="flex items-center gap-2 text-[12px] text-white/35">
                   <Check className="w-3.5 h-3.5 text-[#10B981]" />
                   {item}
@@ -668,72 +850,53 @@ export default function HomePage() {
 
       {/* ── MADE BY INNOWACYJNEAI ── */}
       <section className="relative max-w-4xl mx-auto px-6 pb-20">
-        {/* Ambient glow */}
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(139,92,246,0.08) 0%, transparent 70%)' }} />
-
         <a
           href="https://innowacyjneai.pl/"
           target="_blank"
           rel="noopener noreferrer"
-          className="group block relative"
+          className="group block"
         >
-          {/* Gradient border wrapper */}
-          <div className="rounded-2xl p-px transition-all duration-500 group-hover:shadow-[0_0_60px_rgba(139,92,246,0.2)]"
-            style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.4) 0%, rgba(59,130,246,0.3) 50%, rgba(139,92,246,0.15) 100%)' }}>
-            <div className="rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-6"
-              style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.06) 0%, rgba(15,20,40,0.95) 60%, rgba(59,130,246,0.04) 100%)' }}>
-
-              {/* AI icon */}
-              <div className="relative flex-shrink-0">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(59,130,246,0.2) 100%)', border: '1px solid rgba(139,92,246,0.35)' }}>
-                  <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="url(#aiGrad)" strokeWidth="1.5">
-                    <defs>
-                      <linearGradient id="aiGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#A78BFA" />
-                        <stop offset="100%" stopColor="#60A5FA" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z" />
-                    <circle cx="9" cy="9" r="1" fill="#A78BFA" stroke="none" />
-                    <circle cx="15" cy="9" r="1" fill="#60A5FA" stroke="none" />
-                    <path d="M9 15s1 1.5 3 1.5 3-1.5 3-1.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-                {/* Pulse dot */}
-                <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#8B5CF6] border-2 border-[#060B18] flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                </div>
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-sm hover:shadow-md transition-shadow px-8 py-7 flex flex-col sm:flex-row items-center gap-6">
+            {/* AI icon */}
+            <div className="relative flex-shrink-0">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-100 to-blue-100 border border-violet-200">
+                <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" strokeWidth="1.5">
+                  <defs>
+                    <linearGradient id="aiGrad2" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#8B5CF6" />
+                      <stop offset="100%" stopColor="#3B82F6" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z" stroke="url(#aiGrad2)" />
+                  <circle cx="9" cy="9" r="1" fill="#8B5CF6" stroke="none" />
+                  <circle cx="15" cy="9" r="1" fill="#3B82F6" stroke="none" />
+                  <path d="M9 15s1 1.5 3 1.5 3-1.5 3-1.5" stroke="url(#aiGrad2)" strokeLinecap="round" />
+                </svg>
               </div>
+            </div>
 
-              {/* Text */}
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">Zaprojektowane i zbudowane przez</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center sm:justify-start">
-                  <span className="text-[22px] font-black tracking-tight"
-                    style={{ background: 'linear-gradient(90deg, #A78BFA 0%, #60A5FA 50%, #A78BFA 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                    InnowacyjneAI
-                  </span>
-                  <span className="hidden sm:flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-bold text-violet-300 border border-violet-500/30"
-                    style={{ background: 'rgba(139,92,246,0.12)' }}>
-                    AI Agency
-                  </span>
-                </div>
-                <p className="text-[13px] text-white/35 mt-1">
-                  Budujemy inteligentne oprogramowanie i rozwiązania AI dla biznesu
-                </p>
+            {/* Text */}
+            <div className="flex-1 text-center sm:text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#9CA3AF] mb-1">Zaprojektowane i zbudowane przez</p>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <span className="text-[20px] font-black tracking-tight"
+                  style={{ background: 'linear-gradient(90deg, #8B5CF6 0%, #3B82F6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                  InnowacyjneAI
+                </span>
+                <span className="hidden sm:flex items-center h-5 px-2 rounded-full text-[10px] font-bold text-violet-700 bg-violet-100 border border-violet-200">
+                  AI Agency
+                </span>
               </div>
+              <p className="text-[13px] text-[#6B7280] mt-1">
+                Budujemy inteligentne oprogramowanie i rozwiązania AI dla biznesu
+              </p>
+            </div>
 
-              {/* Arrow CTA */}
-              <div className="flex-shrink-0 flex items-center gap-2 text-[13px] font-semibold text-violet-400/70 group-hover:text-violet-300 transition-colors">
-                <span className="hidden sm:block">innowacyjneai.pl</span>
-                <div className="w-8 h-8 rounded-full border border-violet-500/30 flex items-center justify-center group-hover:border-violet-400/60 group-hover:bg-violet-500/10 transition-all"
-                  style={{ background: 'rgba(139,92,246,0.08)' }}>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </div>
+            {/* Arrow */}
+            <div className="flex-shrink-0 flex items-center gap-2 text-[13px] font-semibold text-[#6B7280] group-hover:text-violet-600 transition-colors">
+              <span className="hidden sm:block">innowacyjneai.pl</span>
+              <div className="w-8 h-8 rounded-full border border-[#E5E7EB] group-hover:border-violet-300 group-hover:bg-violet-50 flex items-center justify-center transition-all">
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </div>
           </div>
@@ -741,16 +904,14 @@ export default function HomePage() {
       </section>
 
       {/* ── EMPLOYEE APP SECTION ── */}
-      <section className="py-20 px-6 relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(59,130,246,0.07) 0%, transparent 70%)' }} />
-        <div className="max-w-4xl mx-auto relative z-10">
+      <section className="py-20 px-6 bg-[#F0F2F5]">
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <Pill>📱 Aplikacja mobilna</Pill>
-            <h2 className="text-[32px] md:text-[40px] font-black text-white mt-4 mb-3 leading-tight">
+            <h2 className="text-[32px] md:text-[40px] font-black text-[#111827] mt-4 mb-3 leading-tight">
               Grafik zawsze <GradientText>pod ręką</GradientText>
             </h2>
-            <p className="text-[16px] text-white/40 max-w-xl mx-auto">
+            <p className="text-[16px] text-[#6B7280] max-w-xl mx-auto">
               Pracownicy mogą sprawdzić swój harmonogram na telefonie — iOS i Android.
             </p>
           </div>
@@ -807,52 +968,36 @@ export default function HomePage() {
                 { icon: '📍', title: 'Informacje o lokalizacji', desc: 'Nazwa lokalu i godziny przy każdej zmianie.' },
               ].map(f => (
                 <div key={f.title} className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center text-xl flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-[#E5E7EB] shadow-sm flex items-center justify-center text-xl flex-shrink-0">
                     {f.icon}
                   </div>
                   <div>
-                    <div className="text-[14px] font-semibold text-white mb-0.5">{f.title}</div>
-                    <div className="text-[13px] text-white/40">{f.desc}</div>
+                    <div className="text-[14px] font-semibold text-[#111827] mb-0.5">{f.title}</div>
+                    <div className="text-[13px] text-[#6B7280]">{f.desc}</div>
                   </div>
                 </div>
               ))}
 
-              {/* Download buttons */}
-              <div className="pt-2 space-y-3">
-                <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold">Pobierz aplikację</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href="https://apps.apple.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-5 py-3 rounded-xl border border-white/12 bg-white/5 hover:bg-white/8 transition-all group"
-                  >
-                    <svg viewBox="0 0 24 24" className="w-6 h-6 text-white fill-current flex-shrink-0">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+              {/* Download coming soon */}
+              <div className="pt-2">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
+                  <div className="w-8 h-8 rounded-lg bg-[#F3F4F6] flex items-center justify-center text-[#9CA3AF] flex-shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="5" y="2" width="14" height="20" rx="2" />
+                      <path d="M12 18h.01" />
                     </svg>
-                    <div>
-                      <div className="text-[9px] text-white/40 leading-none">Pobierz z</div>
-                      <div className="text-[13px] font-semibold text-white leading-tight">App Store</div>
-                    </div>
-                  </a>
-                  <a
-                    href="https://play.google.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-5 py-3 rounded-xl border border-white/12 bg-white/5 hover:bg-white/8 transition-all group"
-                  >
-                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current flex-shrink-0" style={{ color: '#4ADE80' }}>
-                      <path d="M3.18 23.76c.3.17.64.24.99.18L14.64 12 3.18.06c-.35-.06-.69.01-.99.18C1.55.73 1.2 1.55 1.2 2.45v19.1c0 .9.35 1.72.98 2.21zM16.09 10.5l2.3-2.3-9.87-5.59L16.09 10.5zM22.35 10.29l-3.26-1.84-2.57 2.57 2.57 2.57 3.3-1.87c.94-.54.94-1.9-.04-1.43zM8.52 13.5l-6-6.02v9.04l6-3.02zm3 1.7l-2.42 1.42 9.87 5.59-7.45-7.01z"/>
-                    </svg>
-                    <div>
-                      <div className="text-[9px] text-white/40 leading-none">Pobierz z</div>
-                      <div className="text-[13px] font-semibold text-white leading-tight">Google Play</div>
-                    </div>
-                  </a>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#374151]">Aplikacja mobilna — wkrótce</p>
+                    <p className="text-[11px] text-[#9CA3AF]">iOS & Android — w przygotowaniu</p>
+                  </div>
+                  <span className="ml-auto px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-600">
+                    Soon
+                  </span>
                 </div>
-                <p className="text-[11px] text-white/20">
-                  Aplikacja dostępna wkrótce w sklepach. Już teraz dostępna jako wersja webowa pod{' '}
-                  <Link href="/employee" className="text-blue-400/60 hover:text-blue-400 transition-colors">/employee</Link>
+                <p className="text-[11px] text-[#9CA3AF] mt-2">
+                  Webowa wersja pracownicza już dostępna pod{' '}
+                  <Link href="/employee" className="text-blue-500 hover:text-blue-600 transition-colors">/employee</Link>
                 </p>
               </div>
             </div>
@@ -860,27 +1005,95 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── BLOG TEASER ── */}
+      <section className="relative max-w-5xl mx-auto px-6 pb-20">
+        <div className="text-center mb-8">
+          <Pill><FileText className="w-3 h-3 text-blue-500" />Blog</Pill>
+          <h2 className="text-[28px] font-black tracking-tight mt-5 mb-2 text-[#111827]">Wiedza dla restauratorów</h2>
+          <p className="text-[14px] text-[#6B7280]">Praktyczne artykuły o food cost, P&amp;L i zarządzaniu gastronomią</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { tag: 'Food Cost', title: 'Jak obliczyć food cost w restauracji i co zrobić gdy jest za wysoki', date: 'Wkrótce' },
+            { tag: 'P&L', title: 'Jak czytać rachunek zysków i strat małego lokalu — krok po kroku', date: 'Wkrótce' },
+            { tag: 'Magazyn', title: 'Kontrola magazynu w gastronomii: jak wykryć skoki i straty surowców', date: 'Wkrótce' },
+          ].map(a => (
+            <div key={a.title} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <span className="inline-flex items-center h-5 px-2.5 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 mb-3">{a.tag}</span>
+              <h3 className="text-[14px] font-bold text-[#111827] leading-snug mb-3">{a.title}</h3>
+              <p className="text-[11px] text-[#9CA3AF]">{a.date}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── LEAD CAPTURE ── */}
+      <LeadCapture />
+
       {/* ── FAQ ── */}
       <FAQSection />
 
-      {/* ── STICKY MOBILE CTA ── */}
-      <StickyMobileCTA />
+      {/* ── STICKY CTA ── */}
+      <StickyCTA />
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/6 py-10 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <OneLinkLogo iconSize={22} textSize="text-[13px]" />
-          <p className="text-[12px] text-white/20">
-            © 2026 OneLink · Zbudowane przez{" "}
-            <a href="https://innowacyjneai.pl/" target="_blank" rel="noopener noreferrer"
-              className="text-violet-400/50 hover:text-violet-400 transition-colors">
-              InnowacyjneAI
-            </a>
-          </p>
-          <div className="flex items-center gap-5">
-            <Link href="/pricing" className="text-[12px] text-white/30 hover:text-white/60 transition-colors">Cennik</Link>
-            <Link href="/auth/login" className="text-[12px] text-white/30 hover:text-white/60 transition-colors">Logowanie</Link>
-            <Link href="/auth/sign-up" className="text-[12px] text-white/30 hover:text-white/60 transition-colors">Rejestracja</Link>
+      <footer className="border-t border-[#E5E7EB] bg-white py-12 px-6">
+        <div className="max-w-5xl mx-auto">
+          {/* Top row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            {/* Brand */}
+            <div className="col-span-2 md:col-span-1">
+              <OneLinkLogo iconSize={22} textSize="text-[13px]" />
+              <p className="text-[12px] text-[#9CA3AF] mt-3 leading-relaxed">
+                System zarządzania dla restauracji, piekarni i sieci gastronomicznych.
+              </p>
+              <a href="mailto:kontakt@onelink.pl" className="text-[12px] text-[#6B7280] hover:text-[#111827] transition-colors mt-3 block">
+                kontakt@onelink.pl
+              </a>
+            </div>
+
+            {/* Product */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Produkt</p>
+              <div className="space-y-2.5">
+                <Link href="/#features" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Funkcje</Link>
+                <Link href="/pricing" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Cennik</Link>
+                <Link href="/#how" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Jak działa</Link>
+                <Link href="/#faq" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">FAQ</Link>
+              </div>
+            </div>
+
+            {/* Company */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Firma</p>
+              <div className="space-y-2.5">
+                <Link href="/about" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">O nas</Link>
+                <Link href="/contact" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Kontakt</Link>
+                <Link href="/security" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Bezpieczeństwo</Link>
+                <a href="https://innowacyjneai.pl/" target="_blank" rel="noopener noreferrer" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">InnowacyjneAI →</a>
+              </div>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Prawne</p>
+              <div className="space-y-2.5">
+                <Link href="/privacy" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Polityka Prywatności</Link>
+                <Link href="/terms" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Regulamin</Link>
+                <Link href="/security" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Bezpieczeństwo danych</Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom row */}
+          <div className="border-t border-[#F3F4F6] pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-[12px] text-[#9CA3AF]">
+              © 2026 OneLink · InnowacyjneAI sp. z o.o. · kontakt@onelink.pl
+            </p>
+            <div className="flex items-center gap-5">
+              <Link href="/auth/login" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Logowanie</Link>
+              <Link href="/auth/sign-up" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Rejestracja</Link>
+            </div>
           </div>
         </div>
       </footer>

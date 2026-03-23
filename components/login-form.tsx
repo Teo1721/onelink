@@ -46,8 +46,6 @@ export function LoginForm() {
       }
       if (!user) throw new Error("Brak użytkownika po zalogowaniu.");
 
-      // Use server-side API to bypass RLS — client-side reads can return null
-      // if RLS blocks the read or the profile row doesn't exist yet.
       const res = await fetch("/api/auth/profile-role");
       if (!res.ok) {
         throw new Error("Nie udało się pobrać profilu użytkownika.");
@@ -70,7 +68,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-1.5">
+        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#6B7280] mb-1.5">
           Adres email
         </label>
         <input
@@ -79,18 +77,18 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="jan@restauracja.pl"
-          className="w-full h-12 px-4 rounded-xl bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 text-[14px] focus:outline-none focus:border-amber-400/70 focus:bg-white transition-all"
+          className="w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
         />
       </div>
 
       <div className="space-y-1.5">
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40">
+          <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#6B7280]">
             Hasło
           </label>
           <Link
             href="/auth/forgot-password"
-            className="text-[12px] text-amber-400/70 hover:text-amber-400 transition-colors"
+            className="text-[12px] text-amber-500 hover:text-amber-600 transition-colors"
           >
             Zapomniałeś hasła?
           </Link>
@@ -102,12 +100,12 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Twoje hasło"
-            className="w-full h-12 px-4 pr-12 rounded-xl bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 text-[14px] focus:outline-none focus:border-amber-400/70 focus:bg-white transition-all"
+            className="w-full h-12 px-4 pr-12 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
           />
           <button
             type="button"
             onClick={() => setShowPw(!showPw)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
           >
             {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -115,7 +113,7 @@ export function LoginForm() {
       </div>
 
       {error && (
-        <div className="text-[12px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <div className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 leading-relaxed">
           {error}
         </div>
       )}
@@ -128,9 +126,9 @@ export function LoginForm() {
         {isLoading ? "Logowanie..." : <><span>Zaloguj się</span><ArrowRight className="w-4 h-4" /></>}
       </button>
 
-      <p className="text-center text-[13px] text-white/30 pt-1">
+      <p className="text-center text-[13px] text-[#9CA3AF] pt-1">
         Nie masz konta?{" "}
-        <Link href="/auth/sign-up" className="text-amber-400/80 hover:text-amber-400 transition-colors font-medium">
+        <Link href="/auth/sign-up" className="text-amber-500 hover:text-amber-600 transition-colors font-semibold">
           Zarejestruj się
         </Link>
       </p>

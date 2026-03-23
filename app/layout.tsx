@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ChatWidget } from "@/components/chat-widget";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -8,8 +9,30 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "OneLink — System Zarządzania Małym Biznesem | P&L, Koszty, Magazyn",
-  description: "OneLink to system zarządzania małym biznesem — P&L w czasie rzeczywistym, kontrola kosztów, magazyn i faktury. Zacznij bezpłatny 7-dniowy trial.",
+  title: "OneLink — System Zarządzania Restauracją | P&L, Food Cost, Magazyn",
+  description: "OneLink to system zarządzania dla restauracji, piekarni i sieci gastronomicznych — P&L w czasie rzeczywistym, kontrola food cost, magazyn i faktury. Zacznij bezpłatny 7-dniowy trial od 19,99 zł/mies.",
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    url: defaultUrl,
+    siteName: "OneLink",
+    title: "OneLink — Wiedz ile zarabiasz. Każdego dnia.",
+    description: "Jeden panel do P&L, kosztów, magazynu i faktur dla właścicieli restauracji i sieci gastronomicznych. Zacznij 7-dniowy trial za darmo.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "OneLink — Dashboard P&L dla restauracji",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OneLink — Wiedz ile zarabiasz. Każdego dnia.",
+    description: "Jeden panel do P&L, kosztów, magazynu i faktur. Trial 7 dni za darmo od 19,99 zł/mies.",
+    images: ["/og-image.png"],
+  },
 };
 
 const inter = Inter({
@@ -24,7 +47,7 @@ const faqJsonLd = {
   "mainEntity": [
     { "@type": "Question", "name": "Co to jest OneLink i dla kogo jest przeznaczony?", "acceptedAnswer": { "@type": "Answer", "text": "OneLink to system zarządzania małym biznesem, który pozwala właścicielom kontrolować P&L, koszty, magazyn i faktury z jednego panelu — w czasie rzeczywistym. Przeznaczony dla właścicieli restauracji, piekarni, cukierni, delikatesów i każdego biznesu, który chce widzieć swoje liczby na bieżąco." } },
     { "@type": "Question", "name": "Czy muszę podawać kartę kredytową przy rejestracji?", "acceptedAnswer": { "@type": "Answer", "text": "Tak, przy rejestracji prosimy o dane karty przez Stripe. Nie pobieramy żadnej opłaty przez 7 dni. Karta jest potrzebna do natychmiastowej aktywacji konta i zabezpieczenia Twoich danych po zakończeniu trialu. Możesz anulować w dowolnym momencie przed upływem 7 dni — żadna płatność nie zostanie pobrana." } },
-    { "@type": "Question", "name": "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", "acceptedAnswer": { "@type": "Answer", "text": "Plany zaczynają się od 299 zł miesięcznie. Szczegóły wszystkich planów znajdziesz na stronie /pricing. Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." } },
+    { "@type": "Question", "name": "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", "acceptedAnswer": { "@type": "Answer", "text": "Plany zaczynają się od 19,99 zł miesięcznie netto (+ VAT). Szczegóły wszystkich planów znajdziesz na stronie /pricing. Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." } },
     { "@type": "Question", "name": "Jak długo trwa wdrożenie i konfiguracja systemu?", "acceptedAnswer": { "@type": "Answer", "text": "Pierwsze konto jest gotowe w około 3 minuty. Pełna konfiguracja z zaproszeniem managerów i połączeniem danych zajmuje do 20 minut. Nie potrzebujesz działu IT ani technicznej wiedzy." } },
     { "@type": "Question", "name": "Czy OneLink integruje się z moim systemem kasowym lub POS?", "acceptedAnswer": { "@type": "Answer", "text": "Tak. OneLink obsługuje import danych z popularnych systemów kasowych oraz import plików CSV. Jeśli korzystasz z konkretnego systemu POS, skontaktuj się z nami — aktywnie rozwijamy integracje." } },
     { "@type": "Question", "name": "Czy managerowie muszą instalować aplikację?", "acceptedAnswer": { "@type": "Answer", "text": "Nie. Managerowie korzystają z aplikacji webowej dostępnej przez przeglądarkę na telefonie lub tablecie — bez instalacji. Dostępna jest też wersja mobilna w App Store i Google Play (wkrótce)." } },
@@ -60,6 +83,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased bg-[#F7F8FA] text-[#111827]`}>
         {children}
+        <ChatWidget />
       </body>
     </html>
   );

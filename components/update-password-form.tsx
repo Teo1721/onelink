@@ -24,8 +24,8 @@ export function UpdatePasswordForm() {
       if (error) throw error;
       setDone(true);
       setTimeout(() => router.push("/auth/login"), 2000);
-    } catch (err: any) {
-      setError(err.message || "Błąd aktualizacji hasła.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Błąd aktualizacji hasła.");
     } finally {
       setLoading(false);
     }
@@ -34,10 +34,10 @@ export function UpdatePasswordForm() {
   if (done) {
     return (
       <div className="text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center mx-auto">
-          <CheckCircle2 className="w-8 h-8 text-green-400" />
+        <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-8 h-8 text-green-500" />
         </div>
-        <p className="text-[14px] text-white/60">Hasło zostało zmienione. Przekierowanie do logowania...</p>
+        <p className="text-[14px] text-[#6B7280]">Hasło zostało zmienione. Przekierowanie do logowania...</p>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export function UpdatePasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-1.5">
+        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#6B7280] mb-1.5">
           Nowe hasło
         </label>
         <div className="relative">
@@ -55,12 +55,12 @@ export function UpdatePasswordForm() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="Min. 8 znaków"
-            className="w-full h-12 px-4 pr-12 rounded-xl bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 text-[14px] focus:outline-none focus:border-amber-400/70 focus:bg-white transition-all"
+            className="w-full h-12 px-4 pr-12 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
           />
           <button
             type="button"
             onClick={() => setShowPw(!showPw)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
           >
             {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -68,7 +68,7 @@ export function UpdatePasswordForm() {
       </div>
 
       {error && (
-        <div className="text-[12px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <div className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           {error}
         </div>
       )}
