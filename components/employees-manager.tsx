@@ -82,11 +82,14 @@ export function EmployeesManager({
   // ── fetch ──
   const fetchEmployees = useCallback(async () => {
     setLoading(true)
+    const locationIds = locations.map(l => l.id)
+    if (!locationIds.length) { setEmployees([]); setLoading(false); return }
     let q = supabase
       .from('employees')
       .select('id, full_name, email, phone, position, status, real_hour_cost, base_rate, user_id, location_id, locations(name)')
       .order('full_name')
     if (filterLoc !== 'all') q = q.eq('location_id', filterLoc)
+    else q = q.in('location_id', locationIds)
     const { data } = await q
     const emps = (data as unknown as Employee[]) ?? []
     setEmployees(emps)
@@ -103,7 +106,7 @@ export function EmployeesManager({
       } catch { /* non-critical */ }
     }
     setLoading(false)
-  }, [supabase, filterLoc])
+  }, [supabase, filterLoc, locations])
 
   useEffect(() => { fetchEmployees() }, [fetchEmployees])
 

@@ -27,33 +27,39 @@ export function LoginForm() {
         error,
       } = await supabase.auth.signInWithPassword({ email, password });
 
-      if (error) throw error;
-      if (!user) throw new Error("Brak użytkownika po zalogowaniu.");
-
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      let role = profile?.role as string | undefined;
-
-      if (!role) {
-        const { data: createdProfile, error: insertError } = await supabase
-          .from("user_profiles")
-          .insert({ id: user.id, role: "employee" })
-          .select("role")
-          .single();
-
-        if (insertError || !createdProfile?.role) {
+      if (error) {
+        if (
+          error.message.toLowerCase().includes("email not confirmed") ||
+          error.message.toLowerCase().includes("not confirmed")
+        ) {
           throw new Error(
-            insertError?.message || "Nie udało się utworzyć profilu użytkownika."
+            "Potwierdź adres email — sprawdź skrzynkę pocztową i kliknij link aktywacyjny. Jeśli nie dostałeś emaila, sprawdź folder Spam."
           );
         }
-        role = createdProfile.role;
+        if (
+          error.message.toLowerCase().includes("invalid login") ||
+          error.message.toLowerCase().includes("invalid credentials")
+        ) {
+          throw new Error("Nieprawidłowy email lub hasło.");
+        }
+        throw error;
+      }
+      if (!user) throw new Error("Brak użytkownika po zalogowaniu.");
+
+      // Use server-side API to bypass RLS — client-side reads can return null
+      // if RLS blocks the read or the profile row doesn't exist yet.
+      const res = await fetch("/api/auth/profile-role");
+      if (!res.ok) {
+        throw new Error("Nie udało się pobrać profilu użytkownika.");
+      }
+      const { role } = await res.json();
+
+      if (!role) {
+        router.push("/pricing");
+        return;
       }
 
-      router.push(getDashboardRoute(role!));
+      router.push(getDashboardRoute(role));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Błąd logowania.");
     } finally {

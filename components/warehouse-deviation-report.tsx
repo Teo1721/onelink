@@ -24,11 +24,13 @@ interface DeviationRecord {
 interface WarehouseDeviationProps {
   deviations?: DeviationRecord[]
   onExplain?: (id: string, notes: string) => void
+  companyId?: string | null
 }
 
 export function WarehouseDeviationReport({
   deviations: initialDeviations,
-  onExplain
+  onExplain,
+  companyId,
 }: WarehouseDeviationProps) {
   const supabase = createClient()
   const [deviations, setDeviations] = useState<DeviationRecord[]>(initialDeviations || [])
@@ -41,17 +43,20 @@ export function WarehouseDeviationReport({
 
   useEffect(() => {
     fetchDeviations()
-  }, [periodStart, periodEnd])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodStart, periodEnd, companyId])
 
   const fetchDeviations = async () => {
     setLoading(true)
     try {
-      const { data: deviationData, error: devError } = await supabase
+      let devQuery = supabase
         .from('warehouse_deviations')
         .select('*')
         .gte('period_start', periodStart)
         .lte('period_end', periodEnd)
         .order('deviation_pct', { ascending: false })
+      if (companyId) devQuery = devQuery.eq('company_id', companyId)
+      const { data: deviationData, error: devError } = await devQuery
 
       if (devError) {
         setDeviations([])
@@ -59,7 +64,9 @@ export function WarehouseDeviationReport({
         return
       }
 
-      const { data: ingredientData } = await supabase.from('ingredients').select('id, name, category')
+      let ingQuery = supabase.from('ingredients').select('id, name, category')
+      if (companyId) ingQuery = ingQuery.eq('company_id', companyId)
+      const { data: ingredientData } = await ingQuery
 
       const transformed = (deviationData || []).map((dev: any) => {
         const ingredient = ingredientData?.find((i: any) => i.id === dev.ingredient_id)

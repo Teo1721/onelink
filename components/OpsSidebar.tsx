@@ -1,7 +1,7 @@
 'use client'
 
 import { OneLinkLogo } from "@/components/onelink-logo";
-import { LayoutDashboard, FileText, ClipboardList, LogOut, MapPin, Calendar, Users } from 'lucide-react'
+import { LayoutDashboard, FileText, ClipboardList, LogOut, MapPin, Calendar, Users, Settings } from 'lucide-react'
 
 type OpsSidebarProps = {
   locationName: string
@@ -24,6 +24,10 @@ export function OpsSidebar({
     { key: 'inventory',  label: 'Inwentaryzacja',   icon: ClipboardList },
     { key: 'scheduling', label: 'Harmonogram',      icon: Calendar },
     { key: 'employees',  label: 'Pracownicy',       icon: Users },
+  ]
+
+  const bottomItems = [
+    { key: 'account', label: 'Konto', icon: Settings },
   ]
 
   return (
@@ -75,7 +79,28 @@ export function OpsSidebar({
       </nav>
 
       {/* Footer */}
-      <div className="px-2 py-2 border-t border-[#E5E7EB] shrink-0">
+      <div className="px-2 py-2 border-t border-[#E5E7EB] shrink-0 space-y-0.5">
+        {bottomItems.map(({ key, label, icon: Icon }) => {
+          const isActive = activeView === key
+          return (
+            <button
+              key={key}
+              onClick={() => onNavigate(key)}
+              className={[
+                'relative w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium transition-colors duration-100 cursor-pointer',
+                isActive
+                  ? 'bg-[#EFF6FF] text-[#2563EB]'
+                  : 'text-[#374151] hover:bg-[#F9FAFB] hover:text-[#111827]',
+              ].join(' ')}
+            >
+              {isActive && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[#2563EB]" />
+              )}
+              <Icon className="w-[15px] h-[15px] shrink-0" />
+              <span>{label}</span>
+            </button>
+          )
+        })}
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium text-[#6B7280] hover:bg-[#FEF2F2] hover:text-[#DC2626] transition-colors"

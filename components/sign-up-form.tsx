@@ -38,35 +38,68 @@ export function SignUpForm() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/login`,
         },
       });
-      if (error) throw error;
 
-      const user = data.user;
-      if (user) {
-        const { data: company, error: companyError } = await supabase
-          .from("companies")
-          .insert({ name: companyName.trim() })
-          .select("id")
-          .single();
-
-        if (companyError) throw companyError;
-
-        await supabase.from("user_profiles").upsert({
-          id: user.id,
-          role: "owner",
-          company_id: (company as any).id,
-        });
+      if (signUpError) {
+        // "User already registered" — friendly message
+        if (
+          signUpError.message.toLowerCase().includes("already registered") ||
+          signUpError.message.toLowerCase().includes("already been registered")
+        ) {
+          setError("Ten adres email jest już zarejestrowany. Zaloguj się lub zresetuj hasło.");
+          return;
+        }
+        throw signUpError;
       }
 
-      router.push("/auth/sign-up-success");
+      // Supabase returns a user with empty identities when email confirmation is ON
+      // and the email already exists — treat as "already registered"
+      if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        setError("Ten adres email jest już zarejestrowany. Zaloguj się lub zresetuj hasło.");
+        return;
+      }
+
+      const userId = data.user?.id;
+      if (!userId) {
+        // Should not happen, but guard anyway
+        setError("Rejestracja nie powiodła się. Spróbuj ponownie.");
+        return;
+      }
+
+      // Create company + profile on the server (uses service role — bypasses RLS,
+      // works regardless of email confirmation setting, and also confirms the email
+      // so the user can log in immediately without clicking a link).
+      const res = await fetch("/api/auth/complete-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, companyName: companyName.trim() }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? "Nie udało się skonfigurować konta.");
+      }
+
+      // Auto sign-in now that email is confirmed — the user shouldn't need to
+      // go through a separate login step just after registering.
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (signInError) {
+        // Sign-in failed for some reason — fall back to the login page
+        router.push("/auth/login");
+        return;
+      }
+
+      // Successfully signed in — send them to pricing to choose a plan
+      router.push("/pricing");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Błąd rejestracji.");
+      setError(err instanceof Error ? err.message : "Błąd rejestracji. Spróbuj ponownie.");
     } finally {
       setIsLoading(false);
     }
@@ -149,8 +182,16 @@ export function SignUpForm() {
       </div>
 
       {error && (
-        <div className="text-[12px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <div className="text-[12px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 leading-relaxed">
           {error}
+          {(error.includes("już zarejestrowany") || error.includes("already registered")) && (
+            <span>
+              {" "}
+              <Link href="/auth/login" className="underline text-amber-400/80 hover:text-amber-400">
+                Zaloguj się →
+              </Link>
+            </span>
+          )}
         </div>
       )}
 

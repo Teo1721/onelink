@@ -82,7 +82,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("subscription_active, company_id, subscription_plan, role")
+        .select("subscription_active, company_id, subscription_plan, role, stripe_customer_id")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -109,9 +109,20 @@ export async function updateSession(request: NextRequest) {
       const role = profile?.role;
       const isOwnerLike = role === "owner" || role === "superadmin";
 
-      // If subscription is not active, user is not in a bypass group,
-      // and this is an owner/superadmin, send them to pricing.
-      if (!profile?.subscription_active && !isAkabGroup && isOwnerLike) {
+      // Subscription enforcement logic:
+      // - subscription_active === true  → allow (active/trialing subscription)
+      // - subscription_active === null  → allow if they have a stripe_customer_id
+      //     (they went through checkout; webhook may still be pending)
+      //   → block (redirect to pricing) if no stripe_customer_id (never paid)
+      // - subscription_active === false → block (explicitly canceled)
+      const hasStripeCustomer = !!profile?.stripe_customer_id;
+      const needsPricing =
+        isOwnerLike &&
+        !isAkabGroup &&
+        !profile?.subscription_active &&
+        !(profile?.subscription_active === null && hasStripeCustomer);
+
+      if (needsPricing) {
         const url = request.nextUrl.clone();
         url.pathname = "/pricing";
         return NextResponse.redirect(url);

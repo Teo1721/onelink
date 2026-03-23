@@ -1,14 +1,37 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
+import { CheckCircle2, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { OneLinkLogo } from "@/components/onelink-logo";
 
 function BillingSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get("session_id");
+  const [syncing, setSyncing] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Proactively sync the subscription so the middleware lets the user in.
+    // The Stripe webhook is async and may not have fired yet.
+    const sync = async () => {
+      try {
+        await fetch("/api/billing/sync-subscription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+      } catch {
+        // If sync fails, we still let the user proceed —
+        // the webhook will catch up, and worst case they hit pricing once more.
+      } finally {
+        setSyncing(false);
+        setReady(true);
+      }
+    };
+    sync();
+  }, [sessionId]);
 
   return (
     <main
@@ -70,19 +93,23 @@ function BillingSuccessContent() {
             ))}
           </div>
 
-          {sessionId && (
-            <p className="text-[11px] text-white/20 font-mono mb-6 break-all">
-              ID sesji: {sessionId}
-            </p>
-          )}
-
           <button
             onClick={() => router.push("/admin")}
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
+            disabled={syncing}
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-70"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Przejdź do panelu</span>
-            <ArrowRight className="w-4 h-4" />
+            {syncing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Aktywowanie...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Przejdź do panelu</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
       </div>

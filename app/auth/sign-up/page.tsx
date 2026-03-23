@@ -83,6 +83,14 @@ export default function SignUpPage() {
               <h2 className="text-[24px] font-bold text-white mb-1">Utwórz konto</h2>
               <p className="text-[13px] text-white/40">Wypełnij dane i zacznij trial</p>
             </div>
+
+            {/* Card framing trust message */}
+            <div className="mb-6 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
+              <p className="text-[12px] text-amber-200/70 leading-relaxed">
+                <span className="font-semibold text-amber-300/90">Dlaczego prosimy o kartę?</span> Aktywujemy konto natychmiast i masz pewność, że po trialu nie stracisz danych. Możesz anulować w każdej chwili w ciągu 7 dni — bez żadnych opłat.
+              </p>
+            </div>
+
             <SignUpForm />
           </div>
         </div>

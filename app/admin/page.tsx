@@ -15,7 +15,8 @@ import {
   Lock, RefreshCw, Loader2, XCircle,
   ChevronRight, Edit2, ToggleLeft, ToggleRight,
   Clock, TrendingUp, AlertCircle, FileText, Receipt, Bell,
-  ThumbsUp, ThumbsDown, ExternalLink, ImageIcon
+  ThumbsUp, ThumbsDown, ExternalLink, ImageIcon,
+  User, CreditCard, LogOut, ShieldCheck, Settings,
 } from 'lucide-react'
 import { MenuPricingTable } from '@/components/menu-pricing-table'
 import { MenuPriceCalculator } from '@/components/menu-price-calculator'
@@ -24,6 +25,8 @@ import { CentralWarehousePanel } from '@/components/central-warehouse-panel'
 import { DishesManager } from '@/components/dishes-manager'
 import { DashboardCharts } from '@/components/dashboard-charts'
 import { EmployeesManager } from '@/components/employees-manager'
+import { ScheduleGrid } from '@/components/schedule-grid'
+import type { ScheduleEmployee } from '@/components/schedule-grid'
 import type { WeekDay } from '@/components/dashboard-charts'
 
 
@@ -64,7 +67,7 @@ function IngredientsSection({ supabase, companyId }: { supabase: SupabaseClient;
   }, [search, categoryFilter, sortBy, sortDir]);
 
   async function fetchIngredients() {
-    let query = supabase.from("ingredients").select("id,name,category,base_unit,min_threshold,last_price");
+    let query = supabase.from("ingredients").select("id,name,category,base_unit,min_threshold,last_price").eq("company_id", companyId);
     if (search) query = query.ilike("name", `%${search}%`);
     if (categoryFilter) query = query.eq("category", categoryFilter);
     query = query.order(sortBy, { ascending: sortDir === "asc" });
@@ -427,7 +430,8 @@ type ActiveView =
   | 'reports' | 'history' | 'imported'
   | 'menu_pricing' | 'menu_calculator' | 'warehouse_deviations'
   | 'central_warehouse'
-  | 'admin_users' | 'employees'
+  | 'admin_users' | 'employees' | 'schedule'
+  | 'account'
 
 /* ================================================================== */
 /*  HELPERS                                                            */
@@ -470,6 +474,226 @@ const SEMIS_CATEGORIES: Record<string, string> = {
 }
 
 /* ================================================================== */
+/*  ACCOUNT VIEW                                                       */
+/* ================================================================== */
+const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  plan1: { label: 'Start',   color: '#2563EB', bg: '#DBEAFE' },
+  plan2: { label: 'Rozwój',  color: '#7C3AED', bg: '#EDE9FE' },
+  plan3: { label: 'Sieć',    color: '#065F46', bg: '#D1FAE5' },
+  trial: { label: 'Trial',   color: '#92400E', bg: '#FEF3C7' },
+}
+
+type AccountProfile = {
+  email: string; full_name: string
+  subscription_plan: string | null; stripe_customer_id: string | null
+  subscription_active: boolean | null; subscription_status: string | null
+  current_period_end: string | null
+}
+
+function AdminAccountView({ supabase, router }: { supabase: ReturnType<typeof createClient>; router: ReturnType<typeof useRouter> }) {
+  const [profile, setProfile] = useState<AccountProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [error, setError] = useState('')
+  const [showDelete, setShowDelete] = useState(false)
+
+  useEffect(() => {
+    // Use server-side API so admin client bypasses RLS — direct client reads are blocked
+    fetch('/api/account/profile')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) setError(data.error)
+        else setProfile(data as AccountProfile)
+      })
+      .catch(() => setError('Nie udało się załadować danych konta.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const openPortal = async () => {
+    setPortalLoading(true); setError('')
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const json = await res.json()
+      if (json.url) window.location.href = json.url
+      else setError(json.error ?? 'Nie można otworzyć portalu Stripe.')
+    } catch { setError('Błąd połączenia z serwerem.') }
+    finally { setPortalLoading(false) }
+  }
+
+  const handleDelete = async () => {
+    if (deleteConfirm !== 'USUŃ KONTO') return
+    setDeleteLoading(true); setDeleteError('')
+    try {
+      const res = await fetch('/api/admin/delete-account', { method: 'DELETE' })
+      if (res.ok) { await supabase.auth.signOut(); router.push('/') }
+      else { const j = await res.json(); setDeleteError(j.error ?? 'Nie udało się usunąć konta.') }
+    } catch { setDeleteError('Błąd połączenia z serwerem.') }
+    finally { setDeleteLoading(false) }
+  }
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+
+  const plan = profile?.subscription_plan ? (PLAN_LABELS[profile.subscription_plan] ?? PLAN_LABELS['trial']) : PLAN_LABELS['trial']
+  const hasStripe = !!profile?.stripe_customer_id
+  const periodEnd = profile?.current_period_end
+    ? new Date(profile.current_period_end).toLocaleDateString('pl-PL', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <header className="mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">Zarządzaj kontem</h1>
+        <p className="text-sm text-gray-500 mt-1">Subskrypcja, dane konta, usunięcie konta</p>
+      </header>
+
+      {error && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Profile */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="w-4 h-4 text-gray-500" />Profil
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between py-2 border-b border-gray-100">
+            <span className="text-sm text-gray-500">E-mail</span>
+            <span className="text-sm font-medium text-gray-900">{profile?.email ?? '—'}</span>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-gray-100">
+            <span className="text-sm text-gray-500">Imię i nazwisko</span>
+            <span className="text-sm font-medium text-gray-900">{profile?.full_name || '—'}</span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-500">Plan</span>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ color: plan.color, background: plan.bg }}>
+              {plan.label}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subscription */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-gray-500" />Subskrypcja
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hasStripe ? (
+            <>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Zarządzaj subskrypcją przez bezpieczny portal Stripe — zmień plan, zaktualizuj kartę lub anuluj subskrypcję.
+              </p>
+              {periodEnd && (
+                <p className="text-xs text-gray-400">Następne odnowienie / koniec okresu: <span className="font-medium text-gray-600">{periodEnd}</span></p>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <button onClick={openPortal} disabled={portalLoading}
+                  className="flex items-center gap-2 h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60">
+                  {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                  Otwórz portal Stripe
+                </button>
+                <button onClick={() => router.push('/pricing')}
+                  className="flex items-center gap-2 h-10 px-5 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors">
+                  <RefreshCw className="w-4 h-4" />Zmień plan
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-4 pt-1">
+                {[
+                  { icon: ShieldCheck, text: 'Płatności obsługuje Stripe' },
+                  { icon: CheckCircle, text: 'Anuluj kiedy chcesz' },
+                  { icon: RefreshCw, text: 'Zmiana planu od razu' },
+                ].map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-1.5 text-xs text-gray-400">
+                    <Icon className="w-3.5 h-3.5 text-green-500" />{text}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500 leading-relaxed">Nie masz aktywnej subskrypcji. Wybierz plan aby uzyskać pełny dostęp.</p>
+              <button onClick={() => router.push('/pricing')}
+                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition-all shadow-md shadow-amber-500/20">
+                <ChevronRight className="w-4 h-4" />Wybierz plan
+              </button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sign out */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <LogOut className="w-4 h-4 text-gray-500" />Wyloguj się
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 mb-4">Wyloguj się z wszystkich urządzeń. Twoje dane pozostają zachowane.</p>
+          <button onClick={async () => { await supabase.auth.signOut(); router.push('/auth/login') }}
+            className="flex items-center gap-2 h-9 px-4 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            <LogOut className="w-3.5 h-3.5" />Wyloguj
+          </button>
+        </CardContent>
+      </Card>
+
+      {/* Danger zone */}
+      <Card className="border-red-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-red-600">
+            <XCircle className="w-4 h-4" />Strefa niebezpieczna
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Usunięcie konta jest nieodwracalne. Wszystkie dane, raporty, faktury i konfiguracja zostaną trwale usunięte.
+          </p>
+          {!showDelete ? (
+            <button onClick={() => setShowDelete(true)}
+              className="flex items-center gap-2 h-9 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />Usuń konto
+            </button>
+          ) : (
+            <div className="space-y-3 p-4 rounded-xl bg-red-50 border border-red-200">
+              <p className="text-sm font-semibold text-red-800">
+                Wpisz <span className="font-mono bg-red-100 px-1 rounded">USUŃ KONTO</span> aby potwierdzić
+              </p>
+              <input type="text" value={deleteConfirm}
+                onChange={e => { setDeleteConfirm(e.target.value); setDeleteError('') }}
+                placeholder="USUŃ KONTO"
+                className="w-full h-9 px-3 rounded-lg border border-red-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400" />
+              {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleDelete} disabled={deleteConfirm !== 'USUŃ KONTO' || deleteLoading}
+                  className="flex items-center gap-2 h-9 px-4 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-40">
+                  {deleteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Potwierdź usunięcie
+                </button>
+                <button onClick={() => { setShowDelete(false); setDeleteConfirm(''); setDeleteError('') }}
+                  className="h-9 px-4 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                  Anuluj
+                </button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/* ================================================================== */
 /*  COMPONENT                                                          */
 /* ================================================================== */
 export default function AdminDashboard() {
@@ -488,6 +712,10 @@ export default function AdminDashboard() {
   const [companyId, setCompanyId] = useState('')
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
+
+  // ── Schedule ──
+  const [scheduleLocationId, setScheduleLocationId] = useState<string>('')
+  const [scheduleEmployees, setScheduleEmployees] = useState<ScheduleEmployee[]>([])
 
   // ── Notifications ──
   const [notifications, setNotifications] = useState<AdminNotification[]>([])
@@ -602,13 +830,13 @@ export default function AdminDashboard() {
       setCompanyId(profile?.company_id || '')
       setSubscriptionPlan((profile as any)?.subscription_plan || null)
 
-      // Load locations — filter by company_id if set, otherwise show all (legacy accounts)
+      // Load locations — strictly scoped to this company
       let locQuery = supabase
         .from('locations')
         .select('id, name, company_id')
         .order('name')
       if (profile?.company_id) {
-        locQuery = locQuery.or(`company_id.eq.${profile.company_id},company_id.is.null`)
+        locQuery = locQuery.eq('company_id', profile.company_id)
       }
       const { data: locData } = await locQuery
       if (locData) setLocations(locData as LocationRow[])
@@ -648,6 +876,31 @@ export default function AdminDashboard() {
 
     return () => { supabase.removeChannel(channel) }
   }, [supabase, companyId])
+
+  // ── Schedule: sync default location and load employees ──
+  useEffect(() => {
+    if (locations.length > 0 && !scheduleLocationId) {
+      setScheduleLocationId(locations[0].id)
+    }
+  }, [locations])
+
+  useEffect(() => {
+    if (activeView !== 'schedule' || !scheduleLocationId) return
+    supabase.from('employees')
+      .select('id, full_name, real_hour_cost, base_rate, user_id, position, phone')
+      .eq('location_id', scheduleLocationId)
+      .neq('status', 'inactive')
+      .then(({ data }) => {
+        if (data) setScheduleEmployees(data.map((e: any) => ({
+          id: e.id, full_name: e.full_name,
+          real_hour_cost: e.real_hour_cost ?? null,
+          base_rate: e.base_rate ?? null,
+          user_id: e.user_id ?? null,
+          position: e.position ?? null,
+          phone: e.phone ?? null,
+        })))
+      })
+  }, [activeView, scheduleLocationId, supabase])
 
   // Fetch alerts — scoped to company via company_id
   const fetchAlerts = async () => {
@@ -1602,6 +1855,12 @@ export default function AdminDashboard() {
       />
 
       <main className="flex-1 ml-[216px] p-8">
+        {/* ── ACCOUNT VIEW ── */}
+        {activeView === 'account' && (
+          <AdminAccountView supabase={supabase} router={router} />
+        )}
+
+        {activeView !== 'account' && <>
         {/* ── TOP BAR ── */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-white border border-[#E5E7EB] rounded-lg px-3 h-9">
@@ -3015,7 +3274,7 @@ export default function AdminDashboard() {
         {activeView === 'warehouse_deviations' && (
           <div>
             <h1 className="text-[22px] font-bold text-[#111827] tracking-tight mb-6">Raport odchyleń magazynu</h1>
-            <WarehouseDeviationReport />
+            <WarehouseDeviationReport companyId={companyId} />
           </div>
         )}
 
@@ -3028,6 +3287,34 @@ export default function AdminDashboard() {
             <CentralWarehousePanel companyId={companyId} />
           </div>
         )}
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/*  SCHEDULE / GRAFIK PRACY                               */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {activeView === 'schedule' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Grafik pracy</h1>
+              {locations.length > 1 && (
+                <select
+                  value={scheduleLocationId}
+                  onChange={e => setScheduleLocationId(e.target.value)}
+                  className="h-8 rounded-lg border border-[#E5E7EB] px-2 text-[13px] bg-white"
+                >
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <ScheduleGrid
+              locationId={scheduleLocationId || undefined}
+              employees={scheduleEmployees}
+              supabase={supabase}
+            />
+          </div>
+        )}
+        </>}
       </main>
     </div>
   )

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 
 export async function POST(request: Request) {
@@ -32,8 +33,11 @@ export async function POST(request: Request) {
       // no JSON body provided – that's fine, we'll fall back to default price
     }
 
+    // Use admin client to bypass RLS when reading/writing the profile
+    const admin = createAdminClient();
+
     // Ensure we have a customer in Stripe and saved on the profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await admin
       .from("user_profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
@@ -55,7 +59,7 @@ export async function POST(request: Request) {
       });
       customerId = customer.id;
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await admin
         .from("user_profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);

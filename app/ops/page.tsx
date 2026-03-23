@@ -17,7 +17,8 @@ import {
   AlertCircle, FileSpreadsheet, Save, CheckCircle, Plus,
   Trash2, AlertTriangle, ShieldAlert, Package, Receipt, FileText,
   ClipboardList, Search, ArrowLeft, Send, Clock, ChevronRight,
-  Loader2, Calendar, RefreshCw,
+  Loader2, Calendar, RefreshCw, User, CreditCard, LogOut,
+  ExternalLink, ShieldCheck, XCircle,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
@@ -96,7 +97,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -211,6 +212,289 @@ const buildWeekDays = (weekStart: string): { iso: string; label: string }[] => {
 }
 
 /* ================================================================== */
+/* ACCOUNT VIEW COMPONENT                                              */
+/* ================================================================== */
+const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  start:    { label: 'Start',   color: '#6B7280', bg: '#F3F4F6' },
+  rozwoj:   { label: 'Rozwój',  color: '#2563EB', bg: '#EFF6FF' },
+  siec:     { label: 'Sieć',    color: '#7C3AED', bg: '#F5F3FF' },
+  trial:    { label: 'Trial',   color: '#D97706', bg: '#FFFBEB' },
+}
+
+type AccountViewProps = {
+  supabase: ReturnType<typeof createClient>
+  router: ReturnType<typeof useRouter>
+  accountProfile: { email: string; full_name: string; plan_code: string | null; stripe_customer_id: string | null } | null
+  setAccountProfile: (p: AccountViewProps['accountProfile']) => void
+  accountLoading: boolean
+  setAccountLoading: (v: boolean) => void
+  portalLoading: boolean
+  setPortalLoading: (v: boolean) => void
+  deleteConfirm: string
+  setDeleteConfirm: (v: string) => void
+  deleteLoading: boolean
+  setDeleteLoading: (v: boolean) => void
+  deleteError: string
+  setDeleteError: (v: string) => void
+  accountError: string
+  setAccountError: (v: string) => void
+}
+
+function AccountView({
+  supabase, router,
+  accountProfile, setAccountProfile,
+  accountLoading, setAccountLoading,
+  portalLoading, setPortalLoading,
+  deleteConfirm, setDeleteConfirm,
+  deleteLoading, setDeleteLoading,
+  deleteError, setDeleteError,
+  accountError, setAccountError,
+}: AccountViewProps) {
+  const [showDeleteSection, setShowDeleteSection] = useState(false)
+
+  useEffect(() => {
+    if (accountProfile) return
+    setAccountLoading(true)
+    setAccountError('')
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setAccountLoading(false); return }
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('full_name, plan_code, stripe_customer_id')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (error) setAccountError(error.message)
+      else setAccountProfile({ email: user.email ?? '', full_name: data?.full_name ?? '', plan_code: data?.plan_code ?? null, stripe_customer_id: data?.stripe_customer_id ?? null })
+      setAccountLoading(false)
+    })
+  }, [])
+
+  const openPortal = async () => {
+    setPortalLoading(true)
+    setAccountError('')
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const json = await res.json()
+      if (json.url) window.location.href = json.url
+      else setAccountError(json.error ?? 'Nie można otworzyć portalu Stripe.')
+    } catch {
+      setAccountError('Błąd połączenia z serwerem.')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'USUŃ KONTO') return
+    setDeleteLoading(true)
+    setDeleteError('')
+    try {
+      const res = await fetch('/api/admin/delete-account', { method: 'POST' })
+      if (res.ok) {
+        await supabase.auth.signOut()
+        router.push('/')
+      } else {
+        const json = await res.json()
+        setDeleteError(json.error ?? 'Nie udało się usunąć konta.')
+      }
+    } catch {
+      setDeleteError('Błąd połączenia z serwerem.')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  const plan = accountProfile?.plan_code ? PLAN_LABELS[accountProfile.plan_code] ?? PLAN_LABELS['trial'] : PLAN_LABELS['trial']
+  const hasStripe = !!accountProfile?.stripe_customer_id
+
+  if (accountLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <header className="mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">Zarządzaj kontem</h1>
+        <p className="text-sm text-gray-500 mt-1">Subskrypcja, dane konta, usunięcie konta</p>
+      </header>
+
+      {accountError && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{accountError}</span>
+        </div>
+      )}
+
+      {/* ── Profile card ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="w-4 h-4 text-gray-500" />
+            Profil
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between py-2 border-b border-gray-100">
+            <span className="text-sm text-gray-500">E-mail</span>
+            <span className="text-sm font-medium text-gray-900">{accountProfile?.email ?? '—'}</span>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-gray-100">
+            <span className="text-sm text-gray-500">Imię i nazwisko</span>
+            <span className="text-sm font-medium text-gray-900">{accountProfile?.full_name || '—'}</span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-500">Plan</span>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ color: plan.color, background: plan.bg }}>
+              {plan.label}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Subscription card ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-gray-500" />
+            Subskrypcja
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hasStripe ? (
+            <>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Zarządzaj swoją subskrypcją przez bezpieczny portal Stripe — zmień plan, zaktualizuj metodę płatności lub anuluj subskrypcję.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={openPortal}
+                  disabled={portalLoading}
+                  className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60"
+                >
+                  {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                  Otwórz portal Stripe
+                </button>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Zmień plan
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-4 pt-1">
+                {[
+                  { icon: ShieldCheck, text: 'Płatności obsługuje Stripe' },
+                  { icon: CheckCircle, text: 'Anuluj kiedy chcesz' },
+                  { icon: RefreshCw, text: 'Zmiana planu od razu' },
+                ].map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-1.5 text-xs text-gray-400">
+                    <Icon className="w-3.5 h-3.5 text-green-500" />
+                    {text}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Nie masz aktywnej subskrypcji. Wybierz plan aby uzyskać pełny dostęp do platformy.
+              </p>
+              <button
+                onClick={() => router.push('/pricing')}
+                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition-all shadow-md shadow-amber-500/20"
+              >
+                <ChevronRight className="w-4 h-4" />
+                Wybierz plan
+              </button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Sign out ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <LogOut className="w-4 h-4 text-gray-500" />
+            Wyloguj się
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 mb-4">Wyloguj się ze wszystkich urządzeń. Twoje dane pozostają zachowane.</p>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); router.push('/auth/login') }}
+            className="flex items-center gap-2 h-9 px-4 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Wyloguj
+          </button>
+        </CardContent>
+      </Card>
+
+      {/* ── Delete account ── */}
+      <Card className="border-red-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-red-600">
+            <XCircle className="w-4 h-4" />
+            Strefa niebezpieczna
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Usunięcie konta jest nieodwracalne. Wszystkie dane, raporty, faktury i konfiguracja zostaną trwale usunięte po 30 dniach.
+          </p>
+
+          {!showDeleteSection ? (
+            <button
+              onClick={() => setShowDeleteSection(true)}
+              className="flex items-center gap-2 h-9 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Usuń konto
+            </button>
+          ) : (
+            <div className="space-y-3 p-4 rounded-xl bg-red-50 border border-red-200">
+              <p className="text-sm font-semibold text-red-800">
+                Wpisz <span className="font-mono bg-red-100 px-1 rounded">USUŃ KONTO</span> aby potwierdzić
+              </p>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={e => { setDeleteConfirm(e.target.value); setDeleteError('') }}
+                placeholder="USUŃ KONTO"
+                className="w-full h-9 px-3 rounded-lg border border-red-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+              {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirm !== 'USUŃ KONTO' || deleteLoading}
+                  className="flex items-center gap-2 h-9 px-4 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-40"
+                >
+                  {deleteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Potwierdź usunięcie
+                </button>
+                <button
+                  onClick={() => { setShowDeleteSection(false); setDeleteConfirm(''); setDeleteError('') }}
+                  className="h-9 px-4 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Anuluj
+                </button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/* ================================================================== */
 /* COMPONENT                                                           */
 /* ================================================================== */
 export default function OpsDashboard() {
@@ -229,6 +513,15 @@ export default function OpsDashboard() {
   const [scheduleWeekStart, setScheduleWeekStart] = useState('')
   const [reportingSubView, setReportingSubView] = useState<'form' | 'history'>('form')
   const [dailyReportHistory, setDailyReportHistory] = useState<DailyReportHistoryItem[]>([])
+
+  // ── Account management ──
+  const [accountProfile, setAccountProfile] = useState<{ email: string; full_name: string; plan_code: string | null; stripe_customer_id: string | null } | null>(null)
+  const [accountLoading, setAccountLoading] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [accountError, setAccountError] = useState('')
 
   // ── Closing person ──
   const [closingPersonName, setClosingPersonName] = useState('')
@@ -1224,6 +1517,30 @@ export default function OpsDashboard() {
             companyId={selectedLocation.locations?.company_id ?? ''}
             locations={[{ id: selectedLocation.location_id, name: selectedLocation.locations?.name ?? '' }]}
             defaultLocationId={selectedLocation.location_id}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  ACCOUNT MANAGEMENT                                     ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'account' && (
+          <AccountView
+            supabase={supabase}
+            router={router}
+            accountProfile={accountProfile}
+            setAccountProfile={setAccountProfile}
+            accountLoading={accountLoading}
+            setAccountLoading={setAccountLoading}
+            portalLoading={portalLoading}
+            setPortalLoading={setPortalLoading}
+            deleteConfirm={deleteConfirm}
+            setDeleteConfirm={setDeleteConfirm}
+            deleteLoading={deleteLoading}
+            setDeleteLoading={setDeleteLoading}
+            deleteError={deleteError}
+            setDeleteError={setDeleteError}
+            accountError={accountError}
+            setAccountError={setAccountError}
           />
         )}
 

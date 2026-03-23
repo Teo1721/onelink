@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   TrendingUp, BarChart3, Package, Receipt, ShieldCheck,
   ChevronRight, Check, ArrowRight, Zap, Star,
-  Clock, PieChart, FileText,
+  Clock, PieChart, FileText, ChevronDown,
 } from "lucide-react";
 
 /* ── tiny helpers ── */
@@ -61,16 +62,126 @@ const FEATURES = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Marek W.", role: "Właściciel, 3 lokale", text: "Pierwszy raz w życiu wiem co się dzieje w moich restauracjach bez dzwonienia do managerów. Food cost spadł o 4 punkty." },
-  { name: "Agnieszka K.", role: "CEO, sieć kawiarni", text: "Zamknięcie dnia zajmuje teraz 10 minut zamiast godziny. Managerowie mają jeden formularz, ja mam pełny raport." },
-  { name: "Tomasz R.", role: "Właściciel, bistro", text: "Wykryłem że jeden składnik regularnie 'znika'. Bez GastroApp nigdy bym tego nie zauważył. Odbiłem 1 800 zł miesięcznie." },
+  { name: "Marek W.", role: "właściciel — Fabryka Pączków (2 lokale)", text: "Pierwszy raz w życiu wiem co się dzieje w moich lokalach bez dzwonienia do managerów. Koszt surowca spadł o 4 punkty procentowe w trzy miesiące." },
+  { name: "Agnieszka K.", role: "CEO — Piekarnia Matusik (sieć 4 punktów)", text: "Zamknięcie dnia zajmuje teraz 10 minut zamiast godziny. Managerowie wpisują dane przez telefon, ja rano widzę pełny raport. Nie wiem jak funkcjonowałam bez tego." },
+  { name: "Tomasz R.", role: "właściciel — Swojska Spiżarnia (delikatesy + dostawa)", text: "Wykryłem że jeden składnik regularnie znikał ze stanu. Bez OneLink nigdy bym tego nie zauważył. Odbiłem 1 800 zł miesięcznie tylko na tym." },
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Zaloguj manager", desc: "Manager lokal dostaje konto i zaczyna wprowadzać dane ze swojego urządzenia." },
-  { step: "02", title: "Dane wchodzą do systemu", desc: "Sprzedaż, faktury, inwentaryzacje — wszystko trafia do Twojego panelu automatycznie." },
-  { step: "03", title: "Ty widzisz liczby", desc: "P&L, food cost, marże i alerty — w czasie rzeczywistym, na jednym ekranie." },
+  { step: "01", title: "Załóż konto — 3 minuty", desc: "Rejestrujesz się, łączysz swój system kasowy (lub wgrywasz CSV) i zapraszasz managera — wszystko z jednego panelu." },
+  { step: "02", title: "Managerowie wpisują dane z telefonu", desc: "Sprzedaż, faktury, stany magazynu — managerowie wpisują przez prosty formularz na telefonie lub tablecie. Żadnych arkuszy Excel." },
+  { step: "03", title: "Ty widzisz wszystko — w czasie rzeczywistym", desc: "P&L, marże, koszty i alerty o odchyleniach — na jednym ekranie, dostępnym 24/7 z telefonu, tabletu i komputera." },
+  { step: "04", title: "Działaj na danych, nie na przeczuciu", desc: "System alarmuje Cię zanim problem stanie się stratą. Odchylenia food cost, niezatwierdzone faktury, niska marża — dostajesz powiadomienie, nie niespodziankę na koniec miesiąca." },
 ];
+
+/* ── FAQ data ── */
+const FAQ_ITEMS = [
+  { q: "Co to jest OneLink i dla kogo jest przeznaczony?", a: "OneLink to system zarządzania małym biznesem, który pozwala właścicielom kontrolować P&L, koszty, magazyn i faktury z jednego panelu — w czasie rzeczywistym. Przeznaczony dla właścicieli restauracji, piekarni, cukierni, delikatesów i każdego biznesu, który chce widzieć swoje liczby na bieżąco." },
+  { q: "Czy muszę podawać kartę kredytową przy rejestracji?", a: "Tak, przy rejestracji prosimy o dane karty przez Stripe. Nie pobieramy żadnej opłaty przez 7 dni. Karta jest potrzebna do natychmiastowej aktywacji konta i zabezpieczenia Twoich danych po zakończeniu trialu. Możesz anulować w dowolnym momencie przed upływem 7 dni — żadna płatność nie zostanie pobrana." },
+  { q: "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", a: "Plany zaczynają się od 299 zł miesięcznie. Szczegóły wszystkich planów znajdziesz na stronie /pricing. Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." },
+  { q: "Jak długo trwa wdrożenie i konfiguracja systemu?", a: "Pierwsze konto jest gotowe w około 3 minuty. Pełna konfiguracja z zaproszeniem managerów i połączeniem danych zajmuje do 20 minut. Nie potrzebujesz działu IT ani technicznej wiedzy." },
+  { q: "Czy OneLink integruje się z moim systemem kasowym lub POS?", a: "Tak. OneLink obsługuje import danych z popularnych systemów kasowych oraz import plików CSV. Jeśli korzystasz z konkretnego systemu POS, skontaktuj się z nami — aktywnie rozwijamy integracje." },
+  { q: "Czy managerowie muszą instalować aplikację?", a: "Nie. Managerowie korzystają z aplikacji webowej dostępnej przez przeglądarkę na telefonie lub tablecie — bez instalacji. Dostępna jest też wersja mobilna w App Store i Google Play (wkrótce)." },
+  { q: "Jak działa kontrola food cost w OneLink?", a: "OneLink śledzi zużycie teoretyczne składników (na podstawie receptur i sprzedaży) i porównuje je z rzeczywistymi stanami magazynowymi. Odchylenia są automatycznie wykrywane i sygnalizowane alertem. Dzięki temu wiesz, gdzie znika towar — zanim zorientujesz się na koniec miesiąca." },
+  { q: "Czy mogę zarządzać kilkoma lokalami z jednego konta?", a: "Tak. OneLink jest zaprojektowany do zarządzania wieloma lokalizacjami z jednego panelu właściciela. Możesz porównywać wyniki, transferować stany między lokalami i zatwierdzać faktury z każdego z nich." },
+  { q: "Czy moje dane są bezpieczne?", a: "Tak. Dane są szyfrowane i przechowywane na bezpiecznych serwerach. Płatności obsługuje Stripe — jeden z najbardziej zaufanych procesorów płatności na świecie. Nie udostępniamy danych podmiotom trzecim." },
+  { q: "Jak działa workflow zatwierdzania faktur?", a: "Manager przesyła fakturę (zdjęcie lub PDF) przez aplikację. Ty otrzymujesz powiadomienie, przeglądasz fakturę i zatwierdzasz lub odrzucasz jednym kliknięciem. Pełna historia zatwierdzeń jest dostępna w każdej chwili i gotowa do eksportu do księgowości." },
+  { q: "Czy OneLink działa dla piekarni, cukierni albo delikatesów — nie tylko restauracji?", a: "Tak. OneLink działa dla każdego małego biznesu, który zarządza kosztami surowców, stanami magazynowymi i fakturami. Piekarnie, cukiernie, delikatesy, kawiarnie, catering — wszystkie te biznesy korzystają z tych samych funkcji." },
+  { q: "Co to jest P&L i po co mi to?", a: "P&L (Profit & Loss, rachunek zysków i strat) pokazuje Twoje przychody minus wszystkie koszty = zysk netto. W OneLink widzisz P&L każdego dnia, a nie raz w miesiącu na spotkaniu z księgową. Dzięki temu możesz reagować na bieżąco." },
+  { q: "Czy mogę eksportować dane do programu księgowego?", a: "Tak. OneLink umożliwia eksport faktur i zestawień kosztów w formatach kompatybilnych z popularnymi programami księgowymi. Szczegółowy wykaz formatów dostępny po zalogowaniu." },
+  { q: "Jak OneLink pomaga obniżyć food cost?", a: "System automatycznie wykrywa odchylenia między zużyciem teoretycznym a rzeczywistym. Gdy składnik 'znika' ponad normę — system wysyła alert. Nasi klienci odnotowują średnio 2–4 pp. obniżenia food cost w ciągu 90 dni od wdrożeniu." },
+  { q: "Czy jest wsparcie techniczne po polsku?", a: "Tak. Wsparcie techniczne jest dostępne w języku polskim — przez czat, e-mail i telefon. Czas odpowiedzi w godzinach roboczych: do 4 godzin." },
+  { q: "Co się stanie z moimi danymi po anulowaniu subskrypcji?", a: "Twoje dane są przechowywane przez 30 dni po anulowaniu. W tym czasie możesz je wyeksportować. Po upływie 30 dni dane są trwale usuwane z naszych serwerów." },
+  { q: "Ile kont managerów mogę dodać?", a: "Liczba kont zależy od planu. Plan Starter zawiera 2 konta managerów, plan Business — bez ograniczeń. Szczegóły na stronie cennika." },
+  { q: "Czy mogę zmienić plan w trakcie subskrypcji?", a: "Tak. Możesz zmienić plan w dowolnym momencie — zarówno na wyższy, jak i niższy. Zmiana wchodzi w życie od następnego okresu rozliczeniowego. Nie ma żadnych kar za zmianę." },
+  { q: "Jak OneLink porównuje się do arkuszy Excel?", a: "Excel wymaga ręcznego wprowadzania danych, formuł i nie daje alertów w czasie rzeczywistym. OneLink automatyzuje zbieranie danych od managerów, oblicza P&L na bieżąco i alarmuje przy odchyleniach — bez żadnych formuł. Zamknięcie dnia trwa 10 minut zamiast godziny." },
+  { q: "Czy OneLink działa na telefonie?", a: "Tak. Panel właściciela działa w przeglądarce na telefonie, tablecie i komputerze. Aplikacja mobilna dla pracowników (iOS i Android) jest dostępna wkrótce — już teraz działa jako wersja webowa pod adresem /employee." },
+];
+
+/* ── FAQ Section component ── */
+function FAQSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <section id="faq" className="relative max-w-3xl mx-auto px-6 pb-24">
+      <div className="text-center mb-14">
+        <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4">
+          Często zadawane pytania
+        </h2>
+        <p className="text-[16px] text-white/40">Wszystko co chcesz wiedzieć przed startem trialu</p>
+      </div>
+
+      <div className="space-y-2">
+        {FAQ_ITEMS.map((item, i) => (
+          <div
+            key={i}
+            className={`border rounded-2xl overflow-hidden transition-colors ${openIndex === i ? 'border-white/20 bg-white/5' : 'border-white/8 bg-white/3 hover:bg-white/4'}`}
+          >
+            <button
+              className="w-full flex items-center justify-between px-6 py-4 text-left gap-4"
+              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              aria-expanded={openIndex === i}
+            >
+              <span className="text-[15px] font-semibold text-white leading-snug">{item.q}</span>
+              <ChevronDown className={`w-4 h-4 shrink-0 text-white/40 transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`} />
+            </button>
+            <div
+              className="overflow-hidden transition-all duration-300"
+              style={{ maxHeight: openIndex === i ? '400px' : '0px' }}
+            >
+              <p className="px-6 pb-5 text-[14px] text-white/50 leading-relaxed">{item.a}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ── Sticky Mobile CTA ── */
+function StickyMobileCTA() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const faqEl = document.getElementById('faq');
+      const footerEl = document.querySelector('footer');
+
+      if (scrollY < 300) {
+        setVisible(false);
+        return;
+      }
+
+      if (faqEl || footerEl) {
+        const threshold = (faqEl || footerEl)!.getBoundingClientRect().top + window.scrollY - 200;
+        setVisible(scrollY < threshold);
+      } else {
+        setVisible(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div
+      className={`md:hidden fixed bottom-0 left-0 right-0 z-[9999] transition-transform duration-300 ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="mx-3 mb-3 rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
+        <Link
+          href="/auth/sign-up"
+          className="flex flex-col items-center justify-center py-4 bg-gradient-to-r from-amber-400 to-orange-500 active:from-amber-500 active:to-orange-600 transition-all"
+        >
+          <span className="text-[15px] font-bold text-white">Zacznij za darmo — 7 dni bez opłat</span>
+          <span className="text-[11px] text-white/75 mt-0.5">🔒 Bezpieczna płatność Stripe</span>
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 /* ── Dashboard Mockup ── */
 function DashboardMockup() {
@@ -242,7 +353,7 @@ export default function HomePage() {
           <Link href="/auth/login" className="text-[13px] text-white/50 hover:text-white transition-colors font-medium">
             Zaloguj
           </Link>
-          <Link href="/pricing" className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[13px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center shadow-lg shadow-amber-500/25">
+          <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[13px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center shadow-lg shadow-amber-500/25">
             Zacznij za darmo
           </Link>
         </div>
@@ -252,21 +363,21 @@ export default function HomePage() {
       <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-8 text-center">
         <Pill>
           <Zap className="w-3 h-3 text-amber-400" />
-          7 dni za darmo · trial z kartą Stripe
+          7 dni za darmo · karta potrzebna tylko do aktywacji
         </Pill>
 
         <h1 className="mt-8 text-[52px] md:text-[76px] font-black tracking-[-0.03em] leading-[1.0] mb-6 max-w-4xl mx-auto">
-          Zarządzaj restauracją{" "}
+          Wiesz ile zarobiłeś{" "}
           <br className="hidden md:block" />
-          <GradientText>jak profesjonalista</GradientText>
+          <GradientText>dzisiaj?</GradientText>
         </h1>
 
         <p className="text-[18px] text-white/45 max-w-2xl mx-auto leading-relaxed mb-10">
-          Jeden panel do P&amp;L, food cost, magazynu i faktur — dla właścicieli restauracji którzy chcą wiedzieć co się dzieje, nie dopiero na koniec miesiąca.
+          Jeden panel do P&amp;L, kosztów, magazynu i faktur — dla właścicieli małego biznesu, którzy chcą wiedzieć co się dzieje, nie dopiero na koniec miesiąca.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-          <Link href="/pricing" className="h-13 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[15px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-xl shadow-amber-500/30" style={{ height: 52 }}>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
+          <Link href="/auth/sign-up" className="h-13 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[15px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-xl shadow-amber-500/30" style={{ height: 52 }}>
             Zacznij bezpłatny trial
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -274,6 +385,41 @@ export default function HomePage() {
             Zobacz jak działa
             <ChevronRight className="w-4 h-4" />
           </Link>
+        </div>
+
+        {/* Reassurance bar */}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-12 text-[12px] text-white/35">
+          <span className="flex items-center gap-1.5">🔒 Bezpieczna płatność Stripe</span>
+          <span className="text-white/15">·</span>
+          <span>Anuluj kiedy chcesz</span>
+          <span className="text-white/15">·</span>
+          <span>Pełny dostęp przez 7 dni</span>
+        </div>
+
+        {/* Social proof bar */}
+        <div className="flex flex-col items-center gap-4 mb-12">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              {['#F59E0B','#3B82F6','#8B5CF6','#10B981','#EF4444'].map((c, i) => (
+                <div key={i} className="w-8 h-8 rounded-full border-2 border-[#060B18] flex items-center justify-center text-[10px] font-bold text-white" style={{ background: c }}>
+                  {['M','A','T','P','K'][i]}
+                </div>
+              ))}
+            </div>
+            <p className="text-[13px] text-white/45">
+              Dołącz do <span className="text-white font-bold">50+</span> właścicieli małych biznesów, którzy widzą swoje liczby na żywo
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[10px] uppercase tracking-widest text-white/25 font-semibold">Zaufali nam:</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {['Fabryka Pączków', 'Piekarnia Matusik', 'Swojska Spiżarnia'].map(name => (
+                <span key={name} className="px-3 py-1 rounded-full text-[11px] font-medium text-white/50 bg-white/6 border border-white/10">
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Dashboard mockup */}
@@ -303,10 +449,10 @@ export default function HomePage() {
           <Pill><Star className="w-3 h-3 text-amber-400" />Funkcje</Pill>
           <h2 className="text-[40px] md:text-[52px] font-black tracking-tight mt-6 mb-4">
             Wszystko co potrzebuje<br />
-            <GradientText>właściciel restauracji</GradientText>
+            <GradientText>właściciel małego biznesu</GradientText>
           </h2>
           <p className="text-[16px] text-white/40 max-w-xl mx-auto">
-            Zaprojektowane specjalnie dla branży F&amp;B — nie generyczny software dostosowany na siłę.
+            Zaprojektowane dla małych biznesów — nie korporacyjny software dostosowany na siłę.
           </p>
         </div>
 
@@ -435,12 +581,12 @@ export default function HomePage() {
         <div className="text-center mb-14">
           <Pill><Clock className="w-3 h-3 text-blue-400" />Jak działa</Pill>
           <h2 className="text-[36px] md:text-[48px] font-black tracking-tight mt-6 mb-4">
-            Gotowy w <GradientText>20 minut</GradientText>
+            Gotowy w <GradientText>20 minut</GradientText>. Zero IT, zero szkoleń.
           </h2>
-          <p className="text-[15px] text-white/40">Bez implementacji, bez szkoleń, bez IT.</p>
+          <p className="text-[15px] text-white/40">Konto w 3 minuty. Pierwsze dane dziś.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {HOW_IT_WORKS.map((step, i) => (
             <div key={i} className="relative bg-white/3 border border-white/8 rounded-2xl p-7 hover:bg-white/5 transition-colors">
               <div className="text-[52px] font-black leading-none mb-5" style={{ color: 'rgba(255,255,255,0.06)' }}>
@@ -448,8 +594,8 @@ export default function HomePage() {
               </div>
               <h3 className="text-[18px] font-bold text-white mb-2">{step.title}</h3>
               <p className="text-[13px] text-white/40 leading-relaxed">{step.desc}</p>
-              {i < HOW_IT_WORKS.length - 1 && (
-                <div className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#1E40AF] border border-blue-500/40 items-center justify-center z-10">
+              {i < 3 && (
+                <div className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#1E40AF] border border-blue-500/40 items-center justify-center z-10">
                   <ChevronRight className="w-3 h-3 text-blue-300" />
                 </div>
               )}
@@ -463,7 +609,7 @@ export default function HomePage() {
         <div className="text-center mb-14">
           <Pill><Star className="w-3 h-3 text-amber-400" />Opinie</Pill>
           <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mt-6 mb-4">
-            Właściciele restauracji już korzystają
+            Właściciele małych biznesów już korzystają
           </h2>
         </div>
 
@@ -713,6 +859,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── FAQ ── */}
+      <FAQSection />
+
+      {/* ── STICKY MOBILE CTA ── */}
+      <StickyMobileCTA />
 
       {/* ── FOOTER ── */}
       <footer className="border-t border-white/6 py-10 px-6">

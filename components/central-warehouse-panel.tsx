@@ -68,7 +68,8 @@ export function CentralWarehousePanel({
 
   useEffect(() => {
     fetchData()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
 
   const fetchData = async () => {
     setLoading(true)
@@ -92,9 +93,13 @@ export function CentralWarehousePanel({
 
       if (warehouse_id) setWarehouseId(warehouse_id)
 
-      const { data: ingData } = await supabase.from('ingredients').select('*').order('name')
+      let ingQuery = supabase.from('ingredients').select('*').order('name')
+      if (companyId) ingQuery = ingQuery.eq('company_id', companyId)
+      const { data: ingData } = await ingQuery
       if (ingData) setIngredients(ingData)
-      const { data: prodData } = await supabase.from('inventory_products').select('*').order('name')
+      let prodQuery = supabase.from('inventory_products').select('*').order('name')
+      if (companyId) prodQuery = prodQuery.eq('company_id', companyId)
+      const { data: prodData } = await prodQuery
 
       if (companyId) {
         const { data: locData } = await supabase
@@ -170,11 +175,13 @@ export function CentralWarehousePanel({
       setStockData(Array.from(stockMap.values()))
       setTransfers([])
 
-      const { data: deliveryData } = await supabase
+      let deliveryQuery = supabase
         .from('warehouse_deliveries')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20)
+      if (warehouse_id) deliveryQuery = deliveryQuery.eq('warehouse_id', warehouse_id)
+      const { data: deliveryData } = await deliveryQuery
       if (deliveryData) setDeliveries(deliveryData)
     } catch (err) {
       console.error('Error fetching warehouse data:', err)

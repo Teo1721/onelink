@@ -105,7 +105,7 @@ export default function PricingPage() {
         body: JSON.stringify({ priceId: plan.priceId, planCode: plan.id }),
       });
       const data = await res.json();
-      if (res.status === 401) { window.location.href = "/auth/sign-up"; return; }
+      if (res.status === 401) { window.location.href = "/auth/login"; return; }
       if (!res.ok || !data.url) throw new Error(data.error || "Nie udało się rozpocząć płatności");
       window.location.href = data.url as string;
     } catch (err) {

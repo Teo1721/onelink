@@ -108,7 +108,8 @@ export function DishesManager({ supabase, companyId }: DishesManagerProps) {
     fetchProducts()
     fetchLocations()
     fetchDishes()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
 
   useEffect(() => {
     if (selectedRecipeId) fetchRecipeIngredients(selectedRecipeId)
@@ -127,12 +128,16 @@ export function DishesManager({ supabase, companyId }: DishesManagerProps) {
   }
 
   const fetchIngredients = async () => {
-    const { data } = await supabase.from('ingredients').select('id, name, base_unit, category').order('name')
+    let q = supabase.from('ingredients').select('id, name, base_unit, category').order('name')
+    if (companyId) q = q.eq('company_id', companyId)
+    const { data } = await q
     setIngredients((data as Ingredient[]) || [])
   }
 
   const fetchProducts = async () => {
-    const { data } = await supabase.from('inventory_products').select('id, name, unit, last_price').eq('active', true).order('name')
+    let q = supabase.from('inventory_products').select('id, name, unit, last_price').eq('active', true).order('name')
+    if (companyId) q = q.eq('company_id', companyId)
+    const { data } = await q
     setProducts((data as InventoryProduct[]) || [])
   }
 
@@ -155,11 +160,12 @@ export function DishesManager({ supabase, companyId }: DishesManagerProps) {
   }
 
   const fetchDishes = async () => {
-    const { data } = await supabase
+    let q = supabase
       .from('dishes')
       .select('id, recipe_id, location_id, dish_name, menu_price_net, menu_price_gross, vat_rate, margin_target, food_cost_target, status')
       .order('dish_name')
-
+    if (companyId) q = q.eq('company_id', companyId)
+    const { data } = await q
     setDishes((data as Dish[]) || [])
   }
 
