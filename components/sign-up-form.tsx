@@ -86,7 +86,7 @@ export function SignUpForm() {
         return;
       }
 
-      router.push("/pricing");
+      router.push("/admin");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Błąd rejestracji. Spróbuj ponownie.");
     } finally {

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
   const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${origin}/employee`,
+    redirectTo: `${origin}/auth/confirm?next=/employee`,
     data: { full_name: name ?? '' },
   })
 
@@ -29,6 +29,11 @@ export async function POST(req: NextRequest) {
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 })
   }
+
+  // Create user_profiles row with employee role so login redirects correctly
+  await supabase
+    .from('user_profiles')
+    .upsert({ id: data.user.id, role: 'employee', full_name: name ?? '' }, { onConflict: 'id', ignoreDuplicates: false })
 
   return NextResponse.json({ ok: true, user_id: data.user.id })
 }

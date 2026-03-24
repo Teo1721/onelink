@@ -53,7 +53,7 @@ export function LoginForm() {
       const { role } = await res.json();
 
       if (!role) {
-        router.push("/pricing");
+        router.push("/admin");
         return;
       }
 
