@@ -12,7 +12,7 @@ export default function LoginPage() {
             <OneLinkLogo dark={false} className="mb-8" />
             <h1 className="text-[38px] font-bold text-[#111827] leading-[1.15] mb-4">
               Zarządzaj restauracją<br />
-              <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
                 na wyższym poziomie
               </span>
             </h1>
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
           <p className="text-[12px] text-[#9CA3AF]">
             Nie masz konta?{" "}
-            <Link href="/pricing" className="text-amber-500 hover:text-amber-600 transition-colors font-semibold">
+            <Link href="/pricing" className="text-blue-600 hover:text-blue-700 transition-colors font-semibold">
               Sprawdź plany cenowe →
             </Link>
           </p>

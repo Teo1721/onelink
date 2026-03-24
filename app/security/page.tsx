@@ -63,9 +63,9 @@ export default function SecurityPage() {
             },
             {
               icon: RefreshCw,
-              color: '#F59E0B',
-              bgColor: 'bg-amber-50',
-              borderColor: 'border-amber-200',
+              color: '#1D4ED8',
+              bgColor: 'bg-blue-50',
+              borderColor: 'border-blue-200',
               title: 'Kopie zapasowe',
               desc: 'Automatyczne backupy bazy danych wykonywane codziennie. Dane po anulowaniu konta są przechowywane przez 30 dni, po czym trwale usuwane.',
             },

@@ -68,7 +68,7 @@ export default function ContactPage() {
               </p>
               <a
                 href="mailto:kontakt@onelink.pl?subject=Demo OneLink"
-                className="inline-flex items-center gap-2 text-[13px] font-semibold text-amber-500 hover:text-amber-600 transition-colors"
+                className="inline-flex items-center gap-2 text-[13px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
               >
                 Umów demo →
               </a>
@@ -171,7 +171,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={sending}
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60"
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
                 >
                   {sending ? "Wysyłanie..." : "Wyślij wiadomość"}
                 </button>

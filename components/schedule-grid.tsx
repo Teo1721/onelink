@@ -147,10 +147,12 @@ export function ScheduleGrid({
   locationId,
   employees,
   supabase,
+  userId,
 }: {
   locationId: string | undefined
   employees: ScheduleEmployee[]
   supabase: SupabaseClient
+  userId?: string
 }) {
   const today = new Date().toISOString().split('T')[0]
   const todayDate = new Date()
@@ -169,6 +171,10 @@ export function ScheduleGrid({
   const [posting, setPosting] = useState(false)
   const [modal, setModal] = useState<ModalState>({ open: false, mode: 'add', shift: {} })
   const [tab, setTab] = useState<'schedule' | 'suggestions' | 'clockins'>('schedule')
+  const [customPositions, setCustomPositions] = useState<{ value: string; label: string; color: string }[]>([])
+  const [showNewPos, setShowNewPos] = useState(false)
+  const [newPosName, setNewPosName] = useState('')
+  const [savingPos, setSavingPos] = useState(false)
 
   const weekDays = buildWeekDays(weekStart)
   const weekEnd = weekDays[6]?.iso ?? weekStart
@@ -219,6 +225,46 @@ export function ScheduleGrid({
   }, [locationId, periodStart, periodEnd, supabase])
 
   useEffect(() => { loadShifts() }, [loadShifts])
+
+  /* ── load custom positions ── */
+  const loadCustomPositions = useCallback(async () => {
+    if (!userId) return
+    const { data } = await supabase.from('custom_positions').select('name').eq('user_id', userId).order('created_at')
+    if (data) {
+      setCustomPositions(data.map(r => ({
+        value: r.name,
+        label: r.name,
+        color: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      })))
+    }
+  }, [userId, supabase])
+
+  useEffect(() => { loadCustomPositions() }, [loadCustomPositions])
+
+  /* ── save new custom position ── */
+  const saveNewPosition = async () => {
+    const name = newPosName.trim()
+    if (!name || !userId) return
+    setSavingPos(true)
+    const { error } = await supabase.from('custom_positions').insert({ user_id: userId, name })
+    if (!error) {
+      const newPos = { value: name, label: name, color: 'bg-indigo-100 text-indigo-800 border-indigo-300' }
+      setCustomPositions(prev => [...prev, newPos])
+      setModal(m => ({ ...m, shift: { ...m.shift, position: name } }))
+    }
+    setShowNewPos(false)
+    setNewPosName('')
+    setSavingPos(false)
+  }
+
+  const allPositions = [...POSITIONS, ...customPositions]
+  const posColor = (pos?: string | null) => {
+    if (!pos) return DEFAULT_COLOR
+    const lower = pos.toLowerCase()
+    if (POSITION_MAP[lower]) return POSITION_MAP[lower].color
+    const custom = customPositions.find(p => p.value.toLowerCase() === lower)
+    return custom?.color ?? DEFAULT_COLOR
+  }
 
   /* ── helpers ── */
   const getShifts = (emp: ScheduleEmployee, date: string) =>
@@ -640,7 +686,7 @@ export function ScheduleGrid({
           {/* Legend */}
           <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center gap-3">
             <div className="flex flex-wrap gap-1">
-              {POSITIONS.map(p => (
+              {allPositions.map(p => (
                 <span key={p.value} className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${p.color}`}>{p.label}</span>
               ))}
             </div>
@@ -657,7 +703,7 @@ export function ScheduleGrid({
       )}
 
       {/* ── EDIT/ADD MODAL ── */}
-      <Dialog open={modal.open} onOpenChange={o => setModal(m => ({ ...m, open: o }))}>
+      <Dialog open={modal.open} onOpenChange={o => { setModal(m => ({ ...m, open: o })); if (!o) { setShowNewPos(false); setNewPosName('') } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{modal.mode === 'add' ? 'Nowa zmiana' : 'Edytuj zmianę'}</DialogTitle>
@@ -685,13 +731,38 @@ export function ScheduleGrid({
               </div>
               <div>
                 <Label className="text-xs mb-1.5 block">Stanowisko</Label>
-                <Select value={modal.shift.position || 'none'} onValueChange={v => setModal(m => ({ ...m, shift: { ...m.shift, position: v === 'none' ? null : v } }))}>
+                <Select
+                  value={showNewPos ? '__add_new__' : (modal.shift.position || 'none')}
+                  onValueChange={v => {
+                    if (v === '__add_new__') { setShowNewPos(true); setNewPosName(''); return }
+                    setShowNewPos(false)
+                    setModal(m => ({ ...m, shift: { ...m.shift, position: v === 'none' ? null : v } }))
+                  }}
+                >
                   <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Wybierz…" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— brak —</SelectItem>
                     {POSITIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    {customPositions.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    <SelectItem value="__add_new__">＋ Dodaj własne stanowisko</SelectItem>
                   </SelectContent>
                 </Select>
+                {showNewPos && (
+                  <div className="flex gap-1.5 mt-1.5">
+                    <Input
+                      autoFocus
+                      placeholder="Nazwa stanowiska…"
+                      value={newPosName}
+                      onChange={e => setNewPosName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveNewPosition() }}
+                      className="h-7 text-xs flex-1"
+                    />
+                    <Button size="sm" className="h-7 text-xs px-2" onClick={saveNewPosition} disabled={savingPos || !newPosName.trim()}>
+                      {savingPos ? '…' : 'Dodaj'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => { setShowNewPos(false); setNewPosName('') }}>✕</Button>
+                  </div>
+                )}
               </div>
             </div>
             {modalHours > 0 && (

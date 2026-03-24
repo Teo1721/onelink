@@ -12,7 +12,7 @@ export default function SignUpPage() {
             <OneLinkLogo dark={false} className="mb-8" />
             <h1 className="text-[38px] font-bold text-[#111827] leading-[1.15] mb-4">
               Zacznij 7-dniowy<br />
-              <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
                 okres próbny
               </span>
             </h1>
@@ -28,7 +28,7 @@ export default function SignUpPage() {
               { title: "Krok 3", desc: "Zaproś zespół i zacznij zarządzać" },
             ].map((step, i) => (
               <div key={step.title} className="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-[#E5E7EB] shadow-sm">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1D4ED8] to-[#06B6D4] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-[11px] font-bold text-white">{i + 1}</span>
                 </div>
                 <div>
@@ -41,7 +41,7 @@ export default function SignUpPage() {
 
           <p className="text-[12px] text-[#9CA3AF]">
             Masz już konto?{" "}
-            <Link href="/auth/login" className="text-amber-500 hover:text-amber-600 transition-colors font-semibold">
+            <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 transition-colors font-semibold">
               Zaloguj się →
             </Link>
           </p>
@@ -61,9 +61,9 @@ export default function SignUpPage() {
             </div>
 
             {/* Trust message */}
-            <div className="mb-6 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
-              <p className="text-[12px] text-amber-700 leading-relaxed">
-                <span className="font-semibold text-amber-800">Dlaczego prosimy o kartę?</span> Aktywujemy konto natychmiast i masz pewność, że po trialu nie stracisz danych. Możesz anulować w każdej chwili w ciągu 7 dni — bez żadnych opłat.
+            <div className="mb-6 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
+              <p className="text-[12px] text-blue-700 leading-relaxed">
+                <span className="font-semibold text-blue-800">Dlaczego prosimy o kartę?</span> Aktywujemy konto natychmiast i masz pewność, że po trialu nie stracisz danych. Możesz anulować w każdej chwili w ciągu 7 dni — bez żadnych opłat.
               </p>
             </div>
 

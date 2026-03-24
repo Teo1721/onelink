@@ -94,7 +94,7 @@ export function SignUpForm() {
     }
   };
 
-  const inputClass = "w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all";
+  const inputClass = "w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-blue-400 focus:bg-white transition-all";
   const labelClass = "block text-[11px] font-semibold uppercase tracking-widest text-[#6B7280] mb-1.5";
 
   return (
@@ -171,7 +171,7 @@ export function SignUpForm() {
           {(error.includes("już zarejestrowany") || error.includes("already registered")) && (
             <span>
               {" "}
-              <Link href="/auth/login" className="underline text-amber-500 hover:text-amber-600">
+              <Link href="/auth/login" className="underline text-blue-600 hover:text-blue-700">
                 Zaloguj się →
               </Link>
             </span>
@@ -182,14 +182,14 @@ export function SignUpForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-60"
+        className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 disabled:opacity-60"
       >
         {isLoading ? "Tworzenie konta..." : <><span>Utwórz konto</span><ArrowRight className="w-4 h-4" /></>}
       </button>
 
       <p className="text-center text-[13px] text-[#9CA3AF] pt-1">
         Masz już konto?{" "}
-        <Link href="/auth/login" className="text-amber-500 hover:text-amber-600 transition-colors font-semibold">
+        <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 transition-colors font-semibold">
           Zaloguj się
         </Link>
       </p>

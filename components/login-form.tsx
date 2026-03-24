@@ -77,7 +77,7 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="jan@restauracja.pl"
-          className="w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
+          className="w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
         />
       </div>
 
@@ -88,7 +88,7 @@ export function LoginForm() {
           </label>
           <Link
             href="/auth/forgot-password"
-            className="text-[12px] text-amber-500 hover:text-amber-600 transition-colors"
+            className="text-[12px] text-blue-600 hover:text-blue-700 transition-colors"
           >
             Zapomniałeś hasła?
           </Link>
@@ -100,7 +100,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Twoje hasło"
-            className="w-full h-12 px-4 pr-12 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
+            className="w-full h-12 px-4 pr-12 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
           />
           <button
             type="button"
@@ -121,14 +121,14 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-60"
+        className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 disabled:opacity-60"
       >
         {isLoading ? "Logowanie..." : <><span>Zaloguj się</span><ArrowRight className="w-4 h-4" /></>}
       </button>
 
       <p className="text-center text-[13px] text-[#9CA3AF] pt-1">
         Nie masz konta?{" "}
-        <Link href="/auth/sign-up" className="text-amber-500 hover:text-amber-600 transition-colors font-semibold">
+        <Link href="/auth/sign-up" className="text-blue-600 hover:text-blue-700 transition-colors font-semibold">
           Zarejestruj się
         </Link>
       </p>

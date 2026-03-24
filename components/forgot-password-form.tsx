@@ -41,7 +41,7 @@ export function ForgotPasswordForm() {
             Wysłaliśmy link do resetowania hasła na adres <span className="text-[#111827] font-medium">{email}</span>. Sprawdź też folder spam.
           </p>
         </div>
-        <Link href="/auth/login" className="block text-[13px] text-amber-500 hover:text-amber-600 font-medium transition-colors">
+        <Link href="/auth/login" className="block text-[13px] text-blue-600 hover:text-blue-700 font-medium transition-colors">
           ← Wróć do logowania
         </Link>
       </div>
@@ -60,7 +60,7 @@ export function ForgotPasswordForm() {
           value={email}
           onChange={e => setEmail(e.target.value)}
           placeholder="jan@restauracja.pl"
-          className="w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
+          className="w-full h-12 px-4 rounded-xl bg-[#F7F8FA] border border-[#E5E7EB] text-[#111827] placeholder-[#9CA3AF] text-[14px] focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
         />
       </div>
 
@@ -73,13 +73,13 @@ export function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-60"
+        className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 disabled:opacity-60"
       >
         {loading ? "Wysyłanie..." : <><Mail className="w-4 h-4" /><span>Wyślij link resetujący</span></>}
       </button>
 
       <p className="text-center text-[13px] text-[#9CA3AF] pt-1">
-        <Link href="/auth/login" className="text-[#6B7280] hover:text-amber-500 transition-colors">
+        <Link href="/auth/login" className="text-[#6B7280] hover:text-blue-600 transition-colors">
           ← Wróć do logowania
         </Link>
       </p>

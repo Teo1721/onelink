@@ -17,7 +17,7 @@ const Pill = ({ children }: { children: React.ReactNode }) => (
 );
 
 const GradientText = ({ children }: { children: React.ReactNode }) => (
-  <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent">
+  <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
     {children}
   </span>
 );
@@ -27,7 +27,7 @@ const STATS = [
   { value: "+4,2 pp", label: "Wzrost marży w 3 miesiące", color: "#10B981" },
   { value: "–70%", label: "Czas zamknięcia dnia", color: "#3B82F6" },
   { value: "12+", label: "Wykryte odchylenia / miesiąc", color: "#8B5CF6" },
-  { value: "2 400 zł", label: "Oszczędności na food cost", color: "#F59E0B" },
+  { value: "2 400 zł", label: "Oszczędności na food cost", color: "#06B6D4" },
 ];
 
 const FEATURES = [
@@ -47,7 +47,7 @@ const FEATURES = [
   },
   {
     icon: TrendingUp,
-    color: "#F59E0B",
+    color: "#06B6D4",
     title: "Kalkulator i symulator cen menu",
     desc: "Sprawdzasz food cost każdego dania i symulujesz co się stanie z marżą, kiedy zmieni się cena składnika.",
     items: ["Koszt produkcji per danie", "Symulacja zmiany cen surowców", "Status marży (OK / Uwaga / Krytyczny)", "Porównanie z targetem"],
@@ -212,7 +212,7 @@ function StickyCTA() {
         <div className="mx-3 mb-3 rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
           <Link
             href="/auth/sign-up"
-            className="flex flex-col items-center justify-center py-4 bg-gradient-to-r from-amber-400 to-orange-500 active:from-amber-500 active:to-orange-600 transition-all"
+            className="flex flex-col items-center justify-center py-4 bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] active:opacity-80 transition-all"
           >
             <span className="text-[15px] font-bold text-white">Zacznij za darmo — 7 dni bez opłat</span>
             <span className="text-[11px] text-white/75 mt-0.5">🔒 Bezpieczna płatność Stripe</span>
@@ -226,15 +226,15 @@ function StickyCTA() {
       >
         <div className="flex items-center gap-4 px-5 py-3 rounded-2xl border border-[#E5E7EB] bg-white/95 backdrop-blur-md shadow-xl shadow-black/10">
           <div className="flex items-center gap-2">
-            {['#F59E0B','#3B82F6','#8B5CF6'].map((c,i) => (
+            {['#06B6D4','#3B82F6','#8B5CF6'].map((c,i) => (
               <div key={i} className="w-6 h-6 rounded-full border-2 border-white" style={{ background: c }} />
             ))}
-            <span className="text-[12px] text-[#6B7280] ml-1">50+ restauratorów</span>
+            <span className="text-[12px] text-[#6B7280] ml-1">50+ firm używa naszego systemu</span>
           </div>
           <div className="w-px h-5 bg-[#E5E7EB]" />
           <Link
             href="/auth/sign-up"
-            className="h-9 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[13px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30 flex items-center gap-1.5"
+            className="h-9 px-5 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-lg shadow-blue-500/30 flex items-center gap-1.5"
           >
             Zacznij bezpłatny trial
             <ArrowRight className="w-3.5 h-3.5" />
@@ -334,14 +334,14 @@ function DashboardMockup() {
               <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-2">Koszty</p>
               <div className="flex justify-center mb-2">
                 <svg viewBox="0 0 80 80" className="w-16 h-16">
-                  <circle cx="40" cy="40" r="28" fill="none" stroke="#F59E0B" strokeWidth="10" strokeDasharray="52 124" strokeDashoffset="31" />
+                  <circle cx="40" cy="40" r="28" fill="none" stroke="#06B6D4" strokeWidth="10" strokeDasharray="52 124" strokeDashoffset="31" />
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#3B82F6" strokeWidth="10" strokeDasharray="37 124" strokeDashoffset="-21" />
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#8B5CF6" strokeWidth="10" strokeDasharray="21 124" strokeDashoffset="-58" />
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#10B981" strokeWidth="10" strokeDasharray="14 124" strokeDashoffset="-79" />
                 </svg>
               </div>
               <div className="space-y-1">
-                {[['COGS','#F59E0B','31%'],['Praca','#3B82F6','24%'],['OPEX','#8B5CF6','22%'],['Zysk','#10B981','23%']].map(([l,c,v])=>(
+                {[['COGS','#06B6D4','31%'],['Praca','#3B82F6','24%'],['OPEX','#8B5CF6','22%'],['Zysk','#10B981','23%']].map(([l,c,v])=>(
                   <div key={l} className="flex items-center justify-between">
                     <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-sm" style={{background:c}}/><span className="text-[8px] text-white/35">{l}</span></div>
                     <span className="text-[8px] font-bold" style={{color:c}}>{v}</span>
@@ -406,7 +406,7 @@ export default function HomePage() {
           <Link href="/auth/login" className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors font-medium">
             Zaloguj
           </Link>
-          <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[13px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center shadow-lg shadow-amber-500/25">
+          <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all flex items-center shadow-lg shadow-blue-500/25">
             Zacznij za darmo
           </Link>
         </div>
@@ -416,10 +416,6 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-8 text-center">
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-          <Pill>
-            <Zap className="w-3 h-3 text-amber-400" />
-            7 dni za darmo · karta potrzebna tylko do aktywacji
-          </Pill>
           <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-red-500/10 border border-red-500/25 text-[11px] font-semibold text-red-400">
             ⏰ Ceny Early Adopter — tylko do końca marca
           </span>
@@ -432,11 +428,11 @@ export default function HomePage() {
         </h1>
 
         <p className="text-[18px] text-[#6B7280] max-w-2xl mx-auto leading-relaxed mb-10">
-          Restauratorzy, którzy używają OneLink, zamykają dzień w 10 minut i widzą swój P&amp;L na żywo — zamiast dowiadywać się o stracie dopiero na koniec miesiąca.
+          Właściciele firm, którzy używają OneLink, zamykają dzień w 10 minut i widzą swój P&amp;L na żywo — zamiast dowiadywać się o stracie dopiero na koniec miesiąca.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
-          <Link href="/auth/sign-up" className="h-13 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[15px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-xl shadow-amber-500/30" style={{ height: 52 }}>
+          <Link href="/auth/sign-up" className="h-13 px-8 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[15px] font-bold text-white hover:opacity-90 transition-all flex items-center gap-2 shadow-xl shadow-blue-500/30" style={{ height: 52 }}>
             Zacznij bezpłatny trial
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -460,11 +456,11 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <Star key={i} className="w-4 h-4 text-blue-500 fill-blue-500" />
               ))}
             </div>
             <p className="text-[13px] text-[#6B7280]">
-              Ponad <span className="text-[#111827] font-bold">50 restauratorów</span> widzi swoje liczby na żywo
+              Ponad <span className="text-[#111827] font-bold">50 firm</span> używa naszego systemu
             </p>
           </div>
           <div className="flex flex-col items-center gap-2">
@@ -509,7 +505,7 @@ export default function HomePage() {
             { name: 'Stripe', desc: 'Płatności', color: '#635BFF' },
             { name: 'CSV Import', desc: 'Dowolny system POS', color: '#10B981' },
             { name: 'Supabase', desc: 'Bezpieczna baza EU', color: '#3ECF8E' },
-            { name: 'Każdy system kasowy', desc: 'przez CSV', color: '#F59E0B' },
+            { name: 'Każdy system kasowy', desc: 'przez CSV', color: '#06B6D4' },
           ].map(s => (
             <div key={s.name} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-[#E5E7EB] bg-white shadow-sm hover:shadow transition-shadow">
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
@@ -520,7 +516,7 @@ export default function HomePage() {
             </div>
           ))}
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#E5E7EB] bg-white">
-            <span className="text-[12px] text-[#9CA3AF]">+ Więcej integracji w planach</span>
+            <span className="text-[12px] text-[#9CA3AF]">+21 integracji wkrótce</span>
           </div>
         </div>
       </section>
@@ -528,13 +524,13 @@ export default function HomePage() {
       {/* ── FEATURES ── */}
       <section id="features" className="relative max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-16">
-          <Pill><Star className="w-3 h-3 text-amber-400" />Funkcje</Pill>
+          <Pill><Star className="w-3 h-3 text-blue-500" />Funkcje</Pill>
           <h2 className="text-[40px] md:text-[52px] font-black tracking-tight mt-6 mb-4 text-[#111827]">
             Wszystko co potrzebuje<br />
-            <GradientText>właściciel restauracji i lokalu gastronomicznego</GradientText>
+            <GradientText>właściciel biznesu</GradientText>
           </h2>
           <p className="text-[16px] text-[#6B7280] max-w-xl mx-auto">
-            Zaprojektowane dla gastronomii — nie korporacyjny software dostosowany na siłę.
+            Zaprojektowane dla MŚP — nie korporacyjny software dostosowany na siłę.
           </p>
         </div>
 
@@ -588,7 +584,7 @@ export default function HomePage() {
                   {i === 1 && (
                     <>
                       <div className="grid grid-cols-3 gap-2">
-                        {[['Na stanie','284 kg','#fff'],['Zarezerwowane','42 kg','#F59E0B'],['Alerty','2','#DC2626']].map(([l,v,c])=>(
+                        {[['Na stanie','284 kg','#fff'],['Zarezerwowane','42 kg','#06B6D4'],['Alerty','2','#DC2626']].map(([l,v,c])=>(
                           <div key={l} className="bg-white/5 rounded-xl p-3 border border-white/8 text-center">
                             <p className="text-[8px] uppercase tracking-widest text-white/30 mb-1">{l}</p>
                             <p className="text-[16px] font-black leading-none" style={{color:c}}>{v}</p>
@@ -660,7 +656,7 @@ export default function HomePage() {
         {/* Inline CTA after features */}
         <div className="mt-12 text-center">
           <p className="text-[14px] text-[#6B7280] mb-4">Gotowy żeby zobaczyć to na żywo w swoim lokalu?</p>
-          <Link href="/auth/sign-up" className="inline-flex items-center gap-2 h-11 px-7 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/25">
+          <Link href="/auth/sign-up" className="inline-flex items-center gap-2 h-11 px-7 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all shadow-lg shadow-blue-500/25">
             Zacznij bezpłatny trial — 7 dni za darmo
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -696,7 +692,7 @@ export default function HomePage() {
 
         {/* Inline CTA after How it works */}
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/auth/sign-up" className="h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/25">
+          <Link href="/auth/sign-up" className="h-12 px-8 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/25">
             Wypróbuj przez 7 dni za darmo
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -709,9 +705,9 @@ export default function HomePage() {
       {/* ── TESTIMONIALS ── */}
       <section className="relative max-w-5xl mx-auto px-6 pb-24">
         <div className="text-center mb-14">
-          <Pill><Star className="w-3 h-3 text-amber-400" />Opinie</Pill>
+          <Pill><Star className="w-3 h-3 text-blue-500" />Opinie</Pill>
           <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mt-6 mb-4 text-[#111827]">
-            Restauratorzy i właściciele lokali gastronomicznych już korzystają
+            Właściciele firm już korzystają z OneLink
           </h2>
         </div>
 
@@ -720,7 +716,7 @@ export default function HomePage() {
             <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex mb-4">
                 {[...Array(5)].map((_, j) => (
-                  <Star key={j} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <Star key={j} className="w-3.5 h-3.5 text-blue-500 fill-blue-500" />
                 ))}
               </div>
               <p className="text-[14px] text-[#4B5563] leading-relaxed mb-5 italic">&ldquo;{t.text}&rdquo;</p>
@@ -742,7 +738,7 @@ export default function HomePage() {
         {/* Inline CTA after testimonials */}
         <div className="mt-10 text-center">
           <p className="text-[15px] text-[#6B7280] mb-4">Gotowy żeby zobaczyć swoje liczby tak jak Marek czy Agnieszka?</p>
-          <Link href="/auth/sign-up" className="inline-flex items-center gap-2 h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-xl shadow-amber-500/25">
+          <Link href="/auth/sign-up" className="inline-flex items-center gap-2 h-12 px-8 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all shadow-xl shadow-blue-500/25">
             Zacznij bezpłatny trial →
           </Link>
         </div>
@@ -763,7 +759,7 @@ export default function HomePage() {
             <thead>
               <tr className="border-b border-[#E5E7EB]">
                 <th className="text-[12px] font-bold uppercase tracking-widest text-[#9CA3AF] py-4 px-6 w-[40%]">Funkcja</th>
-                <th className="text-[13px] font-bold text-amber-500 py-4 px-6 text-center bg-amber-50">OneLink</th>
+                <th className="text-[13px] font-bold text-blue-600 py-4 px-6 text-center bg-blue-50">OneLink</th>
                 <th className="text-[13px] font-bold text-[#6B7280] py-4 px-6 text-center">Arkusz Excel</th>
                 <th className="text-[13px] font-bold text-[#6B7280] py-4 px-6 text-center">Systemy ERP</th>
               </tr>
@@ -782,13 +778,13 @@ export default function HomePage() {
                 <tr key={i} className={`border-t border-[#F3F4F6] ${i % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'}`}>
                   <td className="py-3.5 px-6 text-[13px] text-[#374151] font-medium">{feature as string}</td>
                   {[onelink, excel, erp].map((val, j) => (
-                    <td key={j} className={`py-3.5 px-6 text-center ${j === 0 ? 'bg-amber-50/50' : ''}`}>
+                    <td key={j} className={`py-3.5 px-6 text-center ${j === 0 ? 'bg-blue-50/50' : ''}`}>
                       {typeof val === 'boolean' ? (
                         val
                           ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100"><Check className="w-3.5 h-3.5 text-green-600" /></span>
                           : <span className="text-[#D1D5DB] text-lg leading-none">—</span>
                       ) : (
-                        <span className={`text-[12px] font-semibold ${j === 0 ? 'text-amber-600' : 'text-[#9CA3AF]'}`}>{val as string}</span>
+                        <span className={`text-[12px] font-semibold ${j === 0 ? 'text-blue-600' : 'text-[#9CA3AF]'}`}>{val as string}</span>
                       )}
                     </td>
                   ))}
@@ -804,7 +800,7 @@ export default function HomePage() {
         <div className="rounded-3xl p-px" style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.5), rgba(245,158,11,0.3), rgba(37,99,235,0.2))' }}>
           <div className="rounded-3xl p-10 md:p-14 text-center" style={{ background: 'linear-gradient(135deg, #0D1628 0%, #0A0F1E 100%)' }}>
             <Pill>
-              <Zap className="w-3 h-3 text-amber-400" />
+              <Zap className="w-3 h-3 text-blue-500" />
               Cennik
             </Pill>
             <h2 className="text-[36px] md:text-[52px] font-black tracking-tight mt-6 mb-4">
@@ -821,8 +817,8 @@ export default function HomePage() {
                 { name: 'Rozwój', price: '39,99 zł', sub: '2 lokale · 2 managerów', popular: true },
                 { name: 'Sieć', price: '59,99 zł', sub: '5 lokali · 5 managerów' },
               ].map(p => (
-                <div key={p.name} className={`rounded-xl p-3 border ${p.popular ? 'border-amber-400/40 bg-amber-400/8' : 'border-white/10 bg-white/4'}`}>
-                  <p className={`text-[11px] font-bold mb-1 ${p.popular ? 'text-amber-400' : 'text-white/50'}`}>{p.name}{p.popular ? ' ★' : ''}</p>
+                <div key={p.name} className={`rounded-xl p-3 border ${p.popular ? 'border-blue-400/40 bg-blue-400/8' : 'border-white/10 bg-white/4'}`}>
+                  <p className={`text-[11px] font-bold mb-1 ${p.popular ? 'text-blue-300' : 'text-white/50'}`}>{p.name}{p.popular ? ' ★' : ''}</p>
                   <p className="text-[18px] font-black text-white leading-none">{p.price}</p>
                   <p className="text-[10px] text-white/35 mt-1">/ mies. + VAT</p>
                   <p className="text-[10px] text-white/40 mt-1">{p.sub}</p>
@@ -831,7 +827,7 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-              <Link href="/pricing" className="h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/30">
+              <Link href="/pricing" className="h-12 px-8 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/30">
                 Zacznij bezpłatny trial
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -991,7 +987,7 @@ export default function HomePage() {
                     <p className="text-[12px] font-semibold text-[#374151]">Aplikacja mobilna — wkrótce</p>
                     <p className="text-[11px] text-[#9CA3AF]">iOS & Android — w przygotowaniu</p>
                   </div>
-                  <span className="ml-auto px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-600">
+                  <span className="ml-auto px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-600">
                     Soon
                   </span>
                 </div>
@@ -1009,14 +1005,14 @@ export default function HomePage() {
       <section className="relative max-w-5xl mx-auto px-6 pb-20">
         <div className="text-center mb-8">
           <Pill><FileText className="w-3 h-3 text-blue-500" />Blog</Pill>
-          <h2 className="text-[28px] font-black tracking-tight mt-5 mb-2 text-[#111827]">Wiedza dla restauratorów</h2>
-          <p className="text-[14px] text-[#6B7280]">Praktyczne artykuły o food cost, P&amp;L i zarządzaniu gastronomią</p>
+          <h2 className="text-[28px] font-black tracking-tight mt-5 mb-2 text-[#111827]">Wiedza dla właścicieli firm</h2>
+          <p className="text-[14px] text-[#6B7280]">Praktyczne artykuły o food cost, P&amp;L i zarządzaniu firmą</p>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
           {[
-            { tag: 'Food Cost', title: 'Jak obliczyć food cost w restauracji i co zrobić gdy jest za wysoki', date: 'Wkrótce' },
+            { tag: 'Food Cost', title: 'Jak obliczyć food cost w firmie i co zrobić gdy jest za wysoki', date: 'Wkrótce' },
             { tag: 'P&L', title: 'Jak czytać rachunek zysków i strat małego lokalu — krok po kroku', date: 'Wkrótce' },
-            { tag: 'Magazyn', title: 'Kontrola magazynu w gastronomii: jak wykryć skoki i straty surowców', date: 'Wkrótce' },
+            { tag: 'Magazyn', title: 'Kontrola magazynu w firmie: jak wykryć skoki i straty surowców', date: 'Wkrótce' },
           ].map(a => (
             <div key={a.title} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
               <span className="inline-flex items-center h-5 px-2.5 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 mb-3">{a.tag}</span>
@@ -1045,7 +1041,7 @@ export default function HomePage() {
             <div className="col-span-2 md:col-span-1">
               <OneLinkLogo iconSize={22} textSize="text-[13px]" />
               <p className="text-[12px] text-[#9CA3AF] mt-3 leading-relaxed">
-                System zarządzania dla restauracji, piekarni i sieci gastronomicznych.
+                System zarządzania dla firm, sklepów i sieci MŚP.
               </p>
               <a href="mailto:kontakt@onelink.pl" className="text-[12px] text-[#6B7280] hover:text-[#111827] transition-colors mt-3 block">
                 kontakt@onelink.pl

@@ -1,16 +1,16 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const SYSTEM_PROMPT = `Jesteś pomocnym asystentem OneLink — polskiego systemu zarządzania dla restauracji, piekarni i sieci gastronomicznych.
+const SYSTEM_PROMPT = `Jesteś pomocnym asystentem OneLink — polskiego systemu zarządzania dla firm, sklepów i sieci MŚP.
 
 Odpowiadaj TYLKO po polsku, chyba że użytkownik pisze w innym języku.
 Bądź pomocny, konkretny i przyjazny. Odpowiedzi utrzymuj zwięzłe (2-4 zdania, chyba że pytanie wymaga więcej).
 
-INFORMACJE O ONELINKLU:
-• Co to jest: Panel do zarządzania P&L, food cost, magazynem i fakturami dla restauratorów — dane w czasie rzeczywistym, dostęp z telefonu i komputera.
-• Dla kogo: Restauracje, piekarnie, kawiarnie, cukiernie, delikatesy, catering i sieci gastronomiczne.
+INFORMACJE O ONELINKU:
+• Co to jest: Panel do zarządzania P&L, food cost, magazynem i fakturami dla właścicieli firm — dane w czasie rzeczywistym, dostęp z telefonu i komputera.
+• Dla kogo: Restauracje, piekarnie, kawiarnie, cukiernie, delikatesy, catering i sieci MŚP.
 • Główne funkcje: Dashboard P&L na żywo, kontrola food cost, moduł magazynowy, zatwierdzanie faktur, alerty o odchyleniach, multi-lokalizacja, raporty EBIT, symulator cen menu.
 • Jak działa: Manager wpisuje dane przez telefon (sprzedaż, faktury, stany), właściciel widzi pełny P&L od razu.
 
@@ -55,7 +55,7 @@ type Message = {
 };
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: "Chatbot tymczasowo niedostępny." }, { status: 503 });
   }
 
@@ -66,14 +66,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak wiadomości." }, { status: 400 });
     }
 
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
       max_tokens: 512,
-      system: SYSTEM_PROMPT,
-      messages: messages.slice(-10), // keep last 10 turns to limit tokens
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...messages.slice(-10),
+      ],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = response.choices[0]?.message?.content ?? "";
     return NextResponse.json({ message: text });
   } catch {
     return NextResponse.json({ error: "Błąd. Spróbuj ponownie." }, { status: 500 });

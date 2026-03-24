@@ -26,8 +26,8 @@ export default function BillingCancelPage() {
             Nie dokończyłeś procesu płatności. Twoja subskrypcja nie została aktywowana. Możesz spróbować ponownie w dowolnym momencie.
           </p>
 
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 mb-8">
-            <p className="text-[13px] text-amber-700">
+          <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 mb-8">
+            <p className="text-[13px] text-blue-700">
               Pamiętaj — 7-dniowy trial jest w pełni funkcjonalny. Nie stracisz nic, próbując ponownie.
             </p>
           </div>
@@ -35,7 +35,7 @@ export default function BillingCancelPage() {
           <div className="space-y-3">
             <button
               onClick={() => router.push("/pricing")}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Spróbuj ponownie</span>

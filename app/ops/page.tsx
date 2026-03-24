@@ -406,7 +406,7 @@ function AccountView({
               </p>
               <button
                 onClick={() => router.push('/pricing')}
-                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition-all shadow-md shadow-amber-500/20"
+                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-sm font-bold hover:opacity-90 transition-all shadow-md shadow-blue-500/20"
               >
                 <ChevronRight className="w-4 h-4" />
                 Wybierz plan
@@ -1504,6 +1504,7 @@ export default function OpsDashboard() {
               locationId={selectedLocation?.location_id}
               employees={employees.map(e => ({ id: e.id, full_name: e.full_name, real_hour_cost: e.real_hour_cost, base_rate: e.base_rate ?? null, user_id: e.user_id ?? null, position: e.position ?? null, phone: e.phone ?? null }))}
               supabase={supabase}
+              userId={userId}
             />
           </div>
         )}

@@ -624,7 +624,7 @@ function AdminAccountView({ supabase, router }: { supabase: ReturnType<typeof cr
             <>
               <p className="text-sm text-gray-500 leading-relaxed">Nie masz aktywnej subskrypcji. Wybierz plan aby uzyskać pełny dostęp.</p>
               <button onClick={() => router.push('/pricing')}
-                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition-all shadow-md shadow-amber-500/20">
+                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-sm font-bold hover:opacity-90 transition-all shadow-md shadow-blue-500/20">
                 <ChevronRight className="w-4 h-4" />Wybierz plan
               </button>
             </>
@@ -3311,6 +3311,7 @@ export default function AdminDashboard() {
               locationId={scheduleLocationId || undefined}
               employees={scheduleEmployees}
               supabase={supabase}
+              userId={adminId}
             />
           </div>
         )}

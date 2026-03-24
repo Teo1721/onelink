@@ -25,7 +25,7 @@ export default function AboutPage() {
       <main className="flex-1 max-w-3xl mx-auto px-6 py-20 w-full">
         {/* Header */}
         <div className="mb-16">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-500 mb-4">O nas</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-4">O nas</p>
           <h1 className="text-[42px] font-black tracking-tight leading-tight mb-6 text-[#111827]">
             Zbudowaliśmy OneLink, bo sami widzieliśmy jak restauratorzy tracą na danych, których nie widzą.
           </h1>
@@ -43,7 +43,7 @@ export default function AboutPage() {
             Odpowiedzią nie były kolejne moduły ERP za 500+ zł miesięcznie, których konfiguracja trwa miesiąc i wymaga konsultanta. Odpowiedzią był <span className="text-[#111827] font-semibold">prosty, szybki panel właściciela</span> — z danymi na żywo, gotowy w 20 minut, dostępny z telefonu.
           </p>
           <p>
-            OneLink to produkt <a href="https://innowacyjneai.pl/" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-600 transition-colors font-semibold">InnowacyjneAI</a> — agencji, która buduje inteligentne oprogramowanie dla małego i średniego biznesu w Polsce. Jesteśmy małym zespołem, który stawia na konkretne wyniki, nie na funkcje dla samych funkcji.
+            OneLink to produkt <a href="https://innowacyjneai.pl/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 transition-colors font-semibold">InnowacyjneAI</a> — agencji, która buduje inteligentne oprogramowanie dla małego i średniego biznesu w Polsce. Jesteśmy małym zespołem, który stawia na konkretne wyniki, nie na funkcje dla samych funkcji.
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function AboutPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 h-11 px-7 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-[14px] font-bold text-white hover:from-amber-500 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/20"
+              className="inline-flex items-center gap-2 h-11 px-7 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[14px] font-bold text-white hover:opacity-90 transition-all shadow-lg shadow-blue-500/20"
             >
               Skontaktuj się <ArrowRight className="w-4 h-4" />
             </Link>

@@ -59,7 +59,7 @@ const PLANS: Plan[] = [
     id: "plan3",
     name: "Sieć",
     subtitle: "Dla większych operacji",
-    description: "Dla sieci restauracji — pełen dostęp, raporty cross-lokalizacyjne i API.",
+    description: "Dla sieci firm — pełen dostęp, raporty cross-lokalizacyjne i API.",
     price: "59.99",
     period: "/ miesiąc",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3 ?? "",
@@ -79,7 +79,7 @@ const METRICS = [
   { icon: TrendingUp, label: "Średni wzrost marży", value: "+4,2 pp", color: "#10B981" },
   { icon: BarChart3, label: "Czas zamknięcia dnia", value: "–70%", color: "#3B82F6" },
   { icon: ShieldCheck, label: "Wykryte odchylenia / mies.", value: "12+", color: "#8B5CF6" },
-  { icon: Package, label: "Zaoszczędzone na food cost", value: "2 400 zł", color: "#F59E0B" },
+  { icon: Package, label: "Zaoszczędzone na food cost", value: "2 400 zł", color: "#06B6D4" },
 ];
 
 const FEATURES = [
@@ -131,12 +131,12 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
         <div className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-[#F3F4F6] border border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-widest text-[#6B7280] mb-8">
-          <Zap className="w-3 h-3 text-amber-500" />
+          <Zap className="w-3 h-3 text-blue-500" />
           7 dni za darmo · trial z kartą Stripe
         </div>
         <h1 className="text-[48px] md:text-[64px] font-black tracking-tight leading-[1.05] mb-6 text-[#111827]">
-          Twój lokal gastronomiczny{" "}
-          <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+          Twój biznes{" "}
+          <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
             pod pełną kontrolą
           </span>
         </h1>
@@ -208,7 +208,7 @@ export default function PricingPage() {
                 <p className="text-[9px] font-semibold uppercase tracking-widest text-white/40">Struktura kosztów</p>
                 <div className="space-y-2">
                   {[
-                    { label: 'COGS', pct: 31, color: '#F59E0B' },
+                    { label: 'COGS', pct: 31, color: '#06B6D4' },
                     { label: 'Praca', pct: 24, color: '#3B82F6' },
                     { label: 'OPEX', pct: 22, color: '#8B5CF6' },
                     { label: 'Zysk', pct: 23, color: '#10B981' },
@@ -250,7 +250,7 @@ export default function PricingPage() {
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-[11px] font-bold text-white tracking-wide shadow-lg">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[11px] font-bold text-white tracking-wide shadow-lg">
                   NAJCZĘŚCIEJ WYBIERANY
                 </div>
               )}
@@ -298,7 +298,7 @@ export default function PricingPage() {
                 disabled={loading}
                 className={`w-full h-11 rounded-xl font-bold text-[14px] transition-all disabled:opacity-60 ${
                   plan.popular
-                    ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30"
+                    ? "bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white hover:opacity-90 shadow-lg shadow-blue-500/30"
                     : "bg-[#111827] text-white hover:bg-[#1F2937]"
                 }`}
               >
@@ -317,7 +317,7 @@ export default function PricingPage() {
       <section className="max-w-5xl mx-auto px-6 mb-24">
         <div className="text-center mb-12">
           <h2 className="text-[30px] font-black tracking-tight mb-3 text-[#111827]">Wszystko w jednym miejscu</h2>
-          <p className="text-[14px] text-[#6B7280]">Dla restauracji, piekarni, kawiarni i sieci gastronomicznych</p>
+          <p className="text-[14px] text-[#6B7280]">Dla firm, sklepów, kawiarni i sieci MŚP</p>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
           {FEATURES.map((f, i) => (
@@ -342,7 +342,7 @@ export default function PricingPage() {
           <button
             onClick={() => handleSubscribe(PLANS[1])}
             disabled={loading}
-            className="h-12 px-8 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[14px] hover:from-amber-500 hover:to-orange-600 shadow-xl shadow-amber-500/30 transition-all disabled:opacity-60"
+            className="h-12 px-8 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white font-bold text-[14px] hover:opacity-90 shadow-xl shadow-blue-500/30 transition-all disabled:opacity-60"
           >
             Zacznij bezpłatny trial
           </button>
