@@ -72,6 +72,9 @@ export function EmployeesManager({
   // auth status map (user_id → confirmed/last_sign_in)
   const [authStatus, setAuthStatus]       = useState<Record<string, AuthStatus>>({})
 
+  // invite state
+  const [inviting, setInviting]           = useState<Record<string, boolean>>({})
+
   // csv
   const [parsed, setParsed]               = useState<ParsedEmployee[]>([])
   const [parseError, setParseError]       = useState('')
@@ -109,6 +112,21 @@ export function EmployeesManager({
   }, [supabase, filterLoc, locations])
 
   useEffect(() => { fetchEmployees() }, [fetchEmployees])
+
+  // ── invite employee ──
+  const inviteEmployee = async (emp: Employee) => {
+    if (!emp.email) return
+    setInviting(prev => ({ ...prev, [emp.id]: true }))
+    const res = await fetch('/api/admin/invite-employee', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employee_id: emp.id, email: emp.email, name: emp.full_name }),
+    })
+    const json = await res.json()
+    if (!res.ok) { alert('Błąd: ' + (json.error ?? 'Nieznany błąd')); }
+    else { fetchEmployees() }
+    setInviting(prev => ({ ...prev, [emp.id]: false }))
+  }
 
   // ── manual add ──
   const handleAdd = async () => {
@@ -484,9 +502,21 @@ export function EmployeesManager({
                         </td>
                         <td className="px-3 py-3">
                           {!emp.user_id ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600">
-                              Brak konta
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600">
+                                Brak konta
+                              </span>
+                              {emp.email && (
+                                <button
+                                  onClick={() => inviteEmployee(emp)}
+                                  disabled={inviting[emp.id]}
+                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 disabled:opacity-50"
+                                  title={`Wyślij zaproszenie na ${emp.email}`}
+                                >
+                                  {inviting[emp.id] ? '…' : '📧 Zaproś'}
+                                </button>
+                              )}
+                            </div>
                           ) : authStatus[emp.user_id]?.confirmed_at ? (
                             <div>
                               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
