@@ -154,6 +154,7 @@ export default function EmployeeDashboard() {
   const [timeEnd,     setTimeEnd]     = useState('16:00')
   const [note,        setNote]        = useState('')
   const [suggSaving,  setSuggSaving]  = useState(false)
+  const [suggError,   setSuggError]   = useState<string | null>(null)
 
   /* ── clock in/out ── */
   const [todayRecord,  setTodayRecord]  = useState<ClockRecord | null>(null)
@@ -176,7 +177,20 @@ export default function EmployeeDashboard() {
         setUserName(profile?.full_name ?? 'Pracownik')
 
         // Get employee record + location
-        const { data: emp } = await supabase.from('employees').select('id, location_id').eq('user_id', user.id).maybeSingle()
+        // Primary: look up by user_id (set after linking)
+        let emp = (await supabase.from('employees').select('id, location_id').eq('user_id', user.id).maybeSingle()).data
+
+        // Fallback: look up by email if user_id match failed
+        if (!emp && user.email) {
+          const { data: byEmail } = await supabase
+            .from('employees').select('id, location_id').eq('email', user.email).maybeSingle()
+          if (byEmail) {
+            emp = byEmail
+            // Link user_id on the employee record so next login skips this fallback
+            await supabase.from('employees').update({ user_id: user.id }).eq('id', byEmail.id)
+          }
+        }
+
         if (emp) {
           setEmployeeId(emp.id)
           if (emp.location_id) {
@@ -260,7 +274,8 @@ export default function EmployeeDashboard() {
   }
 
   const submitSuggestion = async () => {
-    if (!locationId) { alert('Brak powiązanej lokalizacji. Skontaktuj się z managerem.'); return }
+    setSuggError(null)
+    if (!locationId) { setSuggError('Twoje konto nie jest jeszcze przypisane do lokalizacji. Poproś managera o przypisanie lokalizacji w panelu Pracownicy.'); return }
     setSuggSaving(true)
     const payload = {
       suggestion_type: suggType, date: suggDate,
@@ -713,6 +728,11 @@ export default function EmployeeDashboard() {
                   {suggSaving ? 'Zapisywanie...' : editingId ? 'Zapisz zmiany' : 'Wyślij sugestię'}
                 </button>
               </div>
+              {suggError && (
+                <div className="mt-3 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                  {suggError}
+                </div>
+              )}
             </div>
 
             {/* History */}

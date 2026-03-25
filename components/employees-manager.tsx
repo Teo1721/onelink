@@ -42,7 +42,7 @@ const normalizeHeader = (h: string) => { const l = h.trim().toLowerCase(); retur
 
 export function EmployeesManager({
   supabase,
-  companyId: _companyId,
+  companyId,
   locations,
   defaultLocationId,
 }: {
@@ -152,12 +152,14 @@ export function EmployeesManager({
   const handleAdd = async () => {
     if (!form.full_name.trim()) { setSaveMsg('Podaj imię i nazwisko'); return }
     setSaving(true); setSaveMsg('')
+    const resolvedLocationId = form.location_id || defaultLocationId || locations[0]?.id || null
     const { error } = await supabase.from('employees').insert({
       full_name: form.full_name.trim(),
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
       position: form.position || null,
-      location_id: form.location_id || null,
+      location_id: resolvedLocationId,
+      company_id: companyId || null,
       base_rate: form.hourly_cost ? parseFloat(form.hourly_cost) : null,
       real_hour_cost: form.hourly_cost ? parseFloat(form.hourly_cost) : null,
       status: 'active',
@@ -184,7 +186,8 @@ export function EmployeesManager({
       email: editForm.email || null,
       phone: (editForm as any).phone || null,
       position: (editForm as any).position || null,
-      location_id: editForm.location_id || null,
+      location_id: editForm.location_id || defaultLocationId || null,
+      company_id: companyId || null,
       base_rate: editForm.base_rate ?? null,
       real_hour_cost: editForm.real_hour_cost,
       status: editForm.status,
