@@ -9,10 +9,10 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createAdminClient()
-  const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? req.headers.get('origin') ?? 'http://localhost:3000').replace(/\/$/, '')
 
   const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${origin}/auth/confirm?next=/auth/set-password`,
+    redirectTo: `${siteUrl}/auth/confirm?next=/auth/set-password`,
     data: { full_name: name ?? '' },
   })
 

@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   const { email } = await req.json()
   if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
 
-  const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? req.headers.get('origin') ?? 'http://localhost:3000').replace(/\/$/, '')
   const supabase = createAdminClient()
 
   // Generate the recovery link server-side — no email sending by Supabase
