@@ -1522,7 +1522,7 @@ export default function OpsDashboard() {
         onSwitchLocation={() => setSelectedLocation(null)}
       />
 
-      <main className="flex-1 ml-64 p-12">
+      <main className="flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 p-4 md:p-12">
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  0. SCHEDULING (WEEKLY GRID)                            ║ */}
@@ -1561,7 +1561,7 @@ export default function OpsDashboard() {
           const posColor = (pos?: string) => pos ? (POSITIONS[pos.toLowerCase()] ?? 'bg-slate-100 text-slate-700') : 'bg-blue-100 text-blue-800'
           return (
             <div className="max-w-2xl">
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">Mój grafik</h1>
+              <h1 className="text-xl font-bold text-gray-900 mb-4">Mój grafik</h1>
 
               {/* Week navigator */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
@@ -1690,7 +1690,7 @@ export default function OpsDashboard() {
         {activeView === 'reporting' && (
           <div className="max-w-4xl">
             <header className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900">Raport dzienny</h1>
+              <h1 className="text-xl md:text-3xl font-bold text-gray-900">Raport dzienny</h1>
               <div className="flex gap-2 mt-4">
                 <Button variant={reportingSubView === 'form' ? 'default' : 'outline'} onClick={() => setReportingSubView('form')}>
                   <FileText className="w-4 h-4 mr-2" />Formularz</Button>
