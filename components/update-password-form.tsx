@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
 
-export function UpdatePasswordForm() {
+export function UpdatePasswordForm({ redirectTo = "/auth/login" }: { redirectTo?: string }) {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function UpdatePasswordForm() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       setDone(true);
-      setTimeout(() => router.push("/auth/login"), 2000);
+      setTimeout(() => router.push(redirectTo), 2000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Błąd aktualizacji hasła.");
     } finally {
@@ -37,7 +37,7 @@ export function UpdatePasswordForm() {
         <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto">
           <CheckCircle2 className="w-8 h-8 text-green-500" />
         </div>
-        <p className="text-[14px] text-[#6B7280]">Hasło zostało zmienione. Przekierowanie do logowania...</p>
+        <p className="text-[14px] text-[#6B7280]">Hasło zostało ustawione. Przekierowanie...</p>
       </div>
     );
   }
