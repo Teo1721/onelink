@@ -803,7 +803,7 @@ export default function HomePage() {
               <Zap className="w-3 h-3 text-blue-500" />
               Cennik
             </Pill>
-            <h2 className="text-[36px] md:text-[52px] font-black tracking-tight mt-6 mb-4">
+            <h2 className="text-[36px] md:text-[52px] font-black tracking-tight mt-6 mb-4 text-white">
               Od <GradientText>19,99 zł</GradientText> miesięcznie
             </h2>
             <p className="text-[15px] text-white/45 max-w-lg mx-auto mb-8 leading-relaxed">
