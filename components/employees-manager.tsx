@@ -572,7 +572,15 @@ export function EmployeesManager({
                               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700" title="Email zaproszenia wysłany, czeka na potwierdzenie">
                                 📧 Zaproszony
                               </span>
-                              <div className="mt-1">
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                <button
+                                  onClick={() => inviteEmployee(emp)}
+                                  disabled={inviting[emp.id]}
+                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 disabled:opacity-50"
+                                  title={`Wyślij zaproszenie ponownie na ${emp.email}`}
+                                >
+                                  {inviting[emp.id] ? '…' : '📧 Wyślij ponownie'}
+                                </button>
                                 <button
                                   onClick={() => resetPassword(emp)}
                                   disabled={resetting[emp.id]}
