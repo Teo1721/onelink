@@ -191,28 +191,29 @@ export default function EmployeeDashboard() {
           }
         }
 
+        // Track whether we resolved a location via client-side queries
+        let resolvedLocationId: string | null = null
+        let resolvedEmployeeId: string | null = emp?.id ?? null
+
         if (emp) {
-          setEmployeeId(emp.id)
           if (emp.location_id) {
-            setLocationId(emp.location_id)
+            resolvedLocationId = emp.location_id
           } else {
             // Try user_access table
             const { data: access } = await supabase
               .from('user_access').select('location_id').eq('user_id', user.id).limit(1).maybeSingle()
             if (access?.location_id) {
-              setLocationId(access.location_id)
-              // Backfill location_id on the employee record so future lookups are instant
+              resolvedLocationId = access.location_id
               await supabase.from('employees').update({ location_id: access.location_id }).eq('id', emp.id)
             } else {
-              // Last resort: find location via user_profiles.company_id
+              // Try user_profiles.company_id
               const { data: prof } = await supabase
                 .from('user_profiles').select('company_id').eq('id', user.id).maybeSingle()
               if (prof?.company_id) {
                 const { data: loc } = await supabase
                   .from('locations').select('id').eq('company_id', prof.company_id).limit(1).maybeSingle()
                 if (loc?.id) {
-                  setLocationId(loc.id)
-                  // Backfill both tables
+                  resolvedLocationId = loc.id
                   await supabase.from('employees').update({ location_id: loc.id }).eq('id', emp.id)
                   await supabase.from('user_access').upsert(
                     { user_id: user.id, location_id: loc.id },
@@ -223,6 +224,21 @@ export default function EmployeeDashboard() {
             }
           }
         }
+
+        // Final fallback: server-side admin endpoint bypasses RLS and repairs broken accounts
+        if (!resolvedLocationId) {
+          try {
+            const res = await fetch('/api/employee/fix-location')
+            if (res.ok) {
+              const fixed = await res.json()
+              if (fixed.location_id) resolvedLocationId = fixed.location_id
+              if (fixed.employee_id && !resolvedEmployeeId) resolvedEmployeeId = fixed.employee_id
+            }
+          } catch { /* non-critical */ }
+        }
+
+        if (resolvedEmployeeId) setEmployeeId(resolvedEmployeeId)
+        if (resolvedLocationId) setLocationId(resolvedLocationId)
 
       } catch (err) {
         console.error('Employee init error:', err)
