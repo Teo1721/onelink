@@ -23,8 +23,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const resetLink = data.properties?.action_link
-  if (!resetLink) return NextResponse.json({ error: 'Failed to generate link' }, { status: 500 })
+  const hashedToken = data.properties?.hashed_token
+  if (!hashedToken) return NextResponse.json({ error: 'Failed to generate link' }, { status: 500 })
+
+  // Build link pointing to our own /auth/confirm route using the hashed_token.
+  // This bypasses Supabase's redirect allowlist entirely — the link goes straight
+  // to our server, which calls verifyOtp and then redirects to the password page.
+  const resetLink = `${origin}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=recovery&next=/auth/update-password`
 
   // Send via Resend
   const resendKey = process.env.RESEND_API_KEY
