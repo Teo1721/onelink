@@ -75,6 +75,10 @@ export function EmployeesManager({
   // invite state
   const [inviting, setInviting]           = useState<Record<string, boolean>>({})
 
+  // reset password state
+  const [resetting, setResetting]         = useState<Record<string, boolean>>({})
+  const [tempPasswords, setTempPasswords] = useState<Record<string, string>>({})
+
   // csv
   const [parsed, setParsed]               = useState<ParsedEmployee[]>([])
   const [parseError, setParseError]       = useState('')
@@ -126,6 +130,22 @@ export function EmployeesManager({
     if (!res.ok) { alert('Błąd: ' + (json.error ?? 'Nieznany błąd')); }
     else { fetchEmployees() }
     setInviting(prev => ({ ...prev, [emp.id]: false }))
+  }
+
+  // ── reset employee password ──
+  const resetPassword = async (emp: Employee) => {
+    if (!emp.user_id) return
+    if (!confirm(`Ustaw tymczasowe hasło dla ${emp.full_name}?`)) return
+    setResetting(prev => ({ ...prev, [emp.id]: true }))
+    const res = await fetch('/api/admin/reset-employee-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: emp.user_id }),
+    })
+    const json = await res.json()
+    if (!res.ok) { alert('Błąd: ' + (json.error ?? 'Nieznany błąd')) }
+    else { setTempPasswords(prev => ({ ...prev, [emp.id]: json.tempPassword })) }
+    setResetting(prev => ({ ...prev, [emp.id]: false }))
   }
 
   // ── manual add ──
@@ -518,20 +538,54 @@ export function EmployeesManager({
                               )}
                             </div>
                           ) : authStatus[emp.user_id]?.confirmed_at ? (
-                            <div>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
-                                ✓ Aktywny
-                              </span>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                  ✓ Aktywny
+                                </span>
+                                <button
+                                  onClick={() => resetPassword(emp)}
+                                  disabled={resetting[emp.id]}
+                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 disabled:opacity-50"
+                                  title="Ustaw tymczasowe hasło"
+                                >
+                                  {resetting[emp.id] ? '…' : '🔑 Reset'}
+                                </button>
+                              </div>
+                              {tempPasswords[emp.id] && (
+                                <div className="text-[10px] bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-800">
+                                  Temp. hasło: <span className="font-mono font-bold select-all">{tempPasswords[emp.id]}</span>
+                                  <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500 hover:text-yellow-700">✕</button>
+                                </div>
+                              )}
                               {authStatus[emp.user_id]?.last_sign_in && (
-                                <p className="text-[9px] text-gray-400 mt-0.5">
+                                <p className="text-[9px] text-gray-400">
                                   {new Date(authStatus[emp.user_id].last_sign_in!).toLocaleDateString('pl-PL')}
                                 </p>
                               )}
                             </div>
                           ) : (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700" title="Email zaproszenia wysłany, czeka na potwierdzenie">
-                              📧 Zaproszony
-                            </span>
+                            <div className="space-y-1">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700" title="Email zaproszenia wysłany, czeka na potwierdzenie">
+                                📧 Zaproszony
+                              </span>
+                              <div className="mt-1">
+                                <button
+                                  onClick={() => resetPassword(emp)}
+                                  disabled={resetting[emp.id]}
+                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 disabled:opacity-50"
+                                  title="Ustaw tymczasowe hasło zamiast linku"
+                                >
+                                  {resetting[emp.id] ? '…' : '🔑 Ustaw hasło'}
+                                </button>
+                              </div>
+                              {tempPasswords[emp.id] && (
+                                <div className="text-[10px] bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-800">
+                                  Temp. hasło: <span className="font-mono font-bold select-all">{tempPasswords[emp.id]}</span>
+                                  <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500 hover:text-yellow-700">✕</button>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 flex items-center gap-1.5">
