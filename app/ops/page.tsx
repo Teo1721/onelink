@@ -922,6 +922,8 @@ export default function OpsDashboard() {
     if (!gross && !netManual) e.push({ field: 'gross', message: 'Utarg brutto lub netto jest wymagany.' })
     if (gross > 0 && Math.abs(card + cash + online - gross) > 0.5)
       e.push({ field: 'card_cash', message: `Karty + Gotówka + Online ≠ Brutto. Różnica: ${fmt2(Math.abs(card + cash + online - gross))}` })
+    if (gross > 0 && net > gross)
+      e.push({ field: 'gross', message: `Netto (${fmt2(net)} zł) nie może być wyższe niż Brutto (${fmt2(gross)} zł).` })
     if (net > 0 && tx <= 0) e.push({ field: 'transactions', message: 'Utarg > 0, ale brak transakcji.' })
     if (net > 0 && totalHours <= 0) e.push({ field: 'hours', message: 'Utarg > 0, ale brak godzin pracy.' })
     if (Math.abs(cashDiff) > 0.01 && !salesForm.cashDiffExplanation.trim())

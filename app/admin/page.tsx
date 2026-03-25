@@ -727,6 +727,13 @@ export default function AdminDashboard() {
   const [pendingDailyReports, setPendingDailyReports] = useState<DailyReport[]>([])
   const [selectedDailyReport, setSelectedDailyReport] = useState<DailyReport | null>(null)
   const [dailyReportEmployeeHours, setDailyReportEmployeeHours] = useState<any[]>([])
+  const [reportTab, setReportTab] = useState<'pending' | 'history'>('pending')
+  const [historyReports, setHistoryReports] = useState<DailyReport[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [editingReport, setEditingReport] = useState(false)
+  const [editReportForm, setEditReportForm] = useState<Partial<DailyReport>>({})
+  const [savingReport, setSavingReport] = useState(false)
+  const [actioningNotif, setActioningNotif] = useState<Record<string, boolean>>({})
 
   // ── PnL ──
   const [pnl, setPnl] = useState({
@@ -853,6 +860,7 @@ export default function AdminDashboard() {
       .from('admin_notifications')
       .select('*, locations:location_id(name)')
       .eq('company_id', companyId)
+      .neq('status', 'actioned')
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -862,7 +870,7 @@ export default function AdminDashboard() {
         location_name: n.locations?.name || 'Nieznana',
       }))
       setNotifications(notifs)
-      setUnreadCount(notifs.filter((n: AdminNotification) => n.status === 'unread').length)
+      setUnreadCount(notifs.filter((n: AdminNotification) => n.status !== 'actioned').length)
     }
   }
 
@@ -985,8 +993,11 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    if (activeView === 'daily_reports') fetchPendingDailyReports()
-  }, [activeView, filterLocationId])
+    if (activeView === 'daily_reports') {
+      fetchPendingDailyReports()
+      if (reportTab === 'history') fetchHistoryReports()
+    }
+  }, [activeView, filterLocationId, reportTab])
 
   const openDailyReportDetail = async (report: DailyReport) => {
     setSelectedDailyReport(report)
@@ -1042,6 +1053,71 @@ export default function AdminDashboard() {
     setActiveView('daily_reports')
     fetchPendingDailyReports()
     fetchNotifications()
+  }
+
+  const fetchHistoryReports = async () => {
+    const locIds = locations.map(l => l.id)
+    if (!locIds.length) return
+    setHistoryLoading(true)
+    let q = supabase.from('sales_daily')
+      .select('*, locations:location_id(name)')
+      .in('status', ['approved', 'rejected'])
+      .order('date', { ascending: false })
+      .limit(60)
+    if (filterLocationId !== 'all') q = q.eq('location_id', filterLocationId)
+    else q = q.in('location_id', locIds)
+    const { data } = await q
+    if (data) setHistoryReports(data.map((r: any) => ({ ...r, location_name: r.locations?.name || 'Nieznana' })))
+    setHistoryLoading(false)
+  }
+
+  const approveReportFromNotif = async (notifId: string, reportId: string) => {
+    setActioningNotif(p => ({ ...p, [notifId]: true }))
+    await supabase.from('sales_daily')
+      .update({ status: 'approved', approved_by: adminName, approved_at: new Date().toISOString() })
+      .eq('id', reportId)
+    await supabase.from('admin_notifications')
+      .update({ status: 'actioned', actioned_at: new Date().toISOString() })
+      .eq('id', notifId)
+    setActioningNotif(p => ({ ...p, [notifId]: false }))
+    fetchPendingDailyReports()
+    fetchNotifications()
+  }
+
+  const rejectReportFromNotif = async (notifId: string, reportId: string) => {
+    const note = prompt('Podaj powód odrzucenia:')
+    if (!note?.trim()) return
+    setActioningNotif(p => ({ ...p, [notifId]: true }))
+    await supabase.from('sales_daily')
+      .update({ status: 'rejected', rejection_note: note })
+      .eq('id', reportId)
+    await supabase.from('admin_notifications')
+      .update({ status: 'actioned', actioned_at: new Date().toISOString() })
+      .eq('id', notifId)
+    setActioningNotif(p => ({ ...p, [notifId]: false }))
+    fetchPendingDailyReports()
+    fetchNotifications()
+  }
+
+  const saveReportEdit = async () => {
+    if (!selectedDailyReport) return
+    setSavingReport(true)
+    const { error } = await supabase.from('sales_daily')
+      .update({
+        gross_revenue: Number(editReportForm.gross_revenue) || 0,
+        net_revenue: Number(editReportForm.net_revenue) || 0,
+        card_payments: Number(editReportForm.card_payments) || 0,
+        cash_payments: Number(editReportForm.cash_payments) || 0,
+        transaction_count: Number(editReportForm.transaction_count) || 0,
+        comments: editReportForm.comments || '',
+      })
+      .eq('id', selectedDailyReport.id)
+    setSavingReport(false)
+    if (error) { alert('Błąd: ' + error.message); return }
+    setSelectedDailyReport({ ...selectedDailyReport, ...editReportForm } as DailyReport)
+    setEditingReport(false)
+    fetchHistoryReports()
+    alert('✅ Raport zaktualizowany')
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -2123,51 +2199,114 @@ export default function AdminDashboard() {
         {activeView === 'daily_reports' && (
           <div className="space-y-5">
             <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Raporty dzienne</h1>
-            <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
-              {pendingDailyReports.length === 0 ? (
-                <p className="text-center text-[#6B7280] py-12 text-[13px]">Brak raportów do zatwierdzenia</p>
-              ) : (
-                <div className="divide-y divide-[#F3F4F6]">
-                  {pendingDailyReports.map(report => {
-                    const net = Number(report.net_revenue) || (Number(report.gross_revenue) || 0) / (1 + VAT_RATE)
-                    const laborCost = (Number(report.total_labor_hours) || 0) * (Number(report.avg_hourly_rate) || 0)
-                    const laborPct = net > 0 ? laborCost / net : 0
-                    return (
-                      <div key={report.id}
-                        className="flex items-center justify-between px-5 py-4 hover:bg-[#F9FAFB] cursor-pointer transition-colors"
-                        onClick={() => openDailyReportDetail(report)}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] flex items-center justify-center shrink-0">
-                            <FileText className="w-4 h-4 text-[#2563EB]" />
-                          </div>
-                          <div>
-                            <p className="text-[13px] font-semibold text-[#111827]">{report.location_name}</p>
-                            <p className="text-[12px] text-[#6B7280]">{report.date} · {report.closing_person}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-[14px] font-bold text-[#111827]">{fmt0(net)}</p>
-                            <p className="text-[11px] text-[#9CA3AF]">Netto</p>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-[14px] font-bold ${laborPct > 0.3 ? 'text-[#DC2626]' : 'text-[#111827]'}`}>{fmtPct(laborPct)}</p>
-                            <p className="text-[11px] text-[#9CA3AF]">Praca</p>
-                          </div>
-                          {Math.abs(Number(report.cash_diff) || 0) > 0.01 && (
-                            <div className="text-right">
-                              <p className="text-[14px] font-bold text-[#DC2626]">{fmt2(Number(report.cash_diff) || 0)}</p>
-                              <p className="text-[11px] text-[#9CA3AF]">Różn. gotówki</p>
-                            </div>
-                          )}
-                          <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+
+            {/* Tabs */}
+            <div className="flex gap-1 bg-[#F3F4F6] p-1 rounded-lg w-fit">
+              <button
+                onClick={() => setReportTab('pending')}
+                className={`px-4 py-1.5 rounded-md text-[13px] font-medium transition-all ${reportTab === 'pending' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6B7280] hover:text-[#111827]'}`}
+              >
+                Oczekujące {pendingDailyReports.length > 0 && <span className="ml-1.5 bg-blue-100 text-blue-700 text-[11px] px-1.5 py-0.5 rounded-full">{pendingDailyReports.length}</span>}
+              </button>
+              <button
+                onClick={() => setReportTab('history')}
+                className={`px-4 py-1.5 rounded-md text-[13px] font-medium transition-all ${reportTab === 'history' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6B7280] hover:text-[#111827]'}`}
+              >
+                Historia
+              </button>
             </div>
+
+            {/* Pending tab */}
+            {reportTab === 'pending' && (
+              <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
+                {pendingDailyReports.length === 0 ? (
+                  <p className="text-center text-[#6B7280] py-12 text-[13px]">Brak raportów do zatwierdzenia</p>
+                ) : (
+                  <div className="divide-y divide-[#F3F4F6]">
+                    {pendingDailyReports.map(report => {
+                      const net = Number(report.net_revenue) || (Number(report.gross_revenue) || 0) / (1 + VAT_RATE)
+                      const laborCost = (Number(report.total_labor_hours) || 0) * (Number(report.avg_hourly_rate) || 0)
+                      const laborPct = net > 0 ? laborCost / net : 0
+                      return (
+                        <div key={report.id}
+                          className="flex items-center justify-between px-5 py-4 hover:bg-[#F9FAFB] cursor-pointer transition-colors"
+                          onClick={() => openDailyReportDetail(report)}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] flex items-center justify-center shrink-0">
+                              <FileText className="w-4 h-4 text-[#2563EB]" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-semibold text-[#111827]">{report.location_name}</p>
+                              <p className="text-[12px] text-[#6B7280]">{report.date} · {report.closing_person}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <p className="text-[14px] font-bold text-[#111827]">{fmt0(net)}</p>
+                              <p className="text-[11px] text-[#9CA3AF]">Netto</p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-[14px] font-bold ${laborPct > 0.3 ? 'text-[#DC2626]' : 'text-[#111827]'}`}>{fmtPct(laborPct)}</p>
+                              <p className="text-[11px] text-[#9CA3AF]">Praca</p>
+                            </div>
+                            {Math.abs(Number(report.cash_diff) || 0) > 0.01 && (
+                              <div className="text-right">
+                                <p className="text-[14px] font-bold text-[#DC2626]">{fmt2(Number(report.cash_diff) || 0)}</p>
+                                <p className="text-[11px] text-[#9CA3AF]">Różn. gotówki</p>
+                              </div>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* History tab */}
+            {reportTab === 'history' && (
+              <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
+                {historyLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-[#9CA3AF]" /></div>
+                ) : historyReports.length === 0 ? (
+                  <p className="text-center text-[#6B7280] py-12 text-[13px]">Brak historycznych raportów</p>
+                ) : (
+                  <div className="divide-y divide-[#F3F4F6]">
+                    {historyReports.map(report => {
+                      const net = Number(report.net_revenue) || (Number(report.gross_revenue) || 0) / (1 + VAT_RATE)
+                      const isApproved = report.status === 'approved'
+                      return (
+                        <div key={report.id}
+                          className="flex items-center justify-between px-5 py-4 hover:bg-[#F9FAFB] cursor-pointer transition-colors"
+                          onClick={() => { setEditingReport(false); openDailyReportDetail(report) }}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isApproved ? 'bg-green-50' : 'bg-red-50'}`}>
+                              {isApproved ? <CheckCircle className="w-4 h-4 text-green-600" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-semibold text-[#111827]">{report.location_name}</p>
+                              <p className="text-[12px] text-[#6B7280]">{report.date} · {report.closing_person}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <p className="text-[14px] font-bold text-[#111827]">{fmt0(net)}</p>
+                              <p className="text-[11px] text-[#9CA3AF]">Netto</p>
+                            </div>
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${isApproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {isApproved ? '✓ Zatwierdzony' : '✗ Odrzucony'}
+                            </span>
+                            <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -2185,8 +2324,75 @@ export default function AdminDashboard() {
                 <h1 className="text-2xl font-bold">{selectedDailyReport.location_name}</h1>
                 <p className="text-slate-500">{selectedDailyReport.date} • {selectedDailyReport.closing_person}</p>
               </div>
-              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">Do zatwierdzenia</span>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  selectedDailyReport.status === 'approved' ? 'bg-green-100 text-green-700' :
+                  selectedDailyReport.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {selectedDailyReport.status === 'approved' ? '✓ Zatwierdzony' :
+                   selectedDailyReport.status === 'rejected' ? '✗ Odrzucony' : 'Do zatwierdzenia'}
+                </span>
+                {!editingReport && (
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setEditingReport(true)
+                    setEditReportForm({
+                      gross_revenue: selectedDailyReport.gross_revenue,
+                      net_revenue: selectedDailyReport.net_revenue,
+                      card_payments: selectedDailyReport.card_payments,
+                      cash_payments: selectedDailyReport.cash_payments,
+                      transaction_count: selectedDailyReport.transaction_count,
+                      comments: selectedDailyReport.comments,
+                    })
+                  }}>
+                    <Edit2 className="w-3.5 h-3.5 mr-1.5" />Edytuj
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Edit form */}
+            {editingReport && (
+              <Card className="border-blue-200 bg-blue-50/30">
+                <CardHeader><CardTitle className="text-[15px]">Edytuj raport</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {[
+                      { label: 'Brutto (zł)', key: 'gross_revenue' },
+                      { label: 'Netto (zł)', key: 'net_revenue' },
+                      { label: 'Płatności kartą (zł)', key: 'card_payments' },
+                      { label: 'Gotówka (zł)', key: 'cash_payments' },
+                      { label: 'Liczba transakcji', key: 'transaction_count' },
+                    ].map(({ label, key }) => (
+                      <div key={key}>
+                        <Label className="text-[11px] text-[#6B7280] uppercase tracking-wide">{label}</Label>
+                        <Input
+                          type="number"
+                          value={(editReportForm as any)[key] ?? ''}
+                          onChange={e => setEditReportForm(f => ({ ...f, [key]: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                    ))}
+                    <div className="col-span-2">
+                      <Label className="text-[11px] text-[#6B7280] uppercase tracking-wide">Komentarz</Label>
+                      <Input
+                        value={editReportForm.comments ?? ''}
+                        onChange={e => setEditReportForm(f => ({ ...f, comments: e.target.value }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={saveReportEdit} disabled={savingReport} size="sm">
+                      {savingReport ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                      Zapisz zmiany
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingReport(false)}>Anuluj</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Sales Summary */}
             <Card>
