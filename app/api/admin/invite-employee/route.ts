@@ -20,6 +20,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
+  // Fetch the employee record to get location_id and company info
+  const { data: empRow } = await supabase
+    .from('employees')
+    .select('location_id, locations(company_id)')
+    .eq('id', employee_id)
+    .maybeSingle()
+
+  const locationId = empRow?.location_id ?? null
+  const companyId = (empRow?.locations as any)?.company_id ?? null
+
   // Link the new user_id to the employee record immediately
   const { error: updateErr } = await supabase
     .from('employees')
@@ -30,10 +40,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 })
   }
 
-  // Create user_profiles row with employee role so login redirects correctly
+  // Create user_profiles row with employee role, company_id so login redirects correctly
   await supabase
     .from('user_profiles')
-    .upsert({ id: data.user.id, role: 'employee', full_name: name ?? '' }, { onConflict: 'id', ignoreDuplicates: false })
+    .upsert(
+      { id: data.user.id, role: 'employee', full_name: name ?? '', company_id: companyId },
+      { onConflict: 'id', ignoreDuplicates: false }
+    )
+
+  // Grant location access so the employee can submit suggestions etc.
+  if (locationId) {
+    await supabase
+      .from('user_access')
+      .upsert(
+        { user_id: data.user.id, location_id: locationId },
+        { onConflict: 'user_id,location_id', ignoreDuplicates: true }
+      )
+  }
 
   return NextResponse.json({ ok: true, user_id: data.user.id })
 }

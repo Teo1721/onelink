@@ -196,8 +196,31 @@ export default function EmployeeDashboard() {
           if (emp.location_id) {
             setLocationId(emp.location_id)
           } else {
-            const { data: access } = await supabase.from('user_access').select('location_id').eq('user_id', user.id).limit(1).maybeSingle()
-            if (access?.location_id) setLocationId(access.location_id)
+            // Try user_access table
+            const { data: access } = await supabase
+              .from('user_access').select('location_id').eq('user_id', user.id).limit(1).maybeSingle()
+            if (access?.location_id) {
+              setLocationId(access.location_id)
+              // Backfill location_id on the employee record so future lookups are instant
+              await supabase.from('employees').update({ location_id: access.location_id }).eq('id', emp.id)
+            } else {
+              // Last resort: find location via user_profiles.company_id
+              const { data: prof } = await supabase
+                .from('user_profiles').select('company_id').eq('id', user.id).maybeSingle()
+              if (prof?.company_id) {
+                const { data: loc } = await supabase
+                  .from('locations').select('id').eq('company_id', prof.company_id).limit(1).maybeSingle()
+                if (loc?.id) {
+                  setLocationId(loc.id)
+                  // Backfill both tables
+                  await supabase.from('employees').update({ location_id: loc.id }).eq('id', emp.id)
+                  await supabase.from('user_access').upsert(
+                    { user_id: user.id, location_id: loc.id },
+                    { onConflict: 'user_id,location_id', ignoreDuplicates: true }
+                  )
+                }
+              }
+            }
           }
         }
 
