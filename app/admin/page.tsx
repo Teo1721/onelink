@@ -860,18 +860,79 @@ export default function AdminDashboard() {
       .from('admin_notifications')
       .select('*, locations:location_id(name)')
       .eq('company_id', companyId)
-      .neq('status', 'actioned')
       .order('created_at', { ascending: false })
       .limit(50)
 
-    if (data) {
-      const notifs = data.map((n: any) => ({
-        ...n,
-        location_name: n.locations?.name || 'Nieznana',
-      }))
-      setNotifications(notifs)
-      setUnreadCount(notifs.filter((n: AdminNotification) => n.status !== 'actioned').length)
+    if (!data) return
+
+    const pendingNotifs = data.filter((n: any) => n.status !== 'actioned')
+
+    if (pendingNotifs.length > 0) {
+      // Notifications without reference_id can't be auto-linked — mark them done
+      const withoutRef = pendingNotifs.filter((n: any) => !n.reference_id)
+      const withRef = pendingNotifs.filter((n: any) => n.reference_id)
+
+      let toActionIds: string[] = withoutRef.map((n: any) => n.id)
+
+      // For each notification type that has a reference_id, check if that item is done
+      const dailyNotifs = withRef.filter((n: any) => n.type === 'daily_report')
+      const invoiceNotifs = withRef.filter((n: any) => n.type === 'invoice')
+      const inventoryNotifs = withRef.filter((n: any) => n.type === 'inventory')
+
+      const [dailyResult, invoiceResult, inventoryResult] = await Promise.all([
+        dailyNotifs.length > 0
+          ? supabase.from('sales_daily').select('id')
+              .in('id', dailyNotifs.map((n: any) => n.reference_id))
+              .in('status', ['approved', 'rejected'])
+          : Promise.resolve({ data: [] }),
+        invoiceNotifs.length > 0
+          ? supabase.from('invoices').select('id')
+              .in('id', invoiceNotifs.map((n: any) => n.reference_id))
+              .in('status', ['approved', 'rejected'])
+          : Promise.resolve({ data: [] }),
+        inventoryNotifs.length > 0
+          ? supabase.from('inventory_jobs').select('id')
+              .in('id', inventoryNotifs.map((n: any) => n.reference_id))
+              .eq('status', 'approved')
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const dailyDone = new Set((dailyResult.data || []).map((r: any) => r.id))
+      const invoiceDone = new Set((invoiceResult.data || []).map((r: any) => r.id))
+      const inventoryDone = new Set((inventoryResult.data || []).map((r: any) => r.id))
+
+      toActionIds = [
+        ...toActionIds,
+        ...dailyNotifs.filter((n: any) => dailyDone.has(n.reference_id)).map((n: any) => n.id),
+        ...invoiceNotifs.filter((n: any) => invoiceDone.has(n.reference_id)).map((n: any) => n.id),
+        ...inventoryNotifs.filter((n: any) => inventoryDone.has(n.reference_id)).map((n: any) => n.id),
+      ]
+
+      if (toActionIds.length > 0) {
+        await supabase.from('admin_notifications')
+          .update({ status: 'actioned', actioned_at: new Date().toISOString() })
+          .in('id', toActionIds)
+        const { data: fresh } = await supabase
+          .from('admin_notifications')
+          .select('*, locations:location_id(name)')
+          .eq('company_id', companyId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+        if (fresh) {
+          const notifs = fresh.map((n: any) => ({ ...n, location_name: n.locations?.name || 'Nieznana' }))
+          setNotifications(notifs)
+          setUnreadCount(notifs.filter((n: AdminNotification) => n.status !== 'actioned').length)
+        }
+        return
+      }
     }
+
+    const notifs = data.map((n: any) => ({
+      ...n,
+      location_name: n.locations?.name || 'Nieznana',
+    }))
+    setNotifications(notifs)
+    setUnreadCount(notifs.filter((n: AdminNotification) => n.status !== 'actioned').length)
   }
 
   useEffect(() => {
@@ -2091,33 +2152,42 @@ export default function AdminDashboard() {
                   {notifications.map(notif => {
                     const Icon = NOTIFICATION_ICONS[notif.type] || Bell
                     const isUnread = notif.status === 'unread'
+                    const isActioned = notif.status === 'actioned'
                     return (
-                      <div key={notif.id} className={`flex items-start gap-4 px-5 py-4 ${isUnread ? 'bg-[#EFF6FF]' : ''}`}>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isUnread ? 'bg-[#DBEAFE]' : 'bg-[#F3F4F6]'}`}>
-                          <Icon className={`w-4 h-4 ${isUnread ? 'text-[#2563EB]' : 'text-[#9CA3AF]'}`} />
+                      <div key={notif.id} className={`flex items-start gap-4 px-5 py-4 ${isActioned ? 'opacity-50' : isUnread ? 'bg-[#EFF6FF]' : ''}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isActioned ? 'bg-[#F3F4F6]' : isUnread ? 'bg-[#DBEAFE]' : 'bg-[#F3F4F6]'}`}>
+                          <Icon className={`w-4 h-4 ${isActioned ? 'text-[#9CA3AF]' : isUnread ? 'text-[#2563EB]' : 'text-[#9CA3AF]'}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-[13px] font-semibold ${isUnread ? 'text-[#111827]' : 'text-[#374151]'}`}>{notif.title}</p>
+                          <p className={`text-[13px] font-semibold ${isActioned ? 'text-[#9CA3AF] line-through' : isUnread ? 'text-[#111827]' : 'text-[#374151]'}`}>{notif.title}</p>
                           <p className="text-[12px] text-[#6B7280] mt-0.5">{notif.message}</p>
                           <p className="text-[11px] text-[#9CA3AF] mt-1">{notif.location_name} · {new Date(notif.created_at).toLocaleString('pl-PL')}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {isUnread && (
-                            <button onClick={() => markNotificationRead(notif.id)}
-                              className="h-7 w-7 flex items-center justify-center rounded-md text-[#6B7280] hover:bg-[#F3F4F6] transition-colors">
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
+                          {isActioned ? (
+                            <span className="flex items-center gap-1 text-[12px] text-green-600 font-medium">
+                              <CheckCircle className="w-3.5 h-3.5" />Wykonano
+                            </span>
+                          ) : (
+                            <>
+                              {isUnread && (
+                                <button onClick={() => markNotificationRead(notif.id)}
+                                  className="h-7 w-7 flex items-center justify-center rounded-md text-[#6B7280] hover:bg-[#F3F4F6] transition-colors">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <button onClick={() => {
+                                markNotificationRead(notif.id)
+                                if (notif.type === 'daily_report') setActiveView('daily_reports')
+                                else if (notif.type === 'invoice') setActiveView('approvals')
+                                else if (notif.type === 'inventory') setActiveView('inv_approvals')
+                                else if (notif.type === 'semis_reconciliation') setActiveView('semis_verification')
+                                else setActiveView('notifications')
+                              }} className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white text-[12px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">
+                                <ExternalLink className="w-3 h-3" />Przejdź
+                              </button>
+                            </>
                           )}
-                          <button onClick={() => {
-                            markNotificationRead(notif.id)
-                            if (notif.type === 'daily_report') setActiveView('daily_reports')
-                            else if (notif.type === 'invoice') setActiveView('approvals')
-                            else if (notif.type === 'inventory') setActiveView('inv_approvals')
-                            else if (notif.type === 'semis_reconciliation') setActiveView('semis_verification')
-                            else setActiveView('notifications')
-                          }} className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white text-[12px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">
-                            <ExternalLink className="w-3 h-3" />Przejdź
-                          </button>
                         </div>
                       </div>
                     )
