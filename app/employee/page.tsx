@@ -5,9 +5,10 @@ import { createClient } from '@/app/supabase-client'
 import { useRouter } from 'next/navigation'
 import {
   Calendar, Clock, MapPin, LogOut, ChevronLeft, ChevronRight,
-  List, Send, Timer, RefreshCw, CheckCircle, XCircle, Edit2, Trash2,
+  List, Send, Timer, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { UpdatePasswordForm } from '@/components/update-password-form'
 
 /* ─────────────────────── types ── */
 type Shift = {
@@ -132,6 +133,7 @@ export default function EmployeeDashboard() {
 
   /* ── tab ── */
   const [tab, setTab] = useState<'schedule' | 'suggest' | 'clockin'>('schedule')
+  const [showChangePw, setShowChangePw] = useState(false)
 
   /* ── schedule ── */
   const [shifts,      setShifts]      = useState<Shift[]>([])
@@ -341,14 +343,37 @@ export default function EmployeeDashboard() {
               {tab === 'clockin' && 'Odbicia czasu pracy'}
             </p>
           </div>
-          <button
-            onClick={() => { supabase.auth.signOut(); router.push('/auth/login') }}
-            className="flex items-center gap-1.5 text-xs text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />Wyloguj
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowChangePw(true)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              <KeyRound className="w-3.5 h-3.5" />Hasło
+            </button>
+            <button
+              onClick={() => { supabase.auth.signOut(); router.push('/auth/login') }}
+              className="flex items-center gap-1.5 text-xs text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />Wyloguj
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* ── Change password modal ── */}
+      {showChangePw && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[16px] font-bold text-[#111827]">Zmień hasło</h2>
+              <button onClick={() => setShowChangePw(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <UpdatePasswordForm redirectTo="/employee" />
+          </div>
+        </div>
+      )}
 
       <div className="max-w-lg mx-auto px-4 pt-4">
 
