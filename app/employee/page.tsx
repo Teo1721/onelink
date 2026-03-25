@@ -187,15 +187,6 @@ export default function EmployeeDashboard() {
           }
         }
 
-        // Fetch upcoming shifts (user_id OR employee_id)
-        const empId = emp?.id
-        const filter = empId ? `user_id.eq.${user.id},employee_id.eq.${empId}` : `user_id.eq.${user.id}`
-        const { data: upcomingShifts } = await supabase
-          .from('shifts')
-          .select('id, date, time_start, time_end, break_minutes, position, status, accepted_by, employee_id, locations(name)')
-          .or(filter).eq('is_posted', true)
-          .gte('date', today).order('date').limit(60)
-        setShifts((upcomingShifts ?? []) as unknown as Shift[])
       } catch (err) {
         console.error('Employee init error:', err)
       } finally {
@@ -204,6 +195,25 @@ export default function EmployeeDashboard() {
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /* ── week / list shifts ── */
+  const loadShifts = useCallback(async () => {
+    if (!userId) return
+    const { data: emp } = await supabase.from('employees').select('id').eq('user_id', userId).maybeSingle()
+    const empId = emp?.id ?? employeeId
+    const filter = empId ? `user_id.eq.${userId},employee_id.eq.${empId}` : `user_id.eq.${userId}`
+    const startDate = weekStart < today ? weekStart : today
+    const { data } = await supabase
+      .from('shifts')
+      .select('id, date, time_start, time_end, break_minutes, position, status, accepted_by, employee_id, locations(name)')
+      .or(filter).eq('is_posted', true)
+      .gte('date', startDate).order('date').limit(90)
+    setShifts((data ?? []) as unknown as Shift[])
+  }, [userId, employeeId, weekStart, today, supabase])
+
+  useEffect(() => {
+    if (userId) loadShifts()
+  }, [userId, weekStart, loadShifts])
 
   /* ── month shifts (fetched when month view opens or month changes) ── */
   const loadMonthShifts = useCallback(async () => {

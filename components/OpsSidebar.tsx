@@ -1,7 +1,7 @@
 'use client'
 
 import { OneLinkLogo } from "@/components/onelink-logo";
-import { LayoutDashboard, FileText, ClipboardList, LogOut, MapPin, Calendar, Users, Settings } from 'lucide-react'
+import { LayoutDashboard, FileText, ClipboardList, LogOut, MapPin, Calendar, Users, Settings, CalendarDays } from 'lucide-react'
 
 type OpsSidebarProps = {
   locationName: string
@@ -22,8 +22,9 @@ export function OpsSidebar({
     { key: 'reporting',  label: 'Raport dzienny',  icon: LayoutDashboard },
     { key: 'invoices',   label: 'Faktury',          icon: FileText },
     { key: 'inventory',  label: 'Inwentaryzacja',   icon: ClipboardList },
-    { key: 'scheduling', label: 'Harmonogram',      icon: Calendar },
-    { key: 'employees',  label: 'Pracownicy',       icon: Users },
+    { key: 'scheduling',   label: 'Harmonogram',   icon: Calendar },
+    { key: 'my_schedule',  label: 'Mój grafik',    icon: CalendarDays },
+    { key: 'employees',    label: 'Pracownicy',    icon: Users },
   ]
 
   const bottomItems = [

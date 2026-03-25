@@ -97,7 +97,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -511,6 +511,8 @@ export default function OpsDashboard() {
   const [reportDate, setReportDate] = useState('')
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [scheduleWeekStart, setScheduleWeekStart] = useState('')
+  const [myShifts, setMyShifts] = useState<any[]>([])
+  const [myShiftsWeekStart, setMyShiftsWeekStart] = useState('')
   const [reportingSubView, setReportingSubView] = useState<'form' | 'history'>('form')
   const [dailyReportHistory, setDailyReportHistory] = useState<DailyReportHistoryItem[]>([])
 
@@ -598,6 +600,7 @@ export default function OpsDashboard() {
     const today = new Date().toISOString().split('T')[0]
     setReportDate(today)
     setScheduleWeekStart(getWeekStartMonday(today))
+    setMyShiftsWeekStart(getWeekStartMonday(today))
     setInvoiceCommon(p => ({ ...p, saleDate: today, receiptDate: today }))
     setNewSemisEntry(p => ({ ...p, invoice_date: today }))
 
@@ -770,6 +773,30 @@ export default function OpsDashboard() {
     }
     fetchShifts()
   }, [selectedLocation, scheduleWeekStart, activeView, supabase])
+
+  // ═══════════════════════════════════════════════════════════════════
+  // LOAD: My personal shifts
+  // ═══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!userId || !myShiftsWeekStart) return
+    const fetchMyShifts = async () => {
+      const { data: emp } = await supabase.from('employees').select('id').eq('user_id', userId).maybeSingle()
+      const empId = emp?.id
+      const filter = empId ? `user_id.eq.${userId},employee_id.eq.${empId}` : `user_id.eq.${userId}`
+      const today = new Date().toISOString().split('T')[0]
+      const startDate = myShiftsWeekStart < today ? myShiftsWeekStart : today
+      const { data } = await supabase
+        .from('shifts')
+        .select('id, date, time_start, time_end, break_minutes, position, locations(name)')
+        .or(filter)
+        .eq('is_posted', true)
+        .gte('date', startDate)
+        .order('date')
+        .limit(90)
+      setMyShifts(data ?? [])
+    }
+    fetchMyShifts()
+  }, [userId, myShiftsWeekStart, supabase])
 
   // ═══════════════════════════════════════════════════════════════════
   // LOAD: Daily report history
@@ -1510,6 +1537,116 @@ export default function OpsDashboard() {
             />
           </div>
         )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  MY SCHEDULE                                            ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'my_schedule' && (() => {
+          const weekDays = buildWeekDays(myShiftsWeekStart)
+          const weekEnd = weekDays[6]?.iso ?? myShiftsWeekStart
+          const weekShifts = myShifts.filter(s => s.date >= myShiftsWeekStart && s.date <= weekEnd)
+          const today = new Date().toISOString().split('T')[0]
+          const fmtT = (t?: string | null) => (t ?? '').slice(0, 5)
+          const calcH = (ts: string, te: string, brk = 0) => {
+            const [sh, sm] = ts.split(':').map(Number)
+            const [eh, em] = te.split(':').map(Number)
+            return Math.max(0, (eh * 60 + em - sh * 60 - sm - brk) / 60)
+          }
+          const POSITIONS: Record<string, string> = {
+            kucharz: 'bg-orange-100 text-orange-800', kelner: 'bg-blue-100 text-blue-800',
+            kasjer: 'bg-emerald-100 text-emerald-800', manager: 'bg-purple-100 text-purple-800',
+            zmywak: 'bg-yellow-100 text-yellow-800', barista: 'bg-pink-100 text-pink-800',
+            dostawa: 'bg-cyan-100 text-cyan-800', point_manager: 'bg-purple-100 text-purple-800',
+          }
+          const posColor = (pos?: string) => pos ? (POSITIONS[pos.toLowerCase()] ?? 'bg-slate-100 text-slate-700') : 'bg-blue-100 text-blue-800'
+          return (
+            <div className="max-w-2xl">
+              <h1 className="text-2xl font-bold text-gray-900 mb-6">Mój grafik</h1>
+
+              {/* Week navigator */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={() => { const d = new Date(myShiftsWeekStart); d.setDate(d.getDate() - 7); setMyShiftsWeekStart(d.toISOString().split('T')[0]) }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600"
+                  >‹</button>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {weekDays[0] && new Date(weekDays[0].iso + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
+                      {' – '}
+                      {weekDays[6] && new Date(weekDays[6].iso + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                    {weekShifts.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {weekShifts.length} zmian · {weekShifts.reduce((a, s) => a + calcH(fmtT(s.time_start), fmtT(s.time_end), s.break_minutes ?? 0), 0).toFixed(1)}h
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { const d = new Date(myShiftsWeekStart); d.setDate(d.getDate() + 7); setMyShiftsWeekStart(d.toISOString().split('T')[0]) }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600"
+                  >›</button>
+                </div>
+
+                {/* 7-day grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {weekDays.map(d => {
+                    const dayShifts = weekShifts.filter(s => s.date === d.iso)
+                    const isToday = d.iso === today
+                    return (
+                      <div key={d.iso} className={`rounded-xl border p-1.5 min-h-[80px] flex flex-col gap-1 ${isToday ? 'border-blue-400 bg-blue-50' : 'border-gray-100 bg-white'}`}>
+                        <div className="text-center">
+                          <p className={`text-[10px] font-semibold uppercase ${isToday ? 'text-blue-600' : 'text-gray-400'}`}>{d.label.slice(0, 2)}</p>
+                          <p className={`text-[13px] font-bold ${isToday ? 'text-blue-700' : 'text-gray-800'}`}>{new Date(d.iso + 'T12:00:00').getDate()}</p>
+                        </div>
+                        {dayShifts.map(s => (
+                          <div key={s.id} className="bg-blue-600 rounded-lg p-1 text-white">
+                            <p className="text-[9px] font-bold tabular-nums">{fmtT(s.time_start)}–{fmtT(s.time_end)}</p>
+                            {s.position && <p className="text-[8px] opacity-80 capitalize truncate">{s.position}</p>}
+                          </div>
+                        ))}
+                        {dayShifts.length === 0 && <p className="text-[9px] text-gray-300 text-center mt-1">—</p>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Upcoming list */}
+              <div className="space-y-2">
+                {myShifts.length === 0 ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center">
+                    <p className="text-2xl mb-2">📅</p>
+                    <p className="font-bold text-blue-800 text-sm">Brak nadchodzących zmian</p>
+                    <p className="text-xs text-blue-600 mt-1">Grafik nie został jeszcze opublikowany.</p>
+                  </div>
+                ) : myShifts.filter(s => s.date >= today).map(shift => {
+                  const isToday = shift.date === today
+                  const hrs = calcH(fmtT(shift.time_start), fmtT(shift.time_end), shift.break_minutes ?? 0)
+                  return (
+                    <div key={shift.id} className={`bg-white rounded-xl overflow-hidden flex border ${isToday ? 'border-blue-400' : 'border-gray-100'} shadow-sm`}>
+                      <div className="w-1.5 shrink-0 bg-blue-500" />
+                      <div className="flex-1 p-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                            {isToday ? 'DZIŚ · ' : ''}{new Date(shift.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          </p>
+                          <p className="text-base font-bold text-gray-900 tabular-nums">{fmtT(shift.time_start)} – {fmtT(shift.time_end)}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{hrs.toFixed(1)}h{shift.locations ? ` · ${(shift.locations as any)?.name ?? (Array.isArray(shift.locations) ? shift.locations[0]?.name : '')}` : ''}</p>
+                        </div>
+                        {shift.position && (
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full capitalize shrink-0 ${posColor(shift.position)}`}>
+                            {shift.position}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  EMPLOYEES                                              ║ */}
