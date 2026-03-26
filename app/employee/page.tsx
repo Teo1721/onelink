@@ -314,7 +314,22 @@ export default function EmployeeDashboard() {
 
   const submitSuggestion = async () => {
     setSuggError(null)
-    if (!locationId) { setSuggError('Twoje konto nie jest jeszcze przypisane do lokalizacji. Poproś managera o przypisanie lokalizacji w panelu Pracownicy.'); return }
+    let effectiveLocationId = locationId
+    if (!effectiveLocationId) {
+      // Try server-side repair before giving up
+      try {
+        const res = await fetch('/api/employee/fix-location')
+        if (res.ok) {
+          const fixed = await res.json()
+          if (fixed.location_id) {
+            effectiveLocationId = fixed.location_id
+            setLocationId(fixed.location_id)
+            if (fixed.employee_id && !employeeId) setEmployeeId(fixed.employee_id)
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    if (!effectiveLocationId) { setSuggError('Twoje konto nie jest jeszcze przypisane do lokalizacji. Poproś managera o przypisanie lokalizacji w panelu Pracownicy.'); return }
     setSuggSaving(true)
     const payload = {
       suggestion_type: suggType, date: suggDate,
@@ -325,7 +340,7 @@ export default function EmployeeDashboard() {
     if (editingId) {
       await supabase.from('shift_suggestions').update(payload).eq('id', editingId)
     } else {
-      await supabase.from('shift_suggestions').insert({ ...payload, employee_id: employeeId, user_id: userId, location_id: locationId })
+      await supabase.from('shift_suggestions').insert({ ...payload, employee_id: employeeId, user_id: userId, location_id: effectiveLocationId })
     }
     resetSuggForm(); await loadSuggestions()
     setSuggSaving(false)

@@ -48,7 +48,7 @@ export function OpsSidebar({
       {/* ══════════════════════════════════════════════════
           DESKTOP sidebar (hidden on mobile)
       ══════════════════════════════════════════════════ */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[216px] bg-white border-r border-[#E5E7EB] flex-col z-30">
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-white border-r border-[#E5E7EB] flex-col z-30">
         {/* Logo */}
         <div className="h-14 flex items-center px-5 border-b border-[#E5E7EB] shrink-0">
           <OneLinkLogo iconSize={22} textSize="text-[14px]" dark={false} />

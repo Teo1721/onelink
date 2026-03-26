@@ -192,8 +192,23 @@ export function EmployeesManager({
       real_hour_cost: editForm.real_hour_cost,
       status: editForm.status,
     }).eq('id', id)
+    // Backfill user_access + user_profiles for this employee's auth account
+    await fetch('/api/admin/fix-employee-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employee_id: id }),
+    }).catch(() => null)
     setEditingId(null)
     setEditSaving(false)
+    fetchEmployees()
+  }
+
+  const fixAccount = async (emp: Employee) => {
+    await fetch('/api/admin/fix-employee-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employee_id: emp.id }),
+    })
     fetchEmployees()
   }
   const deleteEmployee = async (id: string) => {
@@ -431,188 +446,148 @@ export function EmployeesManager({
               <p className="text-[11px] mt-1">Dodaj ręcznie lub zaimportuj CSV</p>
             </div>
           ) : (
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-[#9CA3AF] border-b border-[#E5E7EB] bg-[#F9FAFB]">
-                  <th className="px-4 py-2.5">Pracownik</th>
-                  <th className="px-3 py-2.5">Stanowisko</th>
-                  <th className="px-3 py-2.5">Email</th>
-                  <th className="px-3 py-2.5">Telefon</th>
-                  <th className="px-3 py-2.5">Lokalizacja</th>
-                  <th className="px-3 py-2.5">Stawka/h</th>
-                  <th className="px-3 py-2.5">Status</th>
-                  <th className="px-3 py-2.5">Konto</th>
-                  <th className="px-4 py-2.5"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F9FAFB]">
-                {employees.map(emp => (
-                  <tr key={emp.id} className="hover:bg-[#F9FAFB]">
-                    {editingId === emp.id ? (
-                      <>
-                        <td className="px-3 py-2">
-                          <input value={editForm.full_name ?? ''} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
-                            className="w-full h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none focus:border-blue-400" />
-                        </td>
-                        <td className="px-3 py-2">
-                          <select value={(editForm as any).position ?? ''} onChange={e => setEditForm({ ...editForm, ...(({ position: e.target.value } as any)) })}
-                            className="w-full h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none">
-                            <option value="">— brak —</option>
-                            {POSITIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2">
-                          <input value={editForm.email ?? ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                            className="w-full h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none focus:border-blue-400" />
-                        </td>
-                        <td className="px-3 py-2">
-                          <input value={(editForm as any).phone ?? ''} onChange={e => setEditForm({ ...editForm, ...({ phone: e.target.value } as any) })}
-                            placeholder="+48..." className="w-full h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none focus:border-blue-400" />
-                        </td>
-                        <td className="px-3 py-2">
-                          <select value={editForm.location_id ?? ''} onChange={e => setEditForm({ ...editForm, location_id: e.target.value })}
-                            className="w-full h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none">
-                            <option value="">— brak —</option>
-                            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2">
-                          <input type="number" value={editForm.base_rate ?? editForm.real_hour_cost ?? ''} onChange={e => { const v = parseFloat(e.target.value) || null; setEditForm({ ...editForm, base_rate: v, real_hour_cost: v }) }}
-                            className="w-20 h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none" />
-                        </td>
-                        <td className="px-3 py-2">
-                          <select value={editForm.status ?? 'active'} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                            className="h-7 rounded border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none">
-                            <option value="active">Aktywny</option>
-                            <option value="inactive">Nieaktywny</option>
-                          </select>
-                        </td>
-                        <td className="px-3 py-2"></td>
-                        <td className="px-4 py-2 flex items-center gap-1.5">
-                          <button onClick={() => saveEdit(emp.id)} disabled={editSaving}
-                            className="h-7 px-2.5 rounded bg-[#2563EB] text-white text-[11px] font-medium hover:bg-[#1D4ED8] disabled:opacity-50 flex items-center gap-1">
-                            {editSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Zapisz
-                          </button>
-                          <button onClick={cancelEdit} className="h-7 px-2 rounded border border-[#E5E7EB] text-[11px] text-[#374151] hover:bg-gray-50">
-                            Anuluj
-                          </button>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-4 py-3 font-medium text-[#111827]">{emp.full_name}</td>
-                        <td className="px-3 py-3">
-                          {emp.position
-                            ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium capitalize">{emp.position}</span>
-                            : <span className="text-[#D1D5DB]">—</span>}
-                        </td>
-                        <td className="px-3 py-3 text-[#6B7280]">
-                          {emp.email
-                            ? <a href={`mailto:${emp.email}`} className="flex items-center gap-1 hover:text-blue-600"><Mail className="w-3 h-3" />{emp.email}</a>
-                            : <span className="text-[#D1D5DB]">—</span>}
-                        </td>
-                        <td className="px-3 py-3 text-[#6B7280]">
-                          {emp.phone
-                            ? <a href={`tel:${emp.phone}`} className="flex items-center gap-1 hover:text-blue-600"><Phone className="w-3 h-3" />{emp.phone}</a>
-                            : <span className="text-[#D1D5DB]">—</span>}
-                        </td>
-                        <td className="px-3 py-3 text-[#6B7280]">{emp.locations?.name ?? <span className="text-[#D1D5DB]">—</span>}</td>
-                        <td className="px-3 py-3 text-[#6B7280]">{(emp.base_rate ?? emp.real_hour_cost) ? `${emp.base_rate ?? emp.real_hour_cost} zł` : <span className="text-[#D1D5DB]">—</span>}</td>
-                        <td className="px-3 py-3">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${emp.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'}`}>
+            <div className="divide-y divide-[#F3F4F6]">
+              {employees.map(emp => (
+                <div key={emp.id} className="hover:bg-[#FAFAFA] transition-colors">
+                  {editingId === emp.id ? (
+                    /* ── EDIT ROW ── */
+                    <div className="px-4 py-3 space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <input value={editForm.full_name ?? ''} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
+                          placeholder="Imię i nazwisko"
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-3 text-[12px] bg-white text-gray-900 focus:outline-none focus:border-blue-400" />
+                        <select value={(editForm as any).position ?? ''} onChange={e => setEditForm({ ...editForm, ...({ position: e.target.value } as any) })}
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none">
+                          <option value="">— stanowisko —</option>
+                          {POSITIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+                        </select>
+                        <select value={editForm.status ?? 'active'} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none">
+                          <option value="active">Aktywny</option>
+                          <option value="inactive">Nieaktywny</option>
+                        </select>
+                        <input value={editForm.email ?? ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                          placeholder="Email" type="email"
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-3 text-[12px] bg-white text-gray-900 focus:outline-none focus:border-blue-400" />
+                        <input value={(editForm as any).phone ?? ''} onChange={e => setEditForm({ ...editForm, ...({ phone: e.target.value } as any) })}
+                          placeholder="Telefon"
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-3 text-[12px] bg-white text-gray-900 focus:outline-none focus:border-blue-400" />
+                        <select value={editForm.location_id ?? ''} onChange={e => setEditForm({ ...editForm, location_id: e.target.value })}
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-2 text-[12px] bg-white text-gray-900 focus:outline-none">
+                          <option value="">— lokalizacja —</option>
+                          {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                        </select>
+                        <input type="number" value={editForm.base_rate ?? editForm.real_hour_cost ?? ''} onChange={e => { const v = parseFloat(e.target.value) || null; setEditForm({ ...editForm, base_rate: v, real_hour_cost: v }) }}
+                          placeholder="Stawka zł/h"
+                          className="h-8 rounded-lg border border-[#E5E7EB] px-3 text-[12px] bg-white text-gray-900 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => saveEdit(emp.id)} disabled={editSaving}
+                          className="h-8 px-3 rounded-lg bg-[#2563EB] text-white text-[12px] font-medium hover:bg-[#1D4ED8] disabled:opacity-50 flex items-center gap-1.5">
+                          {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Zapisz
+                        </button>
+                        <button onClick={cancelEdit} className="h-8 px-3 rounded-lg border border-[#E5E7EB] text-[12px] text-[#374151] hover:bg-gray-50">
+                          Anuluj
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── VIEW ROW ── */
+                    <div className="px-4 py-3 flex items-start gap-3">
+                      {/* Avatar */}
+                      <div className="w-9 h-9 rounded-full bg-[#EEF2FF] flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-[13px] font-bold text-[#4F46E5]">
+                          {emp.full_name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+
+                      {/* Main info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <span className="text-[13px] font-semibold text-[#111827] truncate">{emp.full_name}</span>
+                          {emp.position && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium capitalize shrink-0">{emp.position}</span>
+                          )}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${emp.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'}`}>
                             {emp.status === 'active' ? 'Aktywny' : 'Nieaktywny'}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-[#6B7280]">
+                          {emp.email && <a href={`mailto:${emp.email}`} className="flex items-center gap-1 hover:text-blue-600 truncate"><Mail className="w-3 h-3 shrink-0" />{emp.email}</a>}
+                          {emp.phone && <a href={`tel:${emp.phone}`} className="flex items-center gap-1 hover:text-blue-600"><Phone className="w-3 h-3 shrink-0" />{emp.phone}</a>}
+                          {emp.locations?.name && <span className="flex items-center gap-1"><span className="text-[#D1D5DB]">📍</span>{emp.locations.name}</span>}
+                          {(emp.base_rate ?? emp.real_hour_cost) && <span className="font-medium text-[#374151]">{emp.base_rate ?? emp.real_hour_cost} zł/h</span>}
+                        </div>
+
+                        {/* Account status row */}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           {!emp.user_id ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600">
-                                Brak konta
-                              </span>
+                            <>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600 border border-amber-200">Brak konta</span>
                               {emp.email && (
-                                <button
-                                  onClick={() => inviteEmployee(emp)}
-                                  disabled={inviting[emp.id]}
-                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 disabled:opacity-50"
-                                  title={`Wyślij zaproszenie na ${emp.email}`}
-                                >
+                                <button onClick={() => inviteEmployee(emp)} disabled={inviting[emp.id]}
+                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 disabled:opacity-50">
                                   {inviting[emp.id] ? '…' : '📧 Zaproś'}
                                 </button>
                               )}
-                            </div>
+                            </>
                           ) : authStatus[emp.user_id]?.confirmed_at ? (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
-                                  ✓ Aktywny
-                                </span>
-                                <button
-                                  onClick={() => resetPassword(emp)}
-                                  disabled={resetting[emp.id]}
-                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 disabled:opacity-50"
-                                  title="Ustaw tymczasowe hasło"
-                                >
-                                  {resetting[emp.id] ? '…' : '🔑 Reset'}
-                                </button>
-                              </div>
-                              {tempPasswords[emp.id] && (
-                                <div className="text-[10px] bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-800">
-                                  Temp. hasło: <span className="font-mono font-bold select-all">{tempPasswords[emp.id]}</span>
-                                  <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500 hover:text-yellow-700">✕</button>
-                                </div>
-                              )}
-                              {authStatus[emp.user_id]?.last_sign_in && (
-                                <p className="text-[9px] text-gray-400">
-                                  {new Date(authStatus[emp.user_id].last_sign_in!).toLocaleDateString('pl-PL')}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700" title="Email zaproszenia wysłany, czeka na potwierdzenie">
-                                📧 Zaproszony
+                            <>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 border border-green-200">
+                                ✓ Konto aktywne
+                                {authStatus[emp.user_id]?.last_sign_in && <span className="text-green-500 ml-1">{new Date(authStatus[emp.user_id].last_sign_in!).toLocaleDateString('pl-PL')}</span>}
                               </span>
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                <button
-                                  onClick={() => inviteEmployee(emp)}
-                                  disabled={inviting[emp.id]}
-                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 disabled:opacity-50"
-                                  title={`Wyślij zaproszenie ponownie na ${emp.email}`}
-                                >
-                                  {inviting[emp.id] ? '…' : '📧 Wyślij ponownie'}
-                                </button>
-                                <button
-                                  onClick={() => resetPassword(emp)}
-                                  disabled={resetting[emp.id]}
-                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 disabled:opacity-50"
-                                  title="Ustaw tymczasowe hasło zamiast linku"
-                                >
-                                  {resetting[emp.id] ? '…' : '🔑 Ustaw hasło'}
-                                </button>
-                              </div>
+                              <button onClick={() => resetPassword(emp)} disabled={resetting[emp.id]}
+                                className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 disabled:opacity-50">
+                                {resetting[emp.id] ? '…' : '🔑 Reset hasła'}
+                              </button>
+                              <button onClick={() => fixAccount(emp)}
+                                className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200">
+                                🔧 Napraw konto
+                              </button>
                               {tempPasswords[emp.id] && (
-                                <div className="text-[10px] bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-800">
-                                  Temp. hasło: <span className="font-mono font-bold select-all">{tempPasswords[emp.id]}</span>
-                                  <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500 hover:text-yellow-700">✕</button>
-                                </div>
+                                <span className="text-[10px] bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-yellow-800 font-mono">
+                                  {tempPasswords[emp.id]}
+                                  <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500">✕</button>
+                                </span>
                               )}
-                            </div>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 border border-blue-200">📧 Zaproszony</span>
+                              <button onClick={() => inviteEmployee(emp)} disabled={inviting[emp.id]}
+                                className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 disabled:opacity-50">
+                                {inviting[emp.id] ? '…' : '📧 Wyślij ponownie'}
+                              </button>
+                              <button onClick={() => resetPassword(emp)} disabled={resetting[emp.id]}
+                                className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 disabled:opacity-50">
+                                {resetting[emp.id] ? '…' : '🔑 Ustaw hasło'}
+                              </button>
+                              {tempPasswords[emp.id] && (
+                                <span className="text-[10px] bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-yellow-800 font-mono">
+                                  {tempPasswords[emp.id]}
+                                  <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500">✕</button>
+                                </span>
+                              )}
+                            </>
                           )}
-                        </td>
-                        <td className="px-4 py-3 flex items-center gap-1.5">
-                          <button onClick={() => startEdit(emp)} className="h-7 w-7 rounded border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#2563EB] hover:border-blue-300">
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => deleteEmployee(emp.id)} className="h-7 w-7 rounded border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-red-500 hover:border-red-300">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => startEdit(emp)} className="h-8 w-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#2563EB] hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteEmployee(emp.id)} className="h-8 w-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
