@@ -352,6 +352,19 @@ type Invoice = {
   locations?: { name: string }
 }
 
+type InvoiceItem = {
+  id: string
+  line_number: number
+  product_name: string
+  cos_category?: string | null
+  quantity: number
+  unit: string
+  net_price: number
+  net_value: number
+  vat_rate: number
+  gross_value: number
+}
+
 type InventoryProduct = {
   id: string; name: string; unit: string; category: string
   is_food: boolean; active: boolean; last_price: number
@@ -749,6 +762,8 @@ export default function AdminDashboard() {
 
   // ── Invoices ──
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<InvoiceItem[]>([])
+  const [invoiceItemsLoading, setInvoiceItemsLoading] = useState(false)
   const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([])
   const [importedCosts, setImportedCosts] = useState<any[]>([])
   const [historyInvoices, setHistoryInvoices] = useState<Invoice[]>([])
@@ -2721,7 +2736,18 @@ export default function AdminDashboard() {
                     <div
                       key={inv.id}
                       className="flex justify-between items-center px-5 py-4 cursor-pointer hover:bg-[#F9FAFB] transition-colors"
-                      onClick={() => setSelectedInvoice(inv)}
+                      onClick={async () => {
+                        setSelectedInvoice(inv)
+                        setSelectedInvoiceItems([])
+                        setInvoiceItemsLoading(true)
+                        const { data } = await supabase
+                          .from('invoice_items')
+                          .select('*')
+                          .eq('invoice_id', inv.id)
+                          .order('line_number')
+                        setSelectedInvoiceItems(data ?? [])
+                        setInvoiceItemsLoading(false)
+                      }}
                     >
                       <div>
                         <p className="text-[13px] font-semibold text-[#111827]">{inv.supplier_name}</p>
@@ -2775,6 +2801,59 @@ export default function AdminDashboard() {
                         <p className="text-[13px] font-medium text-[#111827] mt-0.5">{value}</p>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Line items */}
+                  <div className="px-6 pb-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-2">Pozycje faktury</p>
+                    {invoiceItemsLoading ? (
+                      <div className="flex items-center gap-2 text-[12px] text-[#9CA3AF] py-2">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Ładowanie...
+                      </div>
+                    ) : selectedInvoiceItems.length === 0 ? (
+                      <p className="text-[12px] text-[#9CA3AF] py-2">Brak pozycji</p>
+                    ) : (
+                      <div className="border border-[#E5E7EB] rounded-lg overflow-hidden">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+                              <th className="text-left px-3 py-2 font-semibold text-[#6B7280]">Produkt</th>
+                              <th className="text-right px-3 py-2 font-semibold text-[#6B7280]">Ilość</th>
+                              <th className="text-left px-3 py-2 font-semibold text-[#6B7280]">Jedn.</th>
+                              <th className="text-right px-3 py-2 font-semibold text-[#6B7280]">Cena netto</th>
+                              <th className="text-right px-3 py-2 font-semibold text-[#6B7280]">Netto</th>
+                              <th className="text-right px-3 py-2 font-semibold text-[#6B7280]">Brutto</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedInvoiceItems.map((item, i) => (
+                              <tr key={item.id} className={`border-b border-[#F3F4F6] last:border-0 ${i % 2 === 1 ? 'bg-[#FAFAFA]' : ''}`}>
+                                <td className="px-3 py-2 font-medium text-[#111827]">
+                                  {item.product_name}
+                                  {item.cos_category && <span className="ml-1.5 text-[10px] text-[#9CA3AF]">({item.cos_category})</span>}
+                                </td>
+                                <td className="px-3 py-2 text-right text-[#374151]">{item.quantity}</td>
+                                <td className="px-3 py-2 text-[#6B7280]">{item.unit}</td>
+                                <td className="px-3 py-2 text-right text-[#374151]">{fmt0(item.net_price)}</td>
+                                <td className="px-3 py-2 text-right text-[#374151]">{fmt0(item.net_value)}</td>
+                                <td className="px-3 py-2 text-right font-medium text-[#111827]">{fmt0(item.gross_value)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-[#F9FAFB] border-t border-[#E5E7EB]">
+                              <td colSpan={4} className="px-3 py-2 font-semibold text-[#374151]">Suma</td>
+                              <td className="px-3 py-2 text-right font-semibold text-[#374151]">
+                                {fmt0(selectedInvoiceItems.reduce((s, i) => s + (i.net_value || 0), 0))}
+                              </td>
+                              <td className="px-3 py-2 text-right font-bold text-[#111827]">
+                                {fmt0(selectedInvoiceItems.reduce((s, i) => s + (i.gross_value || 0), 0))}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    )}
                   </div>
 
                   {/* Attachment */}
