@@ -863,6 +863,7 @@ export default function AdminDashboard() {
       }
       const { data: locData } = await locQuery
       if (locData) setLocations(locData as LocationRow[])
+      if (locData?.length === 0) { router.push('/onboarding/location'); return }
     }
     init()
   }, [supabase, router])
