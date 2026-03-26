@@ -104,28 +104,39 @@ const MONTH_NAMES = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Li
 const DAY_NAMES_SHORT = ['Pon','Wt','Śr','Czw','Pt','Sob','Nd']
 
 /* ─────────────────────────────────────── helpers ── */
+// Use local date components to avoid UTC offset issues (e.g. Poland = UTC+2)
+const toLocalISO = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// Parse a YYYY-MM-DD string as LOCAL midnight (not UTC midnight)
+const parseLocalDate = (iso: string) => {
+  const [y, m, day] = iso.split('-').map(Number)
+  return new Date(y, m - 1, day)
+}
+
 const getWeekStartMonday = (iso: string) => {
-  const d = new Date(iso); const day = d.getDay() || 7
+  const d = parseLocalDate(iso); const day = d.getDay() || 7
   d.setDate(d.getDate() - (day - 1))
-  return d.toISOString().split('T')[0]
+  return toLocalISO(d)
 }
 
 const buildWeekDays = (weekStart: string) => {
   if (!weekStart) return []
-  const start = new Date(weekStart)
+  const start = parseLocalDate(weekStart)
+  const today = toLocalISO(new Date())
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start); d.setDate(start.getDate() + i)
-    const iso = d.toISOString().split('T')[0]
-    return { iso, label: DAY_NAMES_SHORT[i], dateFull: d.getDate(), month: d.getMonth(), isToday: iso === new Date().toISOString().split('T')[0], isWeekend: i >= 5 }
+    const iso = toLocalISO(d)
+    return { iso, label: DAY_NAMES_SHORT[i], dateFull: d.getDate(), month: d.getMonth(), isToday: iso === today, isWeekend: i >= 5 }
   })
 }
 
 const buildMonthDays = (year: number, month: number) => {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalISO(new Date())
   return Array.from({ length: daysInMonth }, (_, i) => {
     const d = new Date(year, month, i + 1)
-    const iso = d.toISOString().split('T')[0]
+    const iso = toLocalISO(d)
     const dow = d.getDay()
     return { iso, day: i + 1, label: DAY_NAMES_SHORT[(dow === 0 ? 6 : dow - 1)], isToday: iso === today, isWeekend: dow === 0 || dow === 6 }
   })
@@ -140,7 +151,6 @@ const calcHours = (start: string, end: string): number => {
 }
 
 const fmt = (t?: string | null) => (t ?? '').slice(0, 5)
-const posColor = (pos?: string | null) => pos ? (POSITION_MAP[pos.toLowerCase()]?.color ?? DEFAULT_COLOR) : DEFAULT_COLOR
 
 /* ─────────────────────────────────────── component ── */
 export function ScheduleGrid({
@@ -271,7 +281,10 @@ export function ScheduleGrid({
     shifts.filter(s => s.employee_id ? s.employee_id === emp.id && s.date === date : s.employee_name === emp.full_name && s.date === date)
 
   const getPendingSuggestions = (emp: ScheduleEmployee, date: string) =>
-    suggestions.filter(s => s.employee_id === emp.id && s.date === date && s.status === 'pending')
+    suggestions.filter(s =>
+      (s.employee_id === emp.id || (emp.user_id && s.user_id === emp.user_id)) &&
+      s.date === date && s.status === 'pending'
+    )
 
   const empRate = (emp: ScheduleEmployee) => emp.base_rate ?? emp.real_hour_cost ?? 0
 
@@ -477,9 +490,14 @@ export function ScheduleGrid({
                   const ss = sugStyle(sug.suggestion_type)
                   const icon = sugIcon(sug.suggestion_type)
                   const isSpecific = !sug.suggestion_type || sug.suggestion_type === 'specific'
+                  const empName =
+                    sug.employees?.full_name ??
+                    employees.find(e => e.id === sug.employee_id)?.full_name ??
+                    employees.find(e => e.user_id === sug.user_id)?.full_name ??
+                    '—'
                   return (
                   <tr key={sug.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-800">{sug.employees?.full_name ?? '—'}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800">{empName}</td>
                     <td className="px-3 py-3 text-slate-600">{sug.date}</td>
                     <td className="px-3 py-3">
                       <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${ss.badge}`}>

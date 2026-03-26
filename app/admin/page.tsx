@@ -16,7 +16,7 @@ import {
   ChevronRight, Edit2, ToggleLeft, ToggleRight,
   Clock, TrendingUp, AlertCircle, FileText, Receipt, Bell,
   ThumbsUp, ThumbsDown, ExternalLink, ImageIcon,
-  User, CreditCard, LogOut, ShieldCheck, Settings,
+  User, CreditCard, LogOut, ShieldCheck,
 } from 'lucide-react'
 import { MenuPricingTable } from '@/components/menu-pricing-table'
 import { MenuPriceCalculator } from '@/components/menu-price-calculator'
@@ -733,7 +733,7 @@ export default function AdminDashboard() {
   const [editingReport, setEditingReport] = useState(false)
   const [editReportForm, setEditReportForm] = useState<Partial<DailyReport>>({})
   const [savingReport, setSavingReport] = useState(false)
-  const [actioningNotif, setActioningNotif] = useState<Record<string, boolean>>({})
+  const [_actioningNotif, setActioningNotif] = useState<Record<string, boolean>>({})
 
   // ── PnL ──
   const [pnl, setPnl] = useState({
@@ -1132,7 +1132,7 @@ export default function AdminDashboard() {
     setHistoryLoading(false)
   }
 
-  const approveReportFromNotif = async (notifId: string, reportId: string) => {
+  const _approveReportFromNotif = async (notifId: string, reportId: string) => {
     setActioningNotif(p => ({ ...p, [notifId]: true }))
     await supabase.from('sales_daily')
       .update({ status: 'approved', approved_by: adminName, approved_at: new Date().toISOString() })
@@ -1145,7 +1145,7 @@ export default function AdminDashboard() {
     fetchNotifications()
   }
 
-  const rejectReportFromNotif = async (notifId: string, reportId: string) => {
+  const _rejectReportFromNotif = async (notifId: string, reportId: string) => {
     const note = prompt('Podaj powód odrzucenia:')
     if (!note?.trim()) return
     setActioningNotif(p => ({ ...p, [notifId]: true }))

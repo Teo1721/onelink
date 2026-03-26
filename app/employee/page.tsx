@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/app/supabase-client'
 import { useRouter } from 'next/navigation'
 import {
-  Calendar, Clock, MapPin, LogOut, ChevronLeft, ChevronRight,
-  List, Send, Timer, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
+  Calendar, MapPin, LogOut, ChevronLeft, ChevronRight,
+  Send, Timer, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UpdatePasswordForm } from '@/components/update-password-form'
@@ -171,7 +171,7 @@ export default function EmployeeDashboard() {
         setUserId(user.id)
 
         // Auto-link employee account by email (optional RPC — ignore failures)
-        await supabase.rpc('link_employee_on_login').maybeSingle().catch(() => null)
+        await supabase.rpc('link_employee_on_login').maybeSingle().then(() => null, () => null)
 
         const { data: profile } = await supabase.from('user_profiles').select('full_name').eq('id', user.id).maybeSingle()
         setUserName(profile?.full_name ?? 'Pracownik')

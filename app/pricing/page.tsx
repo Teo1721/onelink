@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
 import { Check, Zap, Building2, Globe, TrendingUp, ShieldCheck, BarChart3, Package, Receipt, Users } from "lucide-react";
 
@@ -355,7 +356,7 @@ export default function PricingPage() {
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-[12px] text-[#9CA3AF]">© 2026 OneLink · InnowacyjneAI sp. z o.o.</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <a href="/" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Strona główna</a>
+            <Link href="/" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Strona główna</Link>
             <a href="/about" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">O nas</a>
             <a href="/contact" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Kontakt</a>
             <a href="/security" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Bezpieczeństwo</a>

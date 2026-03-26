@@ -10,7 +10,6 @@ function BillingSuccessContent() {
   const router = useRouter();
   const sessionId = searchParams.get("session_id");
   const [syncing, setSyncing] = useState(true);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     // Proactively sync the subscription so the middleware lets the user in.
@@ -27,7 +26,6 @@ function BillingSuccessContent() {
         // the webhook will catch up, and worst case they hit pricing once more.
       } finally {
         setSyncing(false);
-        setReady(true);
       }
     };
     sync();
