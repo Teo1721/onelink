@@ -16,7 +16,7 @@ import {
   ChevronRight, Edit2, ToggleLeft, ToggleRight,
   Clock, TrendingUp, AlertCircle, FileText, Receipt, Bell,
   ThumbsUp, ThumbsDown, ExternalLink, ImageIcon,
-  User, CreditCard, LogOut, ShieldCheck,
+  User, CreditCard, LogOut, ShieldCheck, X,
 } from 'lucide-react'
 import { MenuPricingTable } from '@/components/menu-pricing-table'
 import { MenuPriceCalculator } from '@/components/menu-price-calculator'
@@ -748,6 +748,7 @@ export default function AdminDashboard() {
   const [statusText, setStatusText] = useState('')
 
   // ── Invoices ──
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([])
   const [importedCosts, setImportedCosts] = useState<any[]>([])
   const [historyInvoices, setHistoryInvoices] = useState<Invoice[]>([])
@@ -2717,23 +2718,22 @@ export default function AdminDashboard() {
               ) : (
                 <div className="divide-y divide-[#F3F4F6]">
                   {pendingInvoices.map(inv => (
-                    <div key={inv.id} className="flex justify-between items-center px-5 py-4">
+                    <div
+                      key={inv.id}
+                      className="flex justify-between items-center px-5 py-4 cursor-pointer hover:bg-[#F9FAFB] transition-colors"
+                      onClick={() => setSelectedInvoice(inv)}
+                    >
                       <div>
                         <p className="text-[13px] font-semibold text-[#111827]">{inv.supplier_name}</p>
                         <p className="text-[12px] text-[#6B7280] mt-0.5">{inv.locations?.name} · {inv.service_date} · {fmt0(inv.total_amount || inv.total_net || 0)}</p>
                         {inv.invoice_number && <p className="text-[11px] text-[#9CA3AF] mt-0.5">Nr: {inv.invoice_number} | {inv.invoice_type || '—'}</p>}
-                        {inv.attachment_url && (
-                          <a href={inv.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center text-[#2563EB] text-[11px] mt-1 font-medium hover:underline">
-                            <ImageIcon className="w-3 h-3 mr-1" />Zobacz zdjęcie
-                          </a>
-                        )}
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <button onClick={() => updateInvoiceStatus(inv.id, 'declined')} disabled={loading}
+                        <button onClick={e => { e.stopPropagation(); updateInvoiceStatus(inv.id, 'declined') }} disabled={loading}
                           className="h-8 px-3 text-[12px] font-medium rounded-lg border border-[#E5E7EB] text-[#DC2626] hover:bg-[#FEF2F2] disabled:opacity-50 transition-colors">
                           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Odrzuć'}
                         </button>
-                        <button onClick={() => updateInvoiceStatus(inv.id, 'approved')} disabled={loading}
+                        <button onClick={e => { e.stopPropagation(); updateInvoiceStatus(inv.id, 'approved') }} disabled={loading}
                           className="h-8 px-3 text-[12px] font-medium rounded-lg bg-[#16A34A] text-white hover:bg-[#15803D] disabled:opacity-50 transition-colors">
                           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Zatwierdź'}
                         </button>
@@ -2743,6 +2743,84 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Invoice detail modal */}
+            {selectedInvoice && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedInvoice(null)}>
+                <div className="absolute inset-0 bg-black/50" />
+                <div
+                  className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+                    <h2 className="text-[16px] font-bold text-[#111827]">{selectedInvoice.supplier_name}</h2>
+                    <button onClick={() => setSelectedInvoice(null)} className="text-[#9CA3AF] hover:text-[#374151]">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Fields */}
+                  <div className="px-6 py-4 grid grid-cols-2 gap-x-6 gap-y-3">
+                    {[
+                      { label: 'Lokal', value: selectedInvoice.locations?.name ?? '—' },
+                      { label: 'Data usługi', value: selectedInvoice.service_date ?? '—' },
+                      { label: 'Nr faktury', value: selectedInvoice.invoice_number || '—' },
+                      { label: 'Typ', value: selectedInvoice.invoice_type || '—' },
+                      { label: 'Kwota brutto', value: fmt0(selectedInvoice.total_amount || 0) },
+                      { label: 'Kwota netto', value: fmt0(selectedInvoice.total_net || 0) },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF]">{label}</p>
+                        <p className="text-[13px] font-medium text-[#111827] mt-0.5">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Attachment */}
+                  {selectedInvoice.attachment_url && (
+                    <div className="px-6 pb-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-2">Załącznik</p>
+                      {/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(selectedInvoice.attachment_url) ? (
+                        <img
+                          src={selectedInvoice.attachment_url}
+                          alt="Faktura"
+                          className="w-full rounded-lg border border-[#E5E7EB] object-contain max-h-80"
+                        />
+                      ) : (
+                        <a
+                          href={selectedInvoice.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-[#2563EB] text-[13px] font-medium hover:underline"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                          Otwórz załącznik
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="px-6 py-4 border-t border-[#E5E7EB] flex gap-3">
+                    <button
+                      onClick={() => { updateInvoiceStatus(selectedInvoice.id, 'declined'); setSelectedInvoice(null) }}
+                      disabled={loading}
+                      className="flex-1 h-10 text-[13px] font-medium rounded-lg border border-[#E5E7EB] text-[#DC2626] hover:bg-[#FEF2F2] disabled:opacity-50 transition-colors"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Odrzuć'}
+                    </button>
+                    <button
+                      onClick={() => { updateInvoiceStatus(selectedInvoice.id, 'approved'); setSelectedInvoice(null) }}
+                      disabled={loading}
+                      className="flex-1 h-10 text-[13px] font-medium rounded-lg bg-[#16A34A] text-white hover:bg-[#15803D] disabled:opacity-50 transition-colors"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Zatwierdź'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
