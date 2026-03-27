@@ -84,7 +84,7 @@ export type ScheduleEmployee = {
 type ModalState = {
   open: boolean
   mode: 'add' | 'edit'
-  shift: Partial<DbShift> & { emp_id?: string; publishNow?: boolean }
+  shift: Partial<DbShift> & { emp_id?: string; publishNow?: boolean; repeatWeeks?: number }
 }
 
 /* ──────────────────────────────────────── constants ── */
@@ -360,13 +360,19 @@ export function ScheduleGrid({
     const hourlyRate = empRate(emp ?? { id: '', full_name: '' })
 
     if (modal.mode === 'add') {
-      await supabase.from('shifts').insert({
-        location_id: locationId, date, employee_name, employee_id: emp_id ?? null,
+      const weeks = modal.shift.repeatWeeks ?? 0
+      const shiftBase = {
+        location_id: locationId, employee_name, employee_id: emp_id ?? null,
         user_id: modal.shift.user_id ?? null,
         time_start, time_end, break_minutes: Number(modal.shift.break_minutes ?? 0),
         hourly_rate: hourlyRate, status: 'scheduled', is_posted: modal.shift.publishNow ?? false,
         position: modal.shift.position || null,
+      }
+      const rows = Array.from({ length: Math.max(1, weeks + 1) }, (_, i) => {
+        const d = new Date(date); d.setDate(d.getDate() + i * 7)
+        return { ...shiftBase, date: toLocalISO(d) }
       })
+      await supabase.from('shifts').insert(rows)
     } else {
       await supabase.from('shifts').update({
         time_start, time_end, break_minutes: Number(modal.shift.break_minutes ?? 0),
@@ -790,12 +796,28 @@ export function ScheduleGrid({
               </div>
             )}
             {modal.mode === 'add' && (
-              <label className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 cursor-pointer">
-                <input type="checkbox" checked={modal.shift.publishNow ?? false}
-                  onChange={e => setModal(m => ({ ...m, shift: { ...m.shift, publishNow: e.target.checked } }))}
-                  className="w-4 h-4 rounded accent-green-600" />
-                <span className="text-xs text-amber-800">Opublikuj od razu — pracownicy zobaczą zmianę natychmiast w aplikacji</span>
-              </label>
+              <>
+                <label className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 cursor-pointer">
+                  <input type="checkbox" checked={modal.shift.publishNow ?? false}
+                    onChange={e => setModal(m => ({ ...m, shift: { ...m.shift, publishNow: e.target.checked } }))}
+                    className="w-4 h-4 rounded accent-green-600" />
+                  <span className="text-xs text-amber-800">Opublikuj od razu — pracownicy zobaczą zmianę natychmiast w aplikacji</span>
+                </label>
+                <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
+                  <span className="text-xs text-blue-800 font-medium shrink-0">Powtarzaj co tydzień:</span>
+                  <select
+                    value={modal.shift.repeatWeeks ?? 0}
+                    onChange={e => setModal(m => ({ ...m, shift: { ...m.shift, repeatWeeks: Number(e.target.value) } }))}
+                    className="h-7 px-2 rounded border border-blue-200 bg-white text-xs text-blue-900 focus:outline-none"
+                  >
+                    <option value={0}>Nie powtarzaj</option>
+                    <option value={1}>1 raz (2 tygodnie)</option>
+                    <option value={2}>2 razy (3 tygodnie)</option>
+                    <option value={3}>3 razy (4 tygodnie)</option>
+                    <option value={7}>7 razy (8 tygodni)</option>
+                  </select>
+                </div>
+              </>
             )}
           </div>
           <DialogFooter className="gap-2">

@@ -5,6 +5,7 @@ import {
   LayoutDashboard, FileText, Receipt, ClipboardList, Package,
   Calendar, RefreshCw, Lock, BarChart3, History, FileSpreadsheet,
   LogOut, Bell, CheckSquare, DollarSign, AlertTriangle, Truck, Users, Settings,
+  Clock, Umbrella, GitCompare, GraduationCap, FolderOpen, LayoutGrid,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -82,6 +83,17 @@ export function Sidebar({
       label: 'Harmonogram',
       items: [
         { key: 'schedule', label: 'Grafik pracy', icon: Calendar },
+      ],
+    },
+    {
+      label: 'HR',
+      items: [
+        { key: 'hr_dashboard',  label: 'Dashboard HR',  icon: LayoutGrid     },
+        { key: 'hr_attendance', label: 'Ewidencja',     icon: Clock          },
+        { key: 'hr_leave',      label: 'Urlopy',        icon: Umbrella       },
+        { key: 'hr_swaps',      label: 'Zamiany zmian', icon: GitCompare     },
+        { key: 'hr_certs',      label: 'Certyfikaty',   icon: GraduationCap  },
+        { key: 'hr_documents',  label: 'Dokumenty',     icon: FolderOpen     },
       ],
     },
     {

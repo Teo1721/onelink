@@ -18,6 +18,7 @@ import {
   ThumbsUp, ThumbsDown, ExternalLink, ImageIcon,
   User, CreditCard, LogOut, ShieldCheck, X,
 } from 'lucide-react'
+import { HRDashboardView, AttendanceView, LeaveView, SwapView, CertsView, DocumentsView } from '@/components/hr-views'
 import { MenuPricingTable } from '@/components/menu-pricing-table'
 import { MenuPriceCalculator } from '@/components/menu-price-calculator'
 import { WarehouseDeviationReport } from '@/components/warehouse-deviation-report'
@@ -444,6 +445,7 @@ type ActiveView =
   | 'menu_pricing' | 'menu_calculator' | 'warehouse_deviations'
   | 'central_warehouse'
   | 'admin_users' | 'employees' | 'schedule'
+  | 'hr_dashboard' | 'hr_attendance' | 'hr_leave' | 'hr_swaps' | 'hr_certs' | 'hr_documents'
   | 'account'
 
 /* ================================================================== */
@@ -730,6 +732,9 @@ export default function AdminDashboard() {
   const [scheduleLocationId, setScheduleLocationId] = useState<string>('')
   const [scheduleEmployees, setScheduleEmployees] = useState<ScheduleEmployee[]>([])
 
+  // ── HR views ──
+  const [hrLocationId, setHrLocationId] = useState<string>('')
+
   // ── Notifications ──
   const [notifications, setNotifications] = useState<AdminNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -967,6 +972,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (locations.length > 0 && !scheduleLocationId) {
       setScheduleLocationId(locations[0].id)
+    }
+    if (locations.length > 0 && !hrLocationId) {
+      setHrLocationId(locations[0].id)
     }
   }, [locations])
 
@@ -3748,6 +3756,60 @@ export default function AdminDashboard() {
               userId={adminId}
             />
           </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/*  HR — location picker (shared across HR views)         */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {(['hr_dashboard', 'hr_attendance', 'hr_leave', 'hr_swaps', 'hr_certs', 'hr_documents'] as ActiveView[]).includes(activeView) && (
+          <>
+            {/* Location selector */}
+            {activeView !== 'hr_dashboard' && locations.length > 1 && (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-[13px] text-[#6B7280] font-medium">Lokalizacja:</span>
+                <select
+                  value={hrLocationId}
+                  onChange={e => setHrLocationId(e.target.value)}
+                  className="h-8 rounded-lg border border-[#E5E7EB] px-2 text-[13px] bg-white"
+                >
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {activeView === 'hr_dashboard' && (
+              <HRDashboardView locations={locations} supabase={supabase} />
+            )}
+            {activeView === 'hr_attendance' && hrLocationId && (
+              <AttendanceView
+                locationId={hrLocationId}
+                locationName={locations.find(l => l.id === hrLocationId)?.name ?? ''}
+                supabase={supabase}
+              />
+            )}
+            {activeView === 'hr_leave' && hrLocationId && (
+              <LeaveView
+                locationId={hrLocationId}
+                locationName={locations.find(l => l.id === hrLocationId)?.name ?? ''}
+                supabase={supabase}
+              />
+            )}
+            {activeView === 'hr_swaps' && hrLocationId && (
+              <SwapView
+                locationId={hrLocationId}
+                locationName={locations.find(l => l.id === hrLocationId)?.name ?? ''}
+                supabase={supabase}
+              />
+            )}
+            {activeView === 'hr_certs' && hrLocationId && (
+              <CertsView locationId={hrLocationId} supabase={supabase} />
+            )}
+            {activeView === 'hr_documents' && hrLocationId && (
+              <DocumentsView locationId={hrLocationId} supabase={supabase} />
+            )}
+          </>
         )}
         </>}
       </main>

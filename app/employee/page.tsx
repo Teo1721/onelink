@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Calendar, MapPin, LogOut, ChevronLeft, ChevronRight,
   Send, Clock, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
+  Umbrella, GitCompare, Plus, Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UpdatePasswordForm } from '@/components/update-password-form'
@@ -133,7 +134,7 @@ export default function EmployeeDashboard() {
   const [loading,   setLoading]   = useState(true)
 
   /* ── tab ── */
-  const [tab, setTab] = useState<'schedule' | 'suggest' | 'hours'>('schedule')
+  const [tab, setTab] = useState<'schedule' | 'suggest' | 'hours' | 'leave' | 'swaps'>('schedule')
   const [showChangePw, setShowChangePw] = useState(false)
 
   /* ── schedule ── */
@@ -163,6 +164,30 @@ export default function EmployeeDashboard() {
   })
   const [hoursRecords, setHoursRecords] = useState<ClockRecord[]>([])
   const [hoursLoading, setHoursLoading] = useState(false)
+
+  /* ── leave requests ── */
+  type LeaveReq = { id: string; leave_type: string; date_from: string; date_to: string; note: string | null; status: string; created_at: string }
+  const LEAVE_TYPES = [
+    { value: 'vacation', label: 'Urlop wypoczynkowy' },
+    { value: 'sick',     label: 'Zwolnienie L4' },
+    { value: 'unpaid',   label: 'Urlop bezpłatny' },
+    { value: 'other',    label: 'Inny' },
+  ]
+  const [leaveRequests,  setLeaveRequests]  = useState<LeaveReq[]>([])
+  const [leaveLoading,   setLeaveLoading]   = useState(false)
+  const [leaveForm,      setLeaveForm]      = useState({ leave_type: 'vacation', date_from: '', date_to: '', note: '' })
+  const [leaveSaving,    setLeaveSaving]    = useState(false)
+  const [leaveError,     setLeaveError]     = useState<string | null>(null)
+
+  /* ── swap requests ── */
+  type SwapReq = { id: string; shift_id: string; note: string | null; status: string; created_at: string; shift?: { date: string; time_start: string; time_end: string } | null; target?: { full_name: string } | null }
+  const [swapRequests,   setSwapRequests]   = useState<SwapReq[]>([])
+  const [swapLoading,    setSwapLoading]    = useState(false)
+  const [swapModal,      setSwapModal]      = useState<{ shiftId: string; shiftLabel: string } | null>(null)
+  const [swapNote,       setSwapNote]       = useState('')
+  const [swapSaving,     setSwapSaving]     = useState(false)
+  const [colleagues,     setColleagues]     = useState<{ id: string; full_name: string }[]>([])
+  const [swapTargetId,   setSwapTargetId]   = useState('')
 
   /* ── init ── */
   useEffect(() => {
@@ -383,6 +408,83 @@ export default function EmployeeDashboard() {
     if (tab === 'hours' && (userId || employeeId)) loadHoursRecords(hoursMonth)
   }, [tab, userId, employeeId, hoursMonth, loadHoursRecords])
 
+  /* ── leave requests ── */
+  const loadLeaveRequests = useCallback(async () => {
+    if (!employeeId && !userId) return
+    setLeaveLoading(true)
+    let q = supabase.from('leave_requests').select('id, leave_type, date_from, date_to, note, status, created_at').order('created_at', { ascending: false })
+    if (employeeId) q = q.eq('employee_id', employeeId)
+    else q = q.eq('user_id', userId)
+    const { data } = await q
+    setLeaveRequests((data ?? []) as LeaveReq[])
+    setLeaveLoading(false)
+  }, [employeeId, userId, supabase])
+
+  useEffect(() => { if (tab === 'leave') loadLeaveRequests() }, [tab, loadLeaveRequests])
+
+  async function submitLeave() {
+    setLeaveError(null)
+    if (!leaveForm.date_from || !leaveForm.date_to) { setLeaveError('Wybierz daty'); return }
+    if (!locationId) { setLeaveError('Twoje konto nie jest przypisane do lokalizacji.'); return }
+    setLeaveSaving(true)
+    const { error } = await supabase.from('leave_requests').insert({
+      employee_id: employeeId ?? null,
+      user_id: userId || null,
+      location_id: locationId,
+      leave_type: leaveForm.leave_type,
+      date_from: leaveForm.date_from,
+      date_to: leaveForm.date_to,
+      note: leaveForm.note || null,
+      status: 'pending',
+    })
+    if (error) { setLeaveError(error.message); setLeaveSaving(false); return }
+    setLeaveForm({ leave_type: 'vacation', date_from: '', date_to: '', note: '' })
+    setLeaveSaving(false)
+    loadLeaveRequests()
+  }
+
+  async function cancelLeave(id: string) {
+    if (!confirm('Anulować wniosek?')) return
+    await supabase.from('leave_requests').delete().eq('id', id)
+    loadLeaveRequests()
+  }
+
+  /* ── swap requests ── */
+  const loadSwapRequests = useCallback(async () => {
+    if (!employeeId) return
+    setSwapLoading(true)
+    const { data } = await supabase.from('shift_swap_requests')
+      .select('id, shift_id, note, status, created_at, shift:shift_id(date, time_start, time_end), target:target_employee_id(full_name)')
+      .eq('requester_employee_id', employeeId)
+      .order('created_at', { ascending: false })
+    setSwapRequests((data ?? []) as SwapReq[])
+    setSwapLoading(false)
+  }, [employeeId, supabase])
+
+  useEffect(() => { if (tab === 'swaps') loadSwapRequests() }, [tab, loadSwapRequests])
+
+  async function loadColleagues() {
+    if (!locationId) return
+    const { data } = await supabase.from('employees').select('id, full_name').eq('location_id', locationId).in('status', ['active', 'confirmed']).order('full_name')
+    setColleagues((data ?? []).filter((e: any) => e.id !== employeeId))
+  }
+
+  async function submitSwap() {
+    if (!swapModal) return
+    setSwapSaving(true)
+    await supabase.from('shift_swap_requests').insert({
+      requester_employee_id: employeeId,
+      target_employee_id: swapTargetId || null,
+      shift_id: swapModal.shiftId,
+      location_id: locationId,
+      note: swapNote || null,
+      status: 'pending',
+    })
+    setSwapModal(null); setSwapNote(''); setSwapTargetId('')
+    setSwapSaving(false)
+    loadSwapRequests()
+  }
+
   /* ── computed ── */
   const weekDays   = buildWeekDays(weekStart)
   const weekEnd    = weekDays[6]?.iso ?? weekStart
@@ -415,6 +517,8 @@ export default function EmployeeDashboard() {
               {tab === 'schedule' && 'Twój grafik pracy'}
               {tab === 'suggest' && 'Zaproponuj zmianę'}
               {tab === 'hours' && 'Przepracowane godziny'}
+              {tab === 'leave' && 'Wnioski urlopowe'}
+              {tab === 'swaps' && 'Zamiany zmian'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -679,11 +783,25 @@ export default function EmployeeDashboard() {
                               {shift.locations?.[0]?.name && <span className="text-xs text-gray-400">📍 {shift.locations[0].name}</span>}
                             </div>
                           </div>
-                          {shift.position && (
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize shrink-0 ${posColor(shift.position)}`}>
-                              {shift.position}
-                            </span>
-                          )}
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {shift.position && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${posColor(shift.position)}`}>
+                                {shift.position}
+                              </span>
+                            )}
+                            {shift.date >= today && employeeId && (
+                              <button
+                                onClick={() => {
+                                  loadColleagues()
+                                  setSwapModal({ shiftId: shift.id, shiftLabel: `${shift.date} · ${fmt(shift.time_start)} – ${fmt(shift.time_end)}` })
+                                  setTab('swaps')
+                                }}
+                                className="text-[10px] font-semibold text-blue-500 hover:text-blue-700 flex items-center gap-0.5"
+                              >
+                                <GitCompare className="w-3 h-3" />Zamień
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -967,15 +1085,181 @@ export default function EmployeeDashboard() {
             </div>
           )
         })()}
+
+        {/* ══════════════════════════════════════════ LEAVE TAB ══ */}
+        {tab === 'leave' && (() => {
+          const LEAVE_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+            pending:  { label: 'Oczekuje',     color: 'text-amber-700', bg: 'bg-amber-50'  },
+            approved: { label: 'Zatwierdzony', color: 'text-green-700', bg: 'bg-green-50'  },
+            rejected: { label: 'Odrzucony',    color: 'text-red-700',   bg: 'bg-red-50'    },
+          }
+          return (
+            <div className="space-y-4">
+              {/* New request form */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <p className="font-bold text-gray-900 mb-0.5">Nowy wniosek urlopowy</p>
+                <p className="text-xs text-gray-500 mb-4">Złóż wniosek — manager zostanie powiadomiony.</p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-1.5">Typ urlopu</p>
+                    <select value={leaveForm.leave_type} onChange={e => setLeaveForm(f => ({ ...f, leave_type: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-900 focus:outline-none focus:border-blue-400">
+                      {LEAVE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700 mb-1.5">Od</p>
+                      <input type="date" value={leaveForm.date_from} onChange={e => setLeaveForm(f => ({ ...f, date_from: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700 mb-1.5">Do</p>
+                      <input type="date" value={leaveForm.date_to} onChange={e => setLeaveForm(f => ({ ...f, date_to: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-1.5">Notatka (opcjonalnie)</p>
+                    <textarea value={leaveForm.note} onChange={e => setLeaveForm(f => ({ ...f, note: e.target.value }))} rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm resize-none focus:outline-none focus:border-blue-400" />
+                  </div>
+                </div>
+                {leaveError && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{leaveError}</div>}
+                <button onClick={submitLeave} disabled={leaveSaving || !leaveForm.date_from || !leaveForm.date_to}
+                  className="w-full mt-4 py-2.5 rounded-xl bg-[#1D4ED8] text-white font-bold text-sm hover:bg-blue-800 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {leaveSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Wyślij wniosek'}
+                </button>
+              </div>
+
+              {/* History */}
+              {leaveLoading ? (
+                <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+              ) : leaveRequests.length > 0 && (
+                <div>
+                  <p className="text-sm font-bold text-gray-700 mb-2">Moje wnioski</p>
+                  <div className="space-y-2">
+                    {leaveRequests.map(r => {
+                      const lt = LEAVE_TYPES.find(t => t.value === r.leave_type)
+                      const st = LEAVE_STATUS[r.status] ?? LEAVE_STATUS.pending
+                      const days = Math.round((new Date(r.date_to).getTime() - new Date(r.date_from).getTime()) / 86400000) + 1
+                      return (
+                        <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-900">{lt?.label ?? r.leave_type}</p>
+                              <p className="text-xs text-gray-500 font-mono">{r.date_from} → {r.date_to} ({days} {days === 1 ? 'dzień' : 'dni'})</p>
+                              {r.note && <p className="text-xs text-gray-400 italic mt-0.5">{r.note}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}>{st.label}</span>
+                              {r.status === 'pending' && (
+                                <button onClick={() => cancelLeave(r.id)} className="h-6 w-6 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ══════════════════════════════════════════ SWAPS TAB ══ */}
+        {tab === 'swaps' && (() => {
+          const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
+            pending:  { label: 'Oczekuje',    color: 'text-amber-700', bg: 'bg-amber-50'  },
+            approved: { label: 'Zatwierdzona',color: 'text-green-700', bg: 'bg-green-50'  },
+            rejected: { label: 'Odrzucona',   color: 'text-red-700',   bg: 'bg-red-50'    },
+          }
+          return (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <p className="text-sm font-bold text-blue-800 mb-1">Jak to działa?</p>
+                <p className="text-xs text-blue-700">W widoku Grafiku kliknij swoją zmianę i naciśnij &ldquo;Zamień&rdquo;. Manager zatwierdzi lub odrzuci wniosek.</p>
+              </div>
+
+              {swapLoading ? (
+                <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+              ) : swapRequests.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <GitCompare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Brak wniosków o zamianę</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {swapRequests.map(s => {
+                    const st = STATUS_CFG[s.status] ?? STATUS_CFG.pending
+                    return (
+                      <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            {s.shift && (
+                              <p className="text-sm font-bold text-gray-900 font-mono">
+                                {s.shift.date} · {s.shift.time_start?.slice(0,5)} – {s.shift.time_end?.slice(0,5)}
+                              </p>
+                            )}
+                            {s.target && <p className="text-xs text-gray-500">Z: {s.target.full_name}</p>}
+                            {s.note && <p className="text-xs text-gray-400 italic">{s.note}</p>}
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.bg} ${st.color} shrink-0`}>{st.label}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* Swap request modal */}
+        {swapModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+              <h3 className="font-bold text-[16px] text-gray-900 mb-1">Wniosek o zamianę</h3>
+              <p className="text-xs text-gray-500 mb-4">{swapModal.shiftLabel}</p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 mb-1.5">Zamień z (opcjonalnie)</p>
+                  <select value={swapTargetId} onChange={e => setSwapTargetId(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400">
+                    <option value="">— dowolny pracownik —</option>
+                    {colleagues.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 mb-1.5">Powód (opcjonalnie)</p>
+                  <textarea value={swapNote} onChange={e => setSwapNote(e.target.value)} rows={2}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-blue-400" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setSwapModal(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">Anuluj</button>
+                <button onClick={submitSwap} disabled={swapSaving}
+                  className="flex-[2] py-2.5 rounded-xl bg-[#1D4ED8] text-white font-bold text-sm hover:bg-blue-800 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {swapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Wyślij wniosek'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Bottom tab bar ── */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 shadow-lg">
-        <div className="max-w-lg mx-auto grid grid-cols-3">
+        <div className="max-w-lg mx-auto grid grid-cols-5">
           {([
-            { key: 'schedule', icon: Calendar, label: 'Grafik' },
+            { key: 'schedule', icon: Calendar, label: 'Grafik'   },
             { key: 'suggest',  icon: Send,     label: 'Sugestie' },
-            { key: 'hours',    icon: Clock,    label: 'Godziny' },
+            { key: 'hours',    icon: Clock,    label: 'Godziny'  },
+            { key: 'leave',    icon: Umbrella, label: 'Urlopy'   },
+            { key: 'swaps',    icon: GitCompare, label: 'Zamiany' },
           ] as const).map(({ key, icon: Icon, label }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex flex-col items-center gap-1 py-3 transition-colors ${tab === key ? 'text-[#1D4ED8]' : 'text-gray-400 hover:text-gray-600'}`}>

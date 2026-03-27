@@ -5,6 +5,7 @@ import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   LayoutDashboard, FileText, ClipboardList, LogOut, MapPin,
   Calendar, Users, Settings, CalendarDays, MoreHorizontal, X, QrCode, Clock,
+  Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -16,13 +17,18 @@ type OpsSidebarProps = {
 }
 
 const NAV_ITEMS = [
-  { key: 'reporting',    label: 'Raport',      labelFull: 'Raport dzienny',  icon: LayoutDashboard },
-  { key: 'invoices',     label: 'Faktury',     labelFull: 'Faktury',         icon: FileText },
+  { key: 'dashboard',   label: 'Dashboard',   labelFull: 'Dashboard',        icon: LayoutGrid },
+  { key: 'reporting',   label: 'Raport',      labelFull: 'Raport dzienny',   icon: LayoutDashboard },
+  { key: 'invoices',    label: 'Faktury',     labelFull: 'Faktury',          icon: FileText },
   { key: 'inventory',   label: 'Inwent.',     labelFull: 'Inwentaryzacja',   icon: ClipboardList },
   { key: 'scheduling',  label: 'Harmonogram', labelFull: 'Harmonogram',      icon: Calendar },
   { key: 'my_schedule', label: 'Mój grafik',  labelFull: 'Mój grafik',       icon: CalendarDays },
   { key: 'employees',   label: 'Pracownicy',  labelFull: 'Pracownicy',       icon: Users },
   { key: 'attendance',  label: 'Ewidencja',   labelFull: 'Ewidencja czasu',  icon: Clock },
+  { key: 'leave',       label: 'Urlopy',      labelFull: 'Urlopy',           icon: Umbrella },
+  { key: 'swaps',       label: 'Zamiany',     labelFull: 'Zamiany zmian',    icon: GitCompare },
+  { key: 'certs',       label: 'Certyfik.',   labelFull: 'Certyfikaty',      icon: GraduationCap },
+  { key: 'documents',   label: 'Dokumenty',   labelFull: 'Dokumenty',        icon: FolderOpen },
   { key: 'kiosk',       label: 'Kiosk',       labelFull: 'Kiosk QR',         icon: QrCode },
   { key: 'account',     label: 'Konto',       labelFull: 'Konto',            icon: Settings },
 ]
