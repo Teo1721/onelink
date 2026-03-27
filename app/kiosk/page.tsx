@@ -1,8 +1,6 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/app/supabase-client'
 import QRCode from 'react-qr-code'
@@ -13,7 +11,7 @@ const REFRESH_INTERVAL = 270 // 4.5 minutes in seconds (refresh before 5-min tok
 type Location = { id: string; name: string }
 type QRData = { clockUrl: string; expiresIn: number } | null
 
-export default function KioskPage() {
+function KioskInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const supabase     = createClient()
@@ -69,7 +67,7 @@ export default function KioskPage() {
       const json = await res.json()
       if (res.ok) {
         setQrData({ clockUrl: json.clockUrl, expiresIn: json.expiresIn })
-        setCountdown(Math.min(json.expiresIn - 10, REFRESH_INTERVAL)) // refresh a bit before expiry
+        setCountdown(Math.min(json.expiresIn - 10, REFRESH_INTERVAL))
       }
     } finally {
       setLoading(false)
@@ -208,5 +206,17 @@ export default function KioskPage() {
         </button>
       )}
     </main>
+  )
+}
+
+export default function KioskPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </main>
+    }>
+      <KioskInner />
+    </Suspense>
   )
 }
