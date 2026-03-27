@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '../supabase-client'
 import { useRouter } from 'next/navigation'
 import { OpsSidebar } from '@/components/OpsSidebar'
@@ -21,6 +21,7 @@ import {
   ExternalLink, ShieldCheck, XCircle,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import QRCode from 'react-qr-code'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -97,7 +98,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -238,6 +239,632 @@ type AccountViewProps = {
   setDeleteError: (v: string) => void
   accountError: string
   setAccountError: (v: string) => void
+}
+
+/* ================================================================== */
+/* ATTENDANCE VIEW                                                     */
+/* ================================================================== */
+type ClockEntry = {
+  id: string; user_id: string | null; employee_id: string | null
+  work_date: string; clock_in_at: string | null; clock_out_at: string | null
+  clock_in_photo_url: string | null; clock_out_photo_url: string | null
+}
+type AttEmp = { id: string; full_name: string; position: string | null; user_id: string | null; base_rate: number | null }
+type AttSummary = AttEmp & { records: ClockEntry[]; days: number; totalMinutes: number }
+
+function AttendanceView({ locationId, locationName, supabase }: { locationId: string; locationName: string; supabase: any }) {
+  const [month, setMonth] = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [records,   setRecords]   = useState<ClockEntry[]>([])
+  const [employees, setEmployees] = useState<AttEmp[]>([])
+  const [loading,   setLoading]   = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [photoModal, setPhotoModal] = useState<string | null>(null)
+
+  /* ── Manual entry / edit modal ── */
+  type ModalMode = 'add' | 'edit'
+  type ModalState = { mode: ModalMode; record?: ClockEntry; empId?: string } | null
+  const [modal,       setModal]       = useState<ModalState>(null)
+  const [mForm,       setMForm]       = useState({ employee_id: '', date: '', clock_in: '', clock_out: '' })
+  const [mSaving,     setMSaving]     = useState(false)
+  const [mError,      setMError]      = useState<string | null>(null)
+
+  function openAdd(empId?: string) {
+    const today = new Date().toLocaleDateString('sv-SE')
+    setMForm({ employee_id: empId ?? '', date: today, clock_in: '', clock_out: '' })
+    setMError(null)
+    setModal({ mode: 'add', empId })
+  }
+  function openEdit(record: ClockEntry, empId: string) {
+    const inT  = record.clock_in_at  ? new Date(record.clock_in_at ).toLocaleTimeString('pl-PL',  { hour: '2-digit', minute: '2-digit' }) : ''
+    const outT = record.clock_out_at ? new Date(record.clock_out_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : ''
+    setMForm({ employee_id: empId, date: record.work_date, clock_in: inT, clock_out: outT })
+    setMError(null)
+    setModal({ mode: 'edit', record, empId })
+  }
+  function mSet(k: string, v: string) { setMForm(f => ({ ...f, [k]: v })) }
+
+  function buildISO(date: string, time: string): string | null {
+    if (!time) return null
+    return new Date(`${date}T${time}:00`).toISOString()
+  }
+
+  async function saveEntry() {
+    setMSaving(true); setMError(null)
+    const { employee_id, date, clock_in, clock_out } = mForm
+    if (!date || !clock_in) { setMError('Data i godzina przyjścia są wymagane'); setMSaving(false); return }
+    const emp = employees.find(e => e.id === employee_id)
+    const payload = {
+      employee_id,
+      user_id: emp?.user_id ?? null,
+      location_id: locationId,
+      work_date: date,
+      clock_in_at: buildISO(date, clock_in),
+      clock_out_at: buildISO(date, clock_out),
+    }
+    let err: { message: string } | null = null
+    if (modal?.mode === 'add') {
+      ;({ error: err } = await supabase.from('shift_clock_ins').insert(payload))
+    } else if (modal?.record) {
+      ;({ error: err } = await supabase.from('shift_clock_ins')
+        .update({ clock_in_at: payload.clock_in_at, clock_out_at: payload.clock_out_at })
+        .eq('id', modal.record.id))
+    }
+    if (err) { setMError(err.message); setMSaving(false); return }
+    setModal(null); await fetchData(); setMSaving(false)
+  }
+
+  async function deleteEntry() {
+    if (!modal?.record) return
+    if (!confirm('Usunąć ten wpis?')) return
+    setMSaving(true)
+    await supabase.from('shift_clock_ins').delete().eq('id', modal.record.id)
+    setModal(null); await fetchData(); setMSaving(false)
+  }
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    const [y, m]   = month.split('-').map(Number)
+    const lastDay  = new Date(y, m, 0).getDate()
+    const start    = `${month}-01`
+    const end      = `${month}-${String(lastDay).padStart(2, '0')}`
+
+    const [{ data: empData }, { data: clockData }] = await Promise.all([
+      supabase.from('employees')
+        .select('id, full_name, position, user_id, base_rate')
+        .eq('location_id', locationId)
+        .in('status', ['active', 'confirmed']),
+      supabase.from('shift_clock_ins')
+        .select('id, user_id, employee_id, work_date, clock_in_at, clock_out_at, clock_in_photo_url, clock_out_photo_url')
+        .eq('location_id', locationId)
+        .gte('work_date', start).lte('work_date', end)
+        .order('work_date'),
+    ])
+    setEmployees((empData ?? []) as AttEmp[])
+    setRecords((clockData ?? []) as ClockEntry[])
+    setLoading(false)
+  }, [locationId, month, supabase])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const summary = useMemo<AttSummary[]>(() => {
+    return employees.map(emp => {
+      const empRecs = records.filter(r =>
+        (r.employee_id && r.employee_id === emp.id) ||
+        (emp.user_id && r.user_id === emp.user_id)
+      )
+      const totalMinutes = empRecs.reduce((sum, r) => {
+        if (!r.clock_in_at || !r.clock_out_at) return sum
+        return sum + Math.round((new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60_000)
+      }, 0)
+      return { ...emp, records: empRecs, days: empRecs.filter(r => r.clock_in_at).length, totalMinutes }
+    }).sort((a, b) => b.days - a.days)
+  }, [employees, records])
+
+  const totalMinAll   = summary.reduce((s, e) => s + e.totalMinutes, 0)
+  const totalDaysAll  = summary.reduce((s, e) => s + e.days, 0)
+  const activeWorkers = summary.filter(e => e.days > 0).length
+
+  function fmtHM(min: number) {
+    if (min <= 0) return '0h 0min'
+    return `${Math.floor(min / 60)}h ${min % 60}min`
+  }
+  function fmtTime(iso: string | null) {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+  }
+  function monthLabel() {
+    const [y, m] = month.split('-').map(Number)
+    return new Date(y, m - 1, 1).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })
+  }
+  function recMin(r: ClockEntry) {
+    if (!r.clock_in_at || !r.clock_out_at) return 0
+    return Math.round((new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60_000)
+  }
+
+  /* ── Excel export ── */
+  function exportExcel() {
+    const wb = XLSX.utils.book_new()
+    // Sheet 1: summary
+    const ws1 = XLSX.utils.aoa_to_sheet([
+      [`Ewidencja czasu pracy — ${locationName} — ${monthLabel()}`], [],
+      ['Pracownik', 'Pozycja', 'Stawka godz.', 'Dni pracy', 'Godziny', 'Minuty ogółem', 'Śr./dzień', 'Szac. koszt'],
+      ...summary.map(e => [
+        e.full_name, e.position ?? '—', e.base_rate ? `${e.base_rate} zł` : '—',
+        e.days, fmtHM(e.totalMinutes), e.totalMinutes,
+        e.days > 0 ? fmtHM(Math.round(e.totalMinutes / e.days)) : '—',
+        e.base_rate ? `${((e.base_rate * e.totalMinutes) / 60).toFixed(2)} zł` : '—',
+      ]),
+      [],
+      ['RAZEM', '', '', totalDaysAll, fmtHM(totalMinAll), totalMinAll, '', ''],
+    ])
+    ws1['!cols'] = [{ wch: 26 }, { wch: 15 }, { wch: 13 }, { wch: 10 }, { wch: 14 }, { wch: 13 }, { wch: 12 }, { wch: 14 }]
+    XLSX.utils.book_append_sheet(wb, ws1, 'Podsumowanie')
+
+    // Sheet 2: details
+    const ws2 = XLSX.utils.aoa_to_sheet([
+      ['Pracownik', 'Data', 'Przyjście', 'Wyjście', 'Czas pracy', 'Minuty'],
+      ...summary.flatMap(e => e.records.map(r => [
+        e.full_name, r.work_date,
+        fmtTime(r.clock_in_at), r.clock_out_at ? fmtTime(r.clock_out_at) : 'W trakcie',
+        fmtHM(recMin(r)), recMin(r),
+      ])),
+    ])
+    ws2['!cols'] = [{ wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }]
+    XLSX.utils.book_append_sheet(wb, ws2, 'Szczegóły')
+
+    XLSX.writeFile(wb, `ewidencja-${locationName.replace(/\s+/g, '-')}-${month}.xlsx`)
+  }
+
+  /* ── PDF (print in new window) ── */
+  function exportPDF() {
+    const sumRows = summary.map(e => `
+      <tr>
+        <td>${e.full_name}</td><td>${e.position ?? '—'}</td>
+        <td class="c">${e.days}</td><td class="r">${fmtHM(e.totalMinutes)}</td>
+        <td class="r">${e.days > 0 ? fmtHM(Math.round(e.totalMinutes / e.days)) : '—'}</td>
+        <td class="r">${e.base_rate ? ((e.base_rate * e.totalMinutes) / 60).toFixed(2) + ' zł' : '—'}</td>
+      </tr>`).join('')
+
+    const detailRows = summary.flatMap(e => e.records.map(r => `
+      <tr>
+        <td>${e.full_name}</td><td>${r.work_date}</td>
+        <td class="c">${fmtTime(r.clock_in_at)}</td>
+        <td class="c">${r.clock_out_at ? fmtTime(r.clock_out_at) : '<em>W trakcie</em>'}</td>
+        <td class="r">${fmtHM(recMin(r))}</td>
+      </tr>`)).join('')
+
+    const html = `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8">
+      <title>Ewidencja — ${locationName} — ${monthLabel()}</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:28px}
+        h1{font-size:17px;font-weight:700;margin-bottom:3px}
+        .meta{color:#666;font-size:11px;margin-bottom:20px}
+        h2{font-size:12px;font-weight:700;margin:22px 0 6px;color:#1D4ED8;text-transform:uppercase;letter-spacing:.06em}
+        table{width:100%;border-collapse:collapse}
+        thead tr{background:#1D4ED8;color:#fff}
+        th{padding:7px 10px;font-size:10px;font-weight:600;text-align:left}
+        td{padding:6px 10px;border-bottom:1px solid #E5E7EB}
+        tr:nth-child(even) td{background:#F9FAFB}
+        .foot td{font-weight:700;border-top:2px solid #1D4ED8;background:#EFF6FF}
+        .c{text-align:center}.r{text-align:right}
+        @media print{@page{margin:16mm}}
+      </style></head><body>
+      <h1>Ewidencja czasu pracy</h1>
+      <p class="meta">${locationName} &bull; ${monthLabel()} &bull; Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</p>
+      <h2>Podsumowanie</h2>
+      <table>
+        <thead><tr><th>Pracownik</th><th>Pozycja</th><th class="c">Dni</th><th class="r">Godziny</th><th class="r">Śr./dzień</th><th class="r">Szac. koszt</th></tr></thead>
+        <tbody>${sumRows}
+          <tr class="foot"><td colspan="2">RAZEM (${activeWorkers} pracowników)</td>
+          <td class="c">${totalDaysAll}</td><td class="r">${fmtHM(totalMinAll)}</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <h2>Szczegóły odbitek</h2>
+      <table>
+        <thead><tr><th>Pracownik</th><th>Data</th><th class="c">Przyjście</th><th class="c">Wyjście</th><th class="r">Czas pracy</th></tr></thead>
+        <tbody>${detailRows}</tbody>
+      </table>
+      <script>window.onload=()=>window.print()</script>
+    </body></html>`
+
+    const win = window.open('', '_blank')
+    win?.document.write(html); win?.document.close()
+  }
+
+  return (
+    <div className="max-w-5xl">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-[22px] font-bold text-[#111827]">Ewidencja czasu pracy</h2>
+          <p className="text-[13px] text-[#9CA3AF]">{locationName} — {monthLabel()}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="month" value={month}
+            onChange={e => setMonth(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button onClick={() => openAdd()} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold transition-colors">
+            <Plus className="w-4 h-4" /> Dodaj wpis
+          </button>
+          <button onClick={exportExcel} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold transition-colors">
+            <FileSpreadsheet className="w-4 h-4" /> Excel
+          </button>
+          <button onClick={exportPDF} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[13px] font-semibold transition-colors">
+            <FileText className="w-4 h-4" /> PDF
+          </button>
+          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] text-[#6B7280] hover:bg-[#F9FAFB] transition-colors">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'Pracownicy z odbiciami', value: `${activeWorkers} / ${employees.length}`, color: 'text-blue-600' },
+          { label: 'Łączne godziny', value: fmtHM(totalMinAll), color: 'text-emerald-600' },
+          { label: 'Łączne dni pracy', value: `${totalDaysAll}`, color: 'text-purple-600' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-[#E5E7EB] p-4">
+            <p className="text-[11px] text-[#9CA3AF] uppercase tracking-widest mb-1">{s.label}</p>
+            <p className={`text-[22px] font-bold ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 gap-2 text-[#9CA3AF]">
+            <Loader2 className="w-5 h-5 animate-spin" /> Ładowanie…
+          </div>
+        ) : summary.length === 0 ? (
+          <div className="py-16 text-center text-[#9CA3AF] text-[14px]">Brak danych dla wybranego miesiąca</div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
+                {['Pracownik', 'Pozycja', 'Dni pracy', 'Godziny ogółem', 'Śr./dzień', 'Stawka', ''].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {summary.map(emp => (
+                <>
+                  <tr
+                    key={emp.id}
+                    onClick={() => setExpandedId(expandedId === emp.id ? null : emp.id)}
+                    className={`border-b border-[#F3F4F6] cursor-pointer hover:bg-[#F9FAFB] transition-colors ${emp.days === 0 ? 'opacity-50' : ''}`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-[12px] font-bold shrink-0">
+                          {emp.full_name[0]?.toUpperCase()}
+                        </div>
+                        <span className="text-[14px] font-semibold text-[#111827]">{emp.full_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-[13px] text-[#6B7280]">{emp.position ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[14px] font-bold ${emp.days > 0 ? 'text-[#111827]' : 'text-[#D1D5DB]'}`}>{emp.days}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[14px] font-bold ${emp.totalMinutes > 0 ? 'text-emerald-600' : 'text-[#D1D5DB]'}`}>
+                        {fmtHM(emp.totalMinutes)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[13px] text-[#6B7280]">
+                      {emp.days > 0 ? fmtHM(Math.round(emp.totalMinutes / emp.days)) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[13px] text-[#6B7280]">
+                      {emp.base_rate ? `${emp.base_rate} zł/h` : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[12px] text-blue-500">{expandedId === emp.id ? '▲' : '▼'}</span>
+                    </td>
+                  </tr>
+
+                  {expandedId === emp.id && (
+                    <tr key={`${emp.id}-detail`} className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+                      <td colSpan={7} className="px-4 py-3">
+                        <div className="flex justify-end mb-2">
+                          <button
+                            onClick={e => { e.stopPropagation(); openAdd(emp.id) }}
+                            className="flex items-center gap-1 text-[12px] font-semibold text-blue-600 hover:text-blue-800"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Dodaj dzień
+                          </button>
+                        </div>
+                        {emp.records.length === 0 ? (
+                          <p className="text-[13px] text-[#9CA3AF] py-2">Brak odbitek — kliknij &quot;Dodaj dzień&quot; aby wprowadzić ręcznie</p>
+                        ) : (
+                          <div className="grid gap-1">
+                            <div className="grid grid-cols-[1fr_100px_100px_90px_60px_1fr_56px] text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider px-2 pb-1 gap-1">
+                              <span>Data</span><span>Przyjście</span><span>Wyjście</span><span>Czas</span><span>Foto</span><span>Status</span><span></span>
+                            </div>
+                            {emp.records.map(r => {
+                              const min = recMin(r)
+                              return (
+                                <div key={r.id} className="grid grid-cols-[1fr_100px_100px_90px_60px_1fr_56px] items-center bg-white rounded-lg px-2 py-2 border border-[#E5E7EB] text-[13px] gap-1">
+                                  <span className="font-medium text-[#374151]">{r.work_date}</span>
+                                  {/* Clock-in + photo */}
+                                  <span className="text-green-600 font-mono flex items-center gap-1">
+                                    {fmtTime(r.clock_in_at)}
+                                    {r.clock_in_photo_url && (
+                                      <button onClick={e => { e.stopPropagation(); setPhotoModal(r.clock_in_photo_url) }}>
+                                        <img src={r.clock_in_photo_url} alt="wejście" className="w-7 h-7 rounded-md object-cover border border-green-200 hover:scale-110 transition-transform" />
+                                      </button>
+                                    )}
+                                  </span>
+                                  {/* Clock-out + photo */}
+                                  <span className="text-orange-600 font-mono flex items-center gap-1">
+                                    {r.clock_out_at ? fmtTime(r.clock_out_at) : <em className="text-slate-400">W trakcie</em>}
+                                    {r.clock_out_photo_url && (
+                                      <button onClick={e => { e.stopPropagation(); setPhotoModal(r.clock_out_photo_url) }}>
+                                        <img src={r.clock_out_photo_url} alt="wyjście" className="w-7 h-7 rounded-md object-cover border border-orange-200 hover:scale-110 transition-transform" />
+                                      </button>
+                                    )}
+                                  </span>
+                                  <span className="font-semibold text-[#374151]">{min > 0 ? fmtHM(min) : '—'}</span>
+                                  {/* Photos count badge */}
+                                  <span className="text-center">
+                                    {(r.clock_in_photo_url || r.clock_out_photo_url)
+                                      ? <span className="text-[10px] text-blue-500">📷</span>
+                                      : <span className="text-[10px] text-slate-300">—</span>}
+                                  </span>
+                                  <span>
+                                    {!r.clock_in_at ? <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px]">Brak</span>
+                                      : !r.clock_out_at ? <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px]">W trakcie</span>
+                                      : <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px]">Zakończona</span>}
+                                  </span>
+                                  <button
+                                    onClick={e => { e.stopPropagation(); openEdit(r, emp.id) }}
+                                    className="flex items-center justify-center gap-1 text-blue-500 hover:text-blue-700 text-[11px] font-medium"
+                                  >
+                                    <Save className="w-3.5 h-3.5" /> Edytuj
+                                  </button>
+                                </div>
+                              )
+                            })}
+                            <div className="grid grid-cols-5 px-2 pt-1 text-[12px] font-bold text-[#374151]">
+                              <span>Suma:</span><span></span><span></span>
+                              <span className="text-emerald-600">{fmtHM(emp.totalMinutes)}</span>
+                              {emp.base_rate && <span className="text-blue-600">{((emp.base_rate * emp.totalMinutes) / 60).toFixed(2)} zł</span>}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-[#EFF6FF] border-t-2 border-[#1D4ED8]">
+                <td className="px-4 py-3 text-[13px] font-bold text-[#1D4ED8]" colSpan={2}>RAZEM ({activeWorkers} pracowników)</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#111827]">{totalDaysAll}</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-emerald-600">{fmtHM(totalMinAll)}</td>
+                <td colSpan={3} />
+              </tr>
+            </tfoot>
+          </table>
+        )}
+      </div>
+
+      <p className="mt-4 text-[12px] text-[#9CA3AF]">
+        * Szacunkowy koszt = stawka godzinowa × godziny przepracowane. Kliknij wiersz pracownika, aby zobaczyć szczegóły odbitek.
+      </p>
+
+      {/* ── Add / Edit Modal ── */}
+      {modal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={e => { if (e.target === e.currentTarget) setModal(null) }}
+        >
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-[18px] font-bold text-[#111827] mb-4">
+              {modal.mode === 'add' ? 'Dodaj odbicie' : 'Edytuj odbicie'}
+            </h3>
+
+            {/* Employee (add mode only) */}
+            {modal.mode === 'add' && (
+              <div className="mb-4">
+                <label className="block text-[13px] font-semibold text-[#374151] mb-1.5">Pracownik *</label>
+                <select
+                  value={mForm.employee_id}
+                  onChange={e => mSet('employee_id', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">— wybierz pracownika —</option>
+                  {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+                </select>
+              </div>
+            )}
+            {modal.mode === 'edit' && (
+              <p className="text-[13px] text-[#6B7280] mb-4">
+                Pracownik: <strong className="text-[#111827]">{employees.find(e => e.id === modal.empId)?.full_name}</strong>
+              </p>
+            )}
+
+            {/* Date */}
+            <div className="mb-4">
+              <label className="block text-[13px] font-semibold text-[#374151] mb-1.5">Data *</label>
+              <input
+                type="date" value={mForm.date}
+                onChange={e => mSet('date', e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+
+            {/* Times */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="block text-[13px] font-semibold text-[#374151] mb-1.5">Przyjście *</label>
+                <input
+                  type="time" value={mForm.clock_in}
+                  onChange={e => mSet('clock_in', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[13px] font-semibold text-[#374151] mb-1.5">Wyjście</label>
+                <input
+                  type="time" value={mForm.clock_out}
+                  onChange={e => mSet('clock_out', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+            </div>
+
+            {/* Error */}
+            {mError && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-[13px] text-red-700">{mError}</div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              {modal.mode === 'edit' && (
+                <button
+                  onClick={deleteEntry} disabled={mSaving}
+                  className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-[13px] font-semibold transition-colors disabled:opacity-40"
+                >
+                  Usuń
+                </button>
+              )}
+              <button
+                onClick={() => setModal(null)} disabled={mSaving}
+                className="flex-1 py-2 rounded-lg border border-[#E5E7EB] text-[14px] font-semibold text-[#6B7280] hover:bg-[#F9FAFB] transition-colors"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={saveEntry} disabled={mSaving}
+                className="flex-[2] py-2 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white font-bold text-[14px] hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {mSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Zapisz'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Photo lightbox ── */}
+      {photoModal && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 cursor-zoom-out"
+          onClick={() => setPhotoModal(null)}
+        >
+          <div className="relative max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <img src={photoModal} alt="Zdjęcie odbicia" className="w-full rounded-2xl shadow-2xl object-contain max-h-[80vh]" />
+            <button
+              onClick={() => setPhotoModal(null)}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ================================================================== */
+/* KIOSK VIEW                                                          */
+/* ================================================================== */
+function KioskView({ locationId, locationName }: { locationId: string; locationName: string }) {
+  const [qrData,    setQrData]    = useState<{ clockUrl: string; expiresIn: number } | null>(null)
+  const [countdown, setCountdown] = useState(270)
+  const [loading,   setLoading]   = useState(false)
+  const [now,       setNow]       = useState(new Date())
+
+  const fetchToken = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res  = await fetch(`/api/clock/token?locationId=${locationId}`)
+      const json = await res.json()
+      if (res.ok) { setQrData(json); setCountdown(Math.min(json.expiresIn - 10, 270)) }
+    } finally { setLoading(false) }
+  }, [locationId])
+
+  useEffect(() => { fetchToken() }, [fetchToken])
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCountdown(prev => { if (prev <= 1) { fetchToken(); return 270 } return prev - 1 })
+    }, 1000)
+    return () => clearInterval(t)
+  }, [fetchToken])
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const fmtCd = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+  return (
+    <div className="max-w-lg mx-auto py-8">
+      <h2 className="text-[22px] font-bold text-[#111827] mb-1">Kiosk QR — {locationName}</h2>
+      <p className="text-[13px] text-[#9CA3AF] mb-6">
+        Wyświetl ten kod na tablecie przy wejściu. Pracownicy skanują go telefonem, aby się odbić.
+      </p>
+
+      {/* QR card */}
+      <div className="bg-[#0F172A] rounded-2xl p-8 text-center mb-4 shadow-lg">
+        <p className="text-slate-400 text-[11px] uppercase tracking-widest mb-4">Zeskanuj, aby się odbić</p>
+        <div className="bg-white rounded-2xl p-5 inline-block mb-4 shadow-inner">
+          {loading || !qrData ? (
+            <div className="w-48 h-48 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            </div>
+          ) : (
+            <QRCode value={qrData.clockUrl} size={192} level="M" />
+          )}
+        </div>
+        <p className="text-white font-bold text-[18px] mb-0.5">{locationName}</p>
+        <p className="text-slate-400 text-[14px] font-mono">
+          {now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        </p>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center justify-between bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] px-4 py-3">
+        <span className="text-[13px] text-[#6B7280]">Odświeży za <strong className="text-[#111827]">{fmtCd(countdown)}</strong></span>
+        <button
+          onClick={fetchToken}
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" /> Odśwież teraz
+        </button>
+      </div>
+
+      <p className="mt-4 text-[12px] text-[#9CA3AF] text-center">
+        Kod automatycznie rotuje co 5 minut dla bezpieczeństwa.
+        Pracownicy nie mogą się odbić poza lokalem.
+      </p>
+
+      {qrData && (
+        <div className="mt-4 p-3 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
+          <p className="text-[11px] text-[#9CA3AF] mb-1">Link do kiosku (pełny ekran)</p>
+          <a
+            href={`/kiosk?location=${locationId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] text-blue-600 hover:underline break-all"
+          >
+            {typeof window !== 'undefined' ? `${window.location.origin}/kiosk?location=${locationId}` : `/kiosk?location=${locationId}`}
+          </a>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function AccountView({
@@ -1657,6 +2284,24 @@ export default function OpsDashboard() {
             companyId={selectedLocation.locations?.company_id ?? ''}
             locations={[{ id: selectedLocation.location_id, name: selectedLocation.locations?.name ?? '' }]}
             defaultLocationId={selectedLocation.location_id}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  KIOSK QR                                               ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'kiosk' && selectedLocation && (
+          <KioskView locationId={selectedLocation.location_id} locationName={selectedLocation.locations?.name ?? ''} />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  ATTENDANCE / TIME RECORDS                              ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'attendance' && selectedLocation && (
+          <AttendanceView
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
           />
         )}
 

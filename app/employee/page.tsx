@@ -5,7 +5,7 @@ import { createClient } from '@/app/supabase-client'
 import { useRouter } from 'next/navigation'
 import {
   Calendar, MapPin, LogOut, ChevronLeft, ChevronRight,
-  Send, Timer, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
+  Send, Clock, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UpdatePasswordForm } from '@/components/update-password-form'
@@ -32,6 +32,7 @@ type Suggestion = {
 type ClockRecord = {
   id: string; work_date: string
   clock_in_at: string | null; clock_out_at: string | null
+  clock_in_photo_url?: string | null; clock_out_photo_url?: string | null
 }
 
 type SuggType = 'off' | 'available' | 'specific'
@@ -132,7 +133,7 @@ export default function EmployeeDashboard() {
   const [loading,   setLoading]   = useState(true)
 
   /* ── tab ── */
-  const [tab, setTab] = useState<'schedule' | 'suggest' | 'clockin'>('schedule')
+  const [tab, setTab] = useState<'schedule' | 'suggest' | 'hours'>('schedule')
   const [showChangePw, setShowChangePw] = useState(false)
 
   /* ── schedule ── */
@@ -156,11 +157,12 @@ export default function EmployeeDashboard() {
   const [suggSaving,  setSuggSaving]  = useState(false)
   const [suggError,   setSuggError]   = useState<string | null>(null)
 
-  /* ── clock in/out ── */
-  const [todayRecord,  setTodayRecord]  = useState<ClockRecord | null>(null)
-  const [clockHistory, setClockHistory] = useState<ClockRecord[]>([])
-  const [clockLoading, setClockLoading] = useState(false)
-  const [clockAction,  setClockAction]  = useState(false)
+  /* ── worked hours ── */
+  const [hoursMonth,   setHoursMonth]   = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [hoursRecords, setHoursRecords] = useState<ClockRecord[]>([])
+  const [hoursLoading, setHoursLoading] = useState(false)
 
   /* ── init ── */
   useEffect(() => {
@@ -353,40 +355,33 @@ export default function EmployeeDashboard() {
     await loadSuggestions()
   }
 
-  /* ── clock in/out ── */
-  const loadClockRecords = useCallback(async () => {
-    if (!userId) return
-    setClockLoading(true)
-    const sevenAgo = new Date(); sevenAgo.setDate(sevenAgo.getDate() - 7)
-    const { data } = await supabase.from('shift_clock_ins')
-      .select('id, work_date, clock_in_at, clock_out_at')
-      .eq('user_id', userId).gte('work_date', sevenAgo.toISOString().split('T')[0])
+  /* ── worked hours ── */
+  const loadHoursRecords = useCallback(async (month: string) => {
+    if (!userId && !employeeId) return
+    setHoursLoading(true)
+    const [y, m] = month.split('-').map(Number)
+    const start  = `${month}-01`
+    const end    = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+
+    let query = supabase.from('shift_clock_ins')
+      .select('id, work_date, clock_in_at, clock_out_at, clock_in_photo_url, clock_out_photo_url')
+      .gte('work_date', start).lte('work_date', end)
       .order('work_date', { ascending: false })
-    const recs = (data ?? []) as ClockRecord[]
-    setTodayRecord(recs.find(r => r.work_date === today) ?? null)
-    setClockHistory(recs.filter(r => r.work_date !== today))
-    setClockLoading(false)
-  }, [userId, today, supabase])
 
-  useEffect(() => { if (tab === 'clockin' && userId) loadClockRecords() }, [tab, userId, loadClockRecords])
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId)
+    } else {
+      query = query.eq('user_id', userId)
+    }
 
-  const handleClockIn = async () => {
-    setClockAction(true)
-    const { data, error } = await supabase.from('shift_clock_ins').insert({
-      user_id: userId, location_id: locationId, work_date: today, clock_in_at: new Date().toISOString(),
-    }).select().single()
-    if (!error) setTodayRecord(data as ClockRecord)
-    setClockAction(false)
-  }
+    const { data } = await query
+    setHoursRecords((data ?? []) as ClockRecord[])
+    setHoursLoading(false)
+  }, [userId, employeeId, supabase])
 
-  const handleClockOut = async () => {
-    if (!todayRecord) return
-    setClockAction(true)
-    const { data, error } = await supabase.from('shift_clock_ins')
-      .update({ clock_out_at: new Date().toISOString() }).eq('id', todayRecord.id).select().single()
-    if (!error) setTodayRecord(data as ClockRecord)
-    setClockAction(false)
-  }
+  useEffect(() => {
+    if (tab === 'hours' && (userId || employeeId)) loadHoursRecords(hoursMonth)
+  }, [tab, userId, employeeId, hoursMonth, loadHoursRecords])
 
   /* ── computed ── */
   const weekDays   = buildWeekDays(weekStart)
@@ -419,7 +414,7 @@ export default function EmployeeDashboard() {
             <p className="text-[11px] text-gray-400">
               {tab === 'schedule' && 'Twój grafik pracy'}
               {tab === 'suggest' && 'Zaproponuj zmianę'}
-              {tab === 'clockin' && 'Odbicia czasu pracy'}
+              {tab === 'hours' && 'Przepracowane godziny'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -846,79 +841,141 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════ CLOCK TAB ══ */}
-        {tab === 'clockin' && (
-          <div className="space-y-4">
+        {/* ══════════════════════════════════════════ HOURS TAB ══ */}
+        {tab === 'hours' && (() => {
+          const [y, m] = hoursMonth.split('-').map(Number)
+          const prevMonth = () => {
+            let nm = m - 1, ny = y
+            if (nm < 1) { nm = 12; ny-- }
+            setHoursMonth(`${ny}-${String(nm).padStart(2, '0')}`)
+          }
+          const nextMonth = () => {
+            let nm = m + 1, ny = y
+            if (nm > 12) { nm = 1; ny++ }
+            setHoursMonth(`${ny}-${String(nm).padStart(2, '0')}`)
+          }
+          const totalMins = hoursRecords.reduce((acc, r) => {
+            if (!r.clock_in_at || !r.clock_out_at) return acc
+            return acc + (new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60000
+          }, 0)
+          const totalHrs  = Math.floor(totalMins / 60)
+          const totalMin  = Math.round(totalMins % 60)
+          const workedDays = hoursRecords.filter(r => r.clock_in_at).length
 
-            {/* Today card */}
-            <div className="bg-[#1E3A8A] rounded-2xl p-5 shadow-lg">
-              <p className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mb-4">DZIŚ · {today}</p>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center">
-                  <p className="text-blue-300 text-xs mb-1">Przyjście</p>
-                  <p className={`text-2xl font-bold tabular-nums ${todayRecord?.clock_in_at ? 'text-green-400' : 'text-slate-500'}`}>
-                    {fmtTime(todayRecord?.clock_in_at ?? null)}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-blue-300 text-xs mb-1">Wyjście</p>
-                  <p className={`text-2xl font-bold tabular-nums ${todayRecord?.clock_out_at ? 'text-red-400' : 'text-slate-500'}`}>
-                    {fmtTime(todayRecord?.clock_out_at ?? null)}
-                  </p>
+          return (
+            <div className="space-y-4">
+
+              {/* Month nav */}
+              <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+                <button onClick={prevMonth} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50">
+                  <ChevronLeft className="w-4 h-4 text-gray-600" />
+                </button>
+                <p className="font-bold text-gray-900">{MONTH_NAMES[m - 1]} {y}</p>
+                <button onClick={nextMonth} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50">
+                  <ChevronRight className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Summary card */}
+              <div className="bg-gradient-to-br from-[#1E3A8A] to-[#1D4ED8] rounded-2xl p-5 text-white shadow-lg">
+                <p className="text-blue-200 text-[10px] font-bold uppercase tracking-widest mb-3">Podsumowanie miesiąca</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold tabular-nums">{workedDays}</p>
+                    <p className="text-blue-300 text-xs mt-1">dni przepracowanych</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold tabular-nums">{totalHrs}h {totalMin}m</p>
+                    <p className="text-blue-300 text-xs mt-1">łączny czas pracy</p>
+                  </div>
                 </div>
               </div>
-              {calcWorked(todayRecord?.clock_in_at ?? null, todayRecord?.clock_out_at ?? null) && (
-                <p className="text-blue-200 text-sm text-center mb-4">
-                  Przepracowano: <strong>{calcWorked(todayRecord?.clock_in_at ?? null, todayRecord?.clock_out_at ?? null)}</strong>
-                </p>
-              )}
-              {clockLoading ? (
-                <div className="flex justify-center py-2"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>
-              ) : !todayRecord?.clock_in_at ? (
-                <button onClick={handleClockIn} disabled={clockAction}
-                  className="w-full py-3.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-base transition-colors disabled:opacity-60">
-                  {clockAction ? 'Zapisywanie...' : '▶ Rozpocznij zmianę'}
-                </button>
-              ) : !todayRecord?.clock_out_at ? (
-                <button onClick={handleClockOut} disabled={clockAction}
-                  className="w-full py-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-base transition-colors disabled:opacity-60">
-                  {clockAction ? 'Zapisywanie...' : '⏹ Zakończ zmianę'}
-                </button>
+
+              {/* Records list */}
+              {hoursLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : hoursRecords.length === 0 ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center">
+                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-gray-500">Brak wpisów w tym miesiącu</p>
+                  <p className="text-xs text-gray-400 mt-1">Rejestracja odbywa się przez kod QR w lokalu.</p>
+                </div>
               ) : (
-                <div className="py-3 rounded-xl bg-green-500/20 text-center">
-                  <p className="text-green-400 font-bold">✓ Zmiana zakończona</p>
+                <div className="space-y-2">
+                  {hoursRecords.map(rec => {
+                    const worked = calcWorked(rec.clock_in_at, rec.clock_out_at)
+                    const dateLabel = new Date(rec.work_date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })
+                    const hasPhoto = rec.clock_in_photo_url || rec.clock_out_photo_url
+                    return (
+                      <div key={rec.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+                        <div className="flex items-start gap-3">
+                          {/* Date */}
+                          <div className="shrink-0 w-12 text-center">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">{dateLabel.split(' ')[0]}</p>
+                            <p className="text-lg font-bold text-gray-900 leading-tight">{parseInt(rec.work_date.split('-')[2])}</p>
+                          </div>
+                          {/* Times */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <p className="text-[10px] text-gray-400 mb-0.5">Przyjście</p>
+                                <p className={`text-sm font-bold tabular-nums ${rec.clock_in_at ? 'text-green-600' : 'text-gray-300'}`}>
+                                  {fmtTime(rec.clock_in_at)}
+                                </p>
+                              </div>
+                              <span className="text-gray-300 text-xs">→</span>
+                              <div>
+                                <p className="text-[10px] text-gray-400 mb-0.5">Wyjście</p>
+                                <p className={`text-sm font-bold tabular-nums ${rec.clock_out_at ? 'text-red-500' : 'text-gray-300'}`}>
+                                  {fmtTime(rec.clock_out_at)}
+                                </p>
+                              </div>
+                              {worked && (
+                                <div className="ml-auto">
+                                  <p className="text-[10px] text-gray-400 mb-0.5">Łącznie</p>
+                                  <p className="text-sm font-bold text-blue-600 tabular-nums">{worked}</p>
+                                </div>
+                              )}
+                            </div>
+                            {!rec.clock_out_at && rec.clock_in_at && (
+                              <p className="text-[10px] text-amber-600 font-semibold mt-1">Zmiana w toku</p>
+                            )}
+                          </div>
+                          {/* Photos */}
+                          {hasPhoto && (
+                            <div className="shrink-0 flex gap-1">
+                              {rec.clock_in_photo_url && (
+                                <a href={rec.clock_in_photo_url} target="_blank" rel="noreferrer">
+                                  <img src={rec.clock_in_photo_url} alt="in" className="w-9 h-9 rounded-lg object-cover border border-green-200" />
+                                </a>
+                              )}
+                              {rec.clock_out_photo_url && (
+                                <a href={rec.clock_out_photo_url} target="_blank" rel="noreferrer">
+                                  <img src={rec.clock_out_photo_url} alt="out" className="w-9 h-9 rounded-lg object-cover border border-red-200" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
-
-            {/* 7-day history */}
-            {clockHistory.length > 0 && (
-              <div>
-                <p className="text-sm font-bold text-gray-700 mb-2">Ostatnie 7 dni</p>
-                <div className="space-y-2">
-                  {clockHistory.map(rec => (
-                    <div key={rec.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-700">{rec.work_date}</p>
-                      <p className="text-sm text-gray-600 tabular-nums">{fmtTime(rec.clock_in_at)} → {fmtTime(rec.clock_out_at)}</p>
-                      {calcWorked(rec.clock_in_at, rec.clock_out_at) && (
-                        <p className="text-sm font-bold text-blue-600">{calcWorked(rec.clock_in_at, rec.clock_out_at)}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* ── Bottom tab bar ── */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 shadow-lg">
         <div className="max-w-lg mx-auto grid grid-cols-3">
           {([
-            { key: 'schedule', icon: Calendar,  label: 'Grafik' },
-            { key: 'suggest',  icon: Send,       label: 'Sugestie' },
-            { key: 'clockin',  icon: Timer,      label: 'Odbicia' },
+            { key: 'schedule', icon: Calendar, label: 'Grafik' },
+            { key: 'suggest',  icon: Send,     label: 'Sugestie' },
+            { key: 'hours',    icon: Clock,    label: 'Godziny' },
           ] as const).map(({ key, icon: Icon, label }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex flex-col items-center gap-1 py-3 transition-colors ${tab === key ? 'text-[#1D4ED8]' : 'text-gray-400 hover:text-gray-600'}`}>

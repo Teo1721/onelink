@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   LayoutDashboard, FileText, ClipboardList, LogOut, MapPin,
-  Calendar, Users, Settings, CalendarDays, MoreHorizontal, X,
+  Calendar, Users, Settings, CalendarDays, MoreHorizontal, X, QrCode, Clock,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -22,6 +22,8 @@ const NAV_ITEMS = [
   { key: 'scheduling',  label: 'Harmonogram', labelFull: 'Harmonogram',      icon: Calendar },
   { key: 'my_schedule', label: 'Mój grafik',  labelFull: 'Mój grafik',       icon: CalendarDays },
   { key: 'employees',   label: 'Pracownicy',  labelFull: 'Pracownicy',       icon: Users },
+  { key: 'attendance',  label: 'Ewidencja',   labelFull: 'Ewidencja czasu',  icon: Clock },
+  { key: 'kiosk',       label: 'Kiosk',       labelFull: 'Kiosk QR',         icon: QrCode },
   { key: 'account',     label: 'Konto',       labelFull: 'Konto',            icon: Settings },
 ]
 

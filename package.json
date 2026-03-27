@@ -24,6 +24,7 @@
     "radix-ui": "^1.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-qr-code": "^2.0.18",
     "rechart": "^0.0.1",
     "recharts": "^3.8.0",
     "stripe": "^16.12.0",
