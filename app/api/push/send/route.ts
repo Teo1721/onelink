@@ -7,14 +7,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-webpush.setVapidDetails(
-  'mailto:admin@onelink.app',
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 export async function POST(req: NextRequest) {
   try {
+    webpush.setVapidDetails(
+      'mailto:admin@onelink.app',
+      process.env.VAPID_PUBLIC_KEY!,
+      process.env.VAPID_PRIVATE_KEY!
+    )
     const { userId, title, body, url } = await req.json()
     if (!userId || !title) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
