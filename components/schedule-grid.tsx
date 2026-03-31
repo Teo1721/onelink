@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { getPolishHolidays, getHolidayName } from '@/lib/polish-holidays'
 
 /* ─────────────────────────────────────── types ── */
 type DbShift = {
@@ -406,6 +407,65 @@ export function ScheduleGrid({
 
   const pendingSuggestions = allSuggestions // already filtered to pending in query
 
+  /* ── Polish holidays ── */
+  const holidays = useMemo(() => getPolishHolidays(viewYear), [viewYear])
+
+  /* ── PDF export ── */
+  function exportPDF() {
+    const title = viewMode === 'week'
+      ? `${weekDays[0]?.dateFull} – ${weekDays[6]?.dateFull} ${MONTH_NAMES[weekDays[0]?.month ?? 0]} ${viewYear}`
+      : `${MONTH_NAMES[viewMonth]} ${viewYear}`
+
+    const headerCells = displayDays.map(d => {
+      const isHol = holidays.has(d.iso)
+      const holName = getHolidayName(d.iso, holidays)
+      return `<th style="background:${isHol ? '#FEF3C7' : d.isWeekend ? '#F9FAFB' : '#EFF6FF'};padding:6px 4px;font-size:10px;text-align:center;border:1px solid #E5E7EB">
+        <div style="font-weight:700">${d.label}</div>
+        <div style="font-size:11px">${'day' in d ? d.day : d.dateFull}</div>
+        ${isHol ? `<div style="font-size:9px;color:#D97706">${holName}</div>` : ''}
+      </th>`
+    }).join('')
+
+    const bodyRows = employees.map(emp => {
+      const cells = displayDays.map(d => {
+        const dayShifts = getShifts(emp, d.iso)
+        const isHol = holidays.has(d.iso)
+        const content = dayShifts.length
+          ? dayShifts.map(s => `<div style="font-size:10px;background:#DBEAFE;border-radius:3px;padding:1px 3px;margin-bottom:2px">${fmt(s.time_start)}–${fmt(s.time_end)}${s.position ? `<br><span style="color:#6B7280">${POSITION_MAP[s.position]?.label ?? s.position}</span>` : ''}</div>`).join('')
+          : '<div style="color:#D1D5DB;font-size:10px;text-align:center">—</div>'
+        return `<td style="padding:4px;border:1px solid #E5E7EB;vertical-align:top;background:${isHol ? '#FFFBEB' : ''}">${content}</td>`
+      }).join('')
+      const empHours = displayDays.reduce((sum, d) => sum + getShifts(emp, d.iso).reduce((s, sh) => s + calcHours(fmt(sh.time_start), fmt(sh.time_end)), 0), 0)
+      return `<tr>
+        <td style="padding:6px 8px;border:1px solid #E5E7EB;font-weight:600;font-size:11px;white-space:nowrap">${emp.full_name}${emp.position ? `<br><span style="color:#9CA3AF;font-weight:400">${emp.position}</span>` : ''}</td>
+        ${cells}
+        <td style="padding:4px;border:1px solid #E5E7EB;text-align:center;font-weight:700;font-size:11px;color:#059669">${empHours > 0 ? empHours.toFixed(1) + 'h' : '—'}</td>
+      </tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8">
+      <title>Grafik — ${title}</title>
+      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;padding:20px}
+      h1{font-size:16px;font-weight:700;margin-bottom:4px}
+      .meta{color:#6B7280;font-size:11px;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse}
+      @media print{@page{margin:10mm;size:A4 landscape}}</style></head><body>
+      <h1>Grafik pracy — ${title}</h1>
+      <p class="meta">Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</p>
+      <table>
+        <thead><tr>
+          <th style="padding:6px 8px;background:#1E3A5F;color:#fff;text-align:left;border:1px solid #E5E7EB;font-size:11px">Pracownik</th>
+          ${headerCells}
+          <th style="padding:6px 4px;background:#1E3A5F;color:#fff;text-align:center;border:1px solid #E5E7EB;font-size:10px">Godz.</th>
+        </tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <script>window.onload=()=>window.print()</script></body></html>`
+
+    const win = window.open('', '_blank')
+    win?.document.write(html); win?.document.close()
+  }
+
   /* ── render ── */
   return (
     <div className="max-w-full space-y-4">
@@ -461,6 +521,9 @@ export function ScheduleGrid({
               💡 {pendingSuggestions.length} sugestii
             </button>
           )}
+          <button onClick={exportPDF} className="h-8 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-medium">
+            📄 PDF
+          </button>
         </div>
       </div>
 
@@ -614,16 +677,21 @@ export function ScheduleGrid({
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 w-[160px] border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
                     Pracownik
                   </th>
-                  {displayDays.map(d => (
-                    <th key={d.iso}
-                      className={`px-1.5 py-2 text-center border-r border-slate-200 ${viewMode === 'month' ? 'min-w-[44px]' : 'min-w-[130px]'} ${d.isToday ? 'bg-blue-50' : d.isWeekend ? 'bg-slate-100/60' : ''}`}>
-                      <div className={`text-[9px] font-bold uppercase ${d.isToday ? 'text-blue-600' : 'text-slate-400'}`}>{d.label}</div>
-                      <div className={`font-semibold ${viewMode === 'month' ? 'text-[11px]' : 'text-sm'} mt-0.5 ${d.isToday ? 'text-blue-700' : 'text-slate-700'}`}>
-                        {'day' in d ? d.day : d.dateFull}
-                      </div>
-                      {d.isToday && <div className="w-1 h-1 bg-blue-500 rounded-full mx-auto mt-0.5" />}
-                    </th>
-                  ))}
+                  {displayDays.map(d => {
+                    const isHoliday = holidays.has(d.iso)
+                    const holName = getHolidayName(d.iso, holidays)
+                    return (
+                      <th key={d.iso}
+                        className={`px-1.5 py-2 text-center border-r border-slate-200 ${viewMode === 'month' ? 'min-w-[44px]' : 'min-w-[130px]'} ${d.isToday ? 'bg-blue-50' : isHoliday ? 'bg-amber-50' : d.isWeekend ? 'bg-slate-100/60' : ''}`}>
+                        <div className={`text-[9px] font-bold uppercase ${d.isToday ? 'text-blue-600' : isHoliday ? 'text-amber-600' : 'text-slate-400'}`}>{d.label}</div>
+                        <div className={`font-semibold ${viewMode === 'month' ? 'text-[11px]' : 'text-sm'} mt-0.5 ${d.isToday ? 'text-blue-700' : isHoliday ? 'text-amber-700' : 'text-slate-700'}`}>
+                          {'day' in d ? d.day : d.dateFull}
+                        </div>
+                        {d.isToday && <div className="w-1 h-1 bg-blue-500 rounded-full mx-auto mt-0.5" />}
+                        {isHoliday && <div className="text-[8px] text-amber-600 leading-tight mt-0.5 truncate max-w-[60px] mx-auto" title={holName ?? ''}>{holName}</div>}
+                      </th>
+                    )
+                  })}
                   <th className="px-2 py-3 text-center text-xs font-semibold uppercase text-slate-400 w-14 sticky right-0 bg-slate-50 z-10">Godz.</th>
                 </tr>
               </thead>
@@ -646,9 +714,10 @@ export function ScheduleGrid({
                     {/* Day cells */}
                     {displayDays.map(d => {
                       const dayShifts = getShifts(emp, d.iso)
+                      const isHoliday = holidays.has(d.iso)
                       return (
                         <td key={d.iso}
-                          className={`border-r border-b border-slate-200 align-top ${d.isToday ? 'bg-blue-50/20' : d.isWeekend ? 'bg-slate-50/40' : ''} ${viewMode === 'month' ? 'p-0.5' : 'px-1.5 py-1.5'}`}>
+                          className={`border-r border-b border-slate-200 align-top ${d.isToday ? 'bg-blue-50/20' : isHoliday ? 'bg-amber-50/40' : d.isWeekend ? 'bg-slate-50/40' : ''} ${viewMode === 'month' ? 'p-0.5' : 'px-1.5 py-1.5'}`}>
                           <div className={`space-y-0.5 ${viewMode === 'month' ? 'min-h-[32px]' : 'min-h-[52px]'}`}>
                             {dayShifts.map(shift => (
                               <button key={shift.id} onClick={() => openEdit(shift)}

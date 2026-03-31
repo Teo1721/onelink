@@ -5,7 +5,7 @@ import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   LayoutDashboard, FileText, ClipboardList, LogOut, MapPin,
   Calendar, Users, Settings, CalendarDays, MoreHorizontal, X, QrCode, Clock,
-  Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen,
+  Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen, Banknote, UserCheck,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -29,6 +29,8 @@ const NAV_ITEMS = [
   { key: 'swaps',       label: 'Zamiany',     labelFull: 'Zamiany zmian',    icon: GitCompare },
   { key: 'certs',       label: 'Certyfik.',   labelFull: 'Certyfikaty',      icon: GraduationCap },
   { key: 'documents',   label: 'Dokumenty',   labelFull: 'Dokumenty',        icon: FolderOpen },
+  { key: 'tips',        label: 'Napiwki',     labelFull: 'Napiwki',          icon: Banknote  },
+  { key: 'onboarding',  label: 'Onboarding',  labelFull: 'Onboarding',       icon: UserCheck },
   { key: 'kiosk',       label: 'Kiosk',       labelFull: 'Kiosk QR',         icon: QrCode },
   { key: 'account',     label: 'Konto',       labelFull: 'Konto',            icon: Settings },
 ]

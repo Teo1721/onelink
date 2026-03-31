@@ -5,6 +5,8 @@ import { createClient } from '../supabase-client'
 import { useRouter } from 'next/navigation'
 import { OpsSidebar } from '@/components/OpsSidebar'
 import { ScheduleGrid } from '@/components/schedule-grid'
+import { TipsView } from '@/components/tips-view'
+import { OnboardingView } from '@/components/onboarding-view'
 import { EmployeesManager } from '@/components/employees-manager'
 import { WeeklySalesImport } from '@/components/weekly-sales-import'
 import { Button } from '@/components/ui/button'
@@ -100,7 +102,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -1742,6 +1744,55 @@ function AccountView({
 }: AccountViewProps) {
   const [showDeleteSection, setShowDeleteSection] = useState(false)
 
+  // ── 2FA / MFA state ──
+  const [mfaFactors, setMfaFactors] = useState<{ id: string; factor_type: string; friendly_name?: string }[]>([])
+  const [mfaLoading, setMfaLoading] = useState(false)
+  const [mfaStep, setMfaStep] = useState<'idle' | 'setup' | 'verify'>('idle')
+  const [mfaQr, setMfaQr] = useState('')
+  const [mfaSecret, setMfaSecret] = useState('')
+  const [mfaFactorId, setMfaFactorId] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaError, setMfaError] = useState('')
+  const [mfaSuccess, setMfaSuccess] = useState('')
+
+  useEffect(() => {
+    supabase.auth.mfa.listFactors().then(({ data }) => {
+      setMfaFactors(data?.totp ?? [])
+    })
+  }, [])
+
+  async function startMfaEnroll() {
+    setMfaLoading(true); setMfaError(''); setMfaSuccess('')
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'OneLink 2FA' })
+    if (error || !data) { setMfaError(error?.message ?? 'Błąd'); setMfaLoading(false); return }
+    setMfaQr(data.totp.qr_code)
+    setMfaSecret(data.totp.secret)
+    setMfaFactorId(data.id)
+    setMfaStep('setup')
+    setMfaLoading(false)
+  }
+
+  async function verifyMfa() {
+    if (mfaCode.length !== 6) { setMfaError('Wpisz 6-cyfrowy kod'); return }
+    setMfaLoading(true); setMfaError('')
+    const { data: ch, error: ce } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId })
+    if (ce || !ch) { setMfaError(ce?.message ?? 'Błąd'); setMfaLoading(false); return }
+    const { error: ve } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: ch.id, code: mfaCode })
+    if (ve) { setMfaError(ve.message); setMfaLoading(false); return }
+    setMfaFactors(prev => [...prev, { id: mfaFactorId, factor_type: 'totp', friendly_name: 'OneLink 2FA' }])
+    setMfaStep('idle'); setMfaCode(''); setMfaSuccess('Weryfikacja dwuetapowa włączona!')
+    setMfaLoading(false)
+  }
+
+  async function disableMfa(factorId: string) {
+    if (!confirm('Wyłączyć weryfikację dwuetapową?')) return
+    setMfaLoading(true)
+    await supabase.auth.mfa.unenroll({ factorId })
+    setMfaFactors(prev => prev.filter(f => f.id !== factorId))
+    setMfaLoading(false)
+    setMfaSuccess('')
+  }
+
   useEffect(() => {
     if (accountProfile) return
     setAccountLoading(true)
@@ -1902,6 +1953,76 @@ function AccountView({
                 Wybierz plan
               </button>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── 2FA card ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-gray-500" />
+            Weryfikacja dwuetapowa (2FA)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {mfaSuccess && (
+            <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />{mfaSuccess}
+            </div>
+          )}
+          {mfaFactors.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Masz włączoną weryfikację dwuetapową (TOTP). Aplikacja uwierzytelniająca jest wymagana przy logowaniu.</p>
+              {mfaFactors.map(f => (
+                <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium">
+                    <ShieldCheck className="w-4 h-4" />{f.friendly_name ?? 'Authenticator App'}
+                  </div>
+                  <button onClick={() => disableMfa(f.id)} disabled={mfaLoading}
+                    className="text-xs text-red-600 hover:underline">Wyłącz</button>
+                </div>
+              ))}
+            </div>
+          ) : mfaStep === 'idle' ? (
+            <>
+              <p className="text-sm text-gray-500 leading-relaxed">Dodaj dodatkową warstwę bezpieczeństwa. Przy każdym logowaniu będziesz pytany o kod z aplikacji uwierzytelniającej (np. Google Authenticator).</p>
+              <button onClick={startMfaEnroll} disabled={mfaLoading}
+                className="flex items-center gap-2 h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                {mfaLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                Włącz 2FA
+              </button>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">Zeskanuj kod QR w aplikacji uwierzytelniającej (Google Authenticator, Authy itp.), następnie wpisz 6-cyfrowy kod.</p>
+              {mfaQr && (
+                <div className="flex flex-col items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={mfaQr} alt="QR 2FA" className="w-40 h-40 border rounded-lg" />
+                  <p className="text-[11px] text-gray-400 font-mono break-all max-w-xs text-center">
+                    Lub wpisz ręcznie: {mfaSecret}
+                  </p>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Kod weryfikacyjny</label>
+                <input type="text" inputMode="numeric" maxLength={6} value={mfaCode}
+                  onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '')); setMfaError('') }}
+                  placeholder="000000"
+                  className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-center text-lg font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                {mfaError && <p className="text-xs text-red-600 mt-1">{mfaError}</p>}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { setMfaStep('idle'); setMfaCode(''); setMfaError('') }}
+                  className="h-9 px-4 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Anuluj</button>
+                <button onClick={verifyMfa} disabled={mfaLoading || mfaCode.length !== 6}
+                  className="flex items-center gap-2 h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  {mfaLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Weryfikuj i włącz'}
+                </button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -3209,6 +3330,28 @@ export default function OpsDashboard() {
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'documents' && selectedLocation && (
           <DocumentsView locationId={selectedLocation.location_id} supabase={supabase} />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  TIPS LOG                                               ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'tips' && selectedLocation && (
+          <TipsView
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  EMPLOYEE ONBOARDING                                    ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'onboarding' && selectedLocation && (
+          <OnboardingView
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+          />
         )}
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}

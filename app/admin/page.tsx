@@ -19,6 +19,8 @@ import {
   User, CreditCard, LogOut, ShieldCheck, X,
 } from 'lucide-react'
 import { HRDashboardView, AttendanceView, LeaveView, SwapView, CertsView, DocumentsView } from '@/components/hr-views'
+import { TipsView } from '@/components/tips-view'
+import { OnboardingView } from '@/components/onboarding-view'
 import { MenuPricingTable } from '@/components/menu-pricing-table'
 import { MenuPriceCalculator } from '@/components/menu-price-calculator'
 import { WarehouseDeviationReport } from '@/components/warehouse-deviation-report'
@@ -445,7 +447,7 @@ type ActiveView =
   | 'menu_pricing' | 'menu_calculator' | 'warehouse_deviations'
   | 'central_warehouse'
   | 'admin_users' | 'employees' | 'schedule'
-  | 'hr_dashboard' | 'hr_attendance' | 'hr_leave' | 'hr_swaps' | 'hr_certs' | 'hr_documents'
+  | 'hr_dashboard' | 'hr_attendance' | 'hr_leave' | 'hr_swaps' | 'hr_certs' | 'hr_documents' | 'hr_tips' | 'hr_onboarding'
   | 'account'
 
 /* ================================================================== */
@@ -3761,7 +3763,7 @@ export default function AdminDashboard() {
         {/* ═══════════════════════════════════════════════════════ */}
         {/*  HR — location picker (shared across HR views)         */}
         {/* ═══════════════════════════════════════════════════════ */}
-        {(['hr_dashboard', 'hr_attendance', 'hr_leave', 'hr_swaps', 'hr_certs', 'hr_documents'] as ActiveView[]).includes(activeView) && (
+        {(['hr_dashboard', 'hr_attendance', 'hr_leave', 'hr_swaps', 'hr_certs', 'hr_documents', 'hr_tips', 'hr_onboarding'] as ActiveView[]).includes(activeView) && (
           <>
             {/* Location selector */}
             {activeView !== 'hr_dashboard' && locations.length > 1 && (
@@ -3808,6 +3810,20 @@ export default function AdminDashboard() {
             )}
             {activeView === 'hr_documents' && hrLocationId && (
               <DocumentsView locationId={hrLocationId} supabase={supabase} />
+            )}
+            {activeView === 'hr_tips' && hrLocationId && (
+              <TipsView
+                locationId={hrLocationId}
+                locationName={locations.find(l => l.id === hrLocationId)?.name ?? ''}
+                supabase={supabase}
+              />
+            )}
+            {activeView === 'hr_onboarding' && hrLocationId && (
+              <OnboardingView
+                locationId={hrLocationId}
+                locationName={locations.find(l => l.id === hrLocationId)?.name ?? ''}
+                supabase={supabase}
+              />
             )}
           </>
         )}

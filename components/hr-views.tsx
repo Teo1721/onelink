@@ -5,9 +5,10 @@ import {
   AlertCircle, FileSpreadsheet, Save, Plus, Trash2, AlertTriangle,
   FileText, Loader2, RefreshCw, Clock, Calendar, User,
   Umbrella, Building2, GitCompare, GraduationCap, FolderOpen,
-  Upload, BellRing, Download, Eye,
+  Upload, BellRing, Download, Eye, TrendingUp,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { getPolishHolidays } from '@/lib/polish-holidays'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -16,6 +17,7 @@ export type ClockEntry = {
   id: string; user_id: string | null; employee_id: string | null
   work_date: string; clock_in_at: string | null; clock_out_at: string | null
   clock_in_photo_url: string | null; clock_out_photo_url: string | null
+  break_minutes?: number | null
 }
 export type AttEmp = { id: string; full_name: string; position: string | null; user_id: string | null; base_rate: number | null }
 export type AttSummary = AttEmp & { records: ClockEntry[]; days: number; totalMinutes: number }
@@ -186,20 +188,20 @@ export function AttendanceView({
   type ModalMode  = 'add' | 'edit'
   type ModalState = { mode: ModalMode; record?: ClockEntry; empId?: string } | null
   const [modal,   setModal]   = useState<ModalState>(null)
-  const [mForm,   setMForm]   = useState({ employee_id: '', date: '', clock_in: '', clock_out: '' })
+  const [mForm,   setMForm]   = useState({ employee_id: '', date: '', clock_in: '', clock_out: '', break_minutes: '0' })
   const [mSaving, setMSaving] = useState(false)
   const [mError,  setMError]  = useState<string | null>(null)
 
   function openAdd(empId?: string) {
     const today = new Date().toLocaleDateString('sv-SE')
-    setMForm({ employee_id: empId ?? '', date: today, clock_in: '', clock_out: '' })
+    setMForm({ employee_id: empId ?? '', date: today, clock_in: '', clock_out: '', break_minutes: '0' })
     setMError(null)
     setModal({ mode: 'add', empId })
   }
   function openEdit(record: ClockEntry, empId: string) {
     const inT  = record.clock_in_at  ? new Date(record.clock_in_at ).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : ''
     const outT = record.clock_out_at ? new Date(record.clock_out_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : ''
-    setMForm({ employee_id: empId, date: record.work_date, clock_in: inT, clock_out: outT })
+    setMForm({ employee_id: empId, date: record.work_date, clock_in: inT, clock_out: outT, break_minutes: String(record.break_minutes ?? 0) })
     setMError(null)
     setModal({ mode: 'edit', record, empId })
   }
@@ -237,6 +239,7 @@ export function AttendanceView({
     const payload = {
       employee_id, user_id: emp?.user_id ?? null, location_id: locationId,
       work_date: date, clock_in_at: buildISO(date, clock_in), clock_out_at: buildISO(date, clock_out),
+      break_minutes: parseInt(mForm.break_minutes) || 0,
     }
     let err: { message: string } | null = null
     if (modal?.mode === 'add') {
@@ -290,7 +293,70 @@ export function AttendanceView({
   }
   function recMin(r: ClockEntry) {
     if (!r.clock_in_at || !r.clock_out_at) return 0
-    return Math.round((new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60_000)
+    const gross = Math.round((new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60_000)
+    return Math.max(0, gross - (r.break_minutes ?? 0))
+  }
+
+  // Overtime: days > 8h, weeks > 40h
+  const overtimeDays = useMemo(() => {
+    return summary.flatMap(emp =>
+      emp.records
+        .filter(r => recMin(r) > 480)
+        .map(r => ({ empName: emp.full_name, date: r.work_date, minutes: recMin(r) }))
+    )
+  }, [summary])
+
+  const overtimeWeeks = useMemo(() => {
+    const byEmpWeek: Record<string, number> = {}
+    summary.forEach(emp => {
+      emp.records.forEach(r => {
+        const d = new Date(r.work_date)
+        const dow = d.getDay() || 7
+        const monDate = new Date(d); monDate.setDate(d.getDate() - (dow - 1))
+        const key = `${emp.id}__${monDate.toISOString().slice(0, 10)}`
+        byEmpWeek[key] = (byEmpWeek[key] ?? 0) + recMin(r)
+      })
+    })
+    return Object.entries(byEmpWeek)
+      .filter(([, mins]) => mins > 2400)
+      .map(([key, mins]) => {
+        const [empId, weekMon] = key.split('__')
+        const empName = summary.find(e => e.id === empId)?.full_name ?? empId
+        return { empName, weekMon, minutes: mins }
+      })
+  }, [summary])
+
+  function generatePayslip(emp: typeof summary[number]) {
+    const hoursWorked = (emp.totalMinutes / 60).toFixed(2)
+    const grossPay = emp.base_rate ? ((emp.base_rate * emp.totalMinutes) / 60).toFixed(2) : null
+    const html = `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8">
+      <title>Pasek wypłaty — ${emp.full_name}</title>
+      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;padding:32px;color:#111}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1D4ED8}
+      .company{font-size:18px;font-weight:700;color:#1D4ED8}.month{font-size:13px;color:#6B7280;margin-top:4px}
+      .emp-name{font-size:16px;font-weight:700}.emp-pos{color:#6B7280;font-size:12px}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+      .card{background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px}
+      .card-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#9CA3AF;margin-bottom:6px}
+      .card-value{font-size:22px;font-weight:700;color:#111827}
+      .card-sub{font-size:11px;color:#6B7280;margin-top:2px}
+      .gross{background:#EFF6FF;border-color:#BFDBFE}.gross .card-value{color:#1D4ED8}
+      .footer{margin-top:24px;padding-top:16px;border-top:1px solid #E5E7EB;font-size:10px;color:#9CA3AF;display:flex;justify-content:space-between}
+      @media print{@page{size:A5;margin:12mm}}</style></head><body>
+      <div class="header">
+        <div><div class="company">OneLink — Pasek Wypłaty</div><div class="month">${locationName} · ${monthLabel()}</div></div>
+        <div style="text-align:right"><div class="emp-name">${emp.full_name}</div><div class="emp-pos">${emp.position ?? '—'}</div></div>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="card-label">Dni przepracowane</div><div class="card-value">${emp.days}</div><div class="card-sub">w miesiącu ${monthLabel()}</div></div>
+        <div class="card"><div class="card-label">Godziny przepracowane</div><div class="card-value">${hoursWorked}h</div><div class="card-sub">${emp.totalMinutes} minut łącznie</div></div>
+        <div class="card"><div class="card-label">Stawka godzinowa</div><div class="card-value">${emp.base_rate ? emp.base_rate + ' zł/h' : '—'}</div></div>
+        <div class="card ${grossPay ? 'gross' : ''}"><div class="card-label">Szacunkowe wynagrodzenie brutto</div><div class="card-value">${grossPay ? grossPay + ' zł' : '—'}</div><div class="card-sub">przed potrąceniami i składkami</div></div>
+      </div>
+      <div class="footer"><span>Dokument wygenerowany automatycznie przez OneLink · ${new Date().toLocaleDateString('pl-PL')}</span><span>Pasek informacyjny — nie jest fakturą</span></div>
+      <script>window.onload=()=>window.print()</script></body></html>`
+    const win = window.open('', '_blank')
+    win?.document.write(html); win?.document.close()
   }
 
   function exportExcel() {
@@ -423,6 +489,28 @@ export function AttendanceView({
         )
       })()}
 
+      {/* Overtime alerts */}
+      {(overtimeDays.length > 0 || overtimeWeeks.length > 0) && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-red-600 shrink-0" />
+            <p className="text-[13px] font-bold text-red-800">Nadgodziny wykryte</p>
+          </div>
+          {overtimeDays.length > 0 && (
+            <p className="text-[12px] text-red-700 mb-1">
+              <strong>Ponad 8h/dzień:</strong>{' '}
+              {overtimeDays.map(o => `${o.empName} (${o.date} · ${fmtHM(o.minutes)})`).join(', ')}
+            </p>
+          )}
+          {overtimeWeeks.length > 0 && (
+            <p className="text-[12px] text-red-700">
+              <strong>Ponad 40h/tydzień:</strong>{' '}
+              {overtimeWeeks.map(o => `${o.empName} (tydz. od ${o.weekMon} · ${fmtHM(o.minutes)})`).join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-[#9CA3AF]">
@@ -526,10 +614,15 @@ export function AttendanceView({
                                 </div>
                               )
                             })}
-                            <div className="grid grid-cols-5 px-2 pt-1 text-[12px] font-bold text-[#374151]">
-                              <span>Suma:</span><span></span><span></span>
-                              <span className="text-emerald-600">{fmtHM(emp.totalMinutes)}</span>
-                              {emp.base_rate && <span className="text-blue-600">{((emp.base_rate * emp.totalMinutes) / 60).toFixed(2)} zł</span>}
+                            <div className="flex items-center justify-between px-2 pt-1">
+                              <div className="flex gap-4 text-[12px] font-bold text-[#374151]">
+                                <span>Suma: <span className="text-emerald-600">{fmtHM(emp.totalMinutes)}</span></span>
+                                {emp.base_rate && <span className="text-blue-600">{((emp.base_rate * emp.totalMinutes) / 60).toFixed(2)} zł</span>}
+                              </div>
+                              <button onClick={e => { e.stopPropagation(); generatePayslip(emp) }}
+                                className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 hover:text-purple-800">
+                                <FileText className="w-3.5 h-3.5" /> Pasek wypłaty
+                              </button>
                             </div>
                           </div>
                         )}
@@ -582,7 +675,7 @@ export function AttendanceView({
               <input type="date" value={mForm.date} onChange={e => mSet('date', e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-[13px] font-semibold text-[#374151] mb-1.5">Przyjście *</label>
                 <input type="time" value={mForm.clock_in} onChange={e => mSet('clock_in', e.target.value)}
@@ -593,6 +686,12 @@ export function AttendanceView({
                 <input type="time" value={mForm.clock_out} onChange={e => mSet('clock_out', e.target.value)}
                   className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400" />
               </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-[13px] font-semibold text-[#374151] mb-1.5">Przerwa (minuty)</label>
+              <input type="number" min="0" max="120" value={mForm.break_minutes} onChange={e => mSet('break_minutes', e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <p className="text-[11px] text-[#9CA3AF] mt-1">Czas przerwy odejmowany od przepracowanych godzin</p>
             </div>
             {mError && <div className="mb-4 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-[13px] text-red-700">{mError}</div>}
             <div className="flex gap-2">

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Calendar, MapPin, LogOut, ChevronLeft, ChevronRight,
   Send, Clock, RefreshCw, CheckCircle, XCircle, Edit2, Trash2, KeyRound, X,
-  Umbrella, GitCompare, Plus, Loader2,
+  Umbrella, GitCompare, Plus, Loader2, Bell, BellOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UpdatePasswordForm } from '@/components/update-password-form'
@@ -136,6 +136,44 @@ export default function EmployeeDashboard() {
   /* ── tab ── */
   const [tab, setTab] = useState<'schedule' | 'suggest' | 'hours' | 'leave' | 'swaps'>('schedule')
   const [showChangePw, setShowChangePw] = useState(false)
+
+  /* ── push notifications ── */
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then(reg =>
+        reg.pushManager.getSubscription().then(sub => setPushEnabled(!!sub))
+      )
+    }
+  }, [])
+
+  async function togglePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    setPushLoading(true)
+    try {
+      const reg = await navigator.serviceWorker.ready
+      if (pushEnabled) {
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) await sub.unsubscribe()
+        await fetch('/api/push/subscribe', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) })
+        setPushEnabled(false)
+      } else {
+        const perm = await Notification.requestPermission()
+        if (perm !== 'granted') { setPushLoading(false); return }
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey,
+        })
+        await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), userId }) })
+        setPushEnabled(true)
+      }
+    } finally {
+      setPushLoading(false)
+    }
+  }
 
   /* ── schedule ── */
   const [shifts,      setShifts]      = useState<Shift[]>([])
@@ -522,6 +560,20 @@ export default function EmployeeDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {'serviceWorker' in (typeof navigator !== 'undefined' ? navigator : {}) && (
+              <button
+                onClick={togglePush}
+                disabled={pushLoading}
+                title={pushEnabled ? 'Wyłącz powiadomienia' : 'Włącz powiadomienia push'}
+                className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-colors ${
+                  pushEnabled
+                    ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200'
+                    : 'text-gray-500 bg-gray-50 hover:bg-gray-100 border-gray-200'
+                }`}
+              >
+                {pushLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pushEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+              </button>
+            )}
             <button
               onClick={() => setShowChangePw(true)}
               className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"

@@ -47,3 +47,34 @@ self.addEventListener('fetch', event => {
     })
   )
 })
+
+// Push: show notification
+self.addEventListener('push', event => {
+  let data = { title: 'OneLink', body: 'Masz nowe powiadomienie', url: '/employee' }
+  try {
+    if (event.data) data = { ...data, ...event.data.json() }
+  } catch {}
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-72.png',
+      data: { url: data.url },
+      vibrate: [100, 50, 100],
+    })
+  )
+})
+
+// Notification click: open or focus the app
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const targetUrl = event.notification.data?.url ?? '/employee'
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes(targetUrl))
+      if (existing) return existing.focus()
+      return clients.openWindow(targetUrl)
+    })
+  )
+})
