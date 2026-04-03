@@ -179,9 +179,12 @@ export function AttendanceView({
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
-  const [records,    setRecords]    = useState<ClockEntry[]>([])
-  const [employees,  setEmployees]  = useState<AttEmp[]>([])
-  const [loading,    setLoading]    = useState(false)
+  const [records,        setRecords]        = useState<ClockEntry[]>([])
+  const [employees,      setEmployees]      = useState<AttEmp[]>([])
+  const [leaveData,      setLeaveData]      = useState<{ id: string; employee_id: string; leave_type: string; date_from: string; date_to: string; status: string; note: string | null }[]>([])
+  const [loading,        setLoading]        = useState(false)
+  const [nightRate,      setNightRate]      = useState('')   // extra zł per night hour
+  const [equivalentRate, setEquivalentRate] = useState('')   // zł per all worked hour
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [photoModal, setPhotoModal] = useState<string | null>(null)
 
@@ -206,9 +209,16 @@ export function AttendanceView({
     setModal({ mode: 'edit', record, empId })
   }
   function mSet(k: string, v: string) { setMForm(f => ({ ...f, [k]: v })) }
-  function buildISO(date: string, time: string): string | null {
+  function buildISO(date: string, time: string, refTime?: string): string | null {
     if (!time) return null
-    return new Date(`${date}T${time}:00`).toISOString()
+    const dt = new Date(`${date}T${time}:00`)
+    // If clock-out time is earlier than clock-in (overnight shift), add one day
+    if (refTime) {
+      const [rh, rm] = refTime.split(':').map(Number)
+      const [th, tm] = time.split(':').map(Number)
+      if (th * 60 + tm < rh * 60 + rm) dt.setDate(dt.getDate() + 1)
+    }
+    return dt.toISOString()
   }
 
   const fetchData = useCallback(async () => {
@@ -217,15 +227,30 @@ export function AttendanceView({
     const lastDay = new Date(y, m, 0).getDate()
     const start   = `${month}-01`
     const end     = `${month}-${String(lastDay).padStart(2, '0')}`
-    const [{ data: empData }, { data: clockData }] = await Promise.all([
-      supabase.from('employees').select('id, full_name, position, user_id, base_rate')
-        .eq('location_id', locationId).in('status', ['active', 'confirmed']),
+
+    const { data: empData } = await supabase.from('employees')
+      .select('id, full_name, position, user_id, base_rate')
+      .eq('location_id', locationId).in('status', ['active', 'confirmed'])
+
+    const empIds = (empData ?? []).map((e: any) => e.id)
+
+    const [{ data: clockData }, { data: leaveRes }] = await Promise.all([
       supabase.from('shift_clock_ins')
-        .select('id, user_id, employee_id, work_date, clock_in_at, clock_out_at, clock_in_photo_url, clock_out_photo_url')
+        .select('id, user_id, employee_id, work_date, clock_in_at, clock_out_at, clock_in_photo_url, clock_out_photo_url, break_minutes')
         .eq('location_id', locationId).gte('work_date', start).lte('work_date', end).order('work_date'),
+      empIds.length > 0
+        ? supabase.from('leave_requests')
+            .select('id, employee_id, leave_type, date_from, date_to, status, note')
+            .in('employee_id', empIds)
+            .eq('status', 'approved')
+            .lte('date_from', end)
+            .gte('date_to', start)
+        : Promise.resolve({ data: [] }),
     ])
+
     setEmployees((empData ?? []) as AttEmp[])
     setRecords((clockData ?? []) as ClockEntry[])
+    setLeaveData((leaveRes ?? []) as any)
     setLoading(false)
   }, [locationId, month, supabase])
 
@@ -236,11 +261,12 @@ export function AttendanceView({
     const { employee_id, date, clock_in, clock_out } = mForm
     if (!date || !clock_in) { setMError('Data i godzina przyjścia są wymagane'); setMSaving(false); return }
     const emp = employees.find(e => e.id === employee_id)
-    const payload = {
-      employee_id, user_id: emp?.user_id ?? null, location_id: locationId,
-      work_date: date, clock_in_at: buildISO(date, clock_in), clock_out_at: buildISO(date, clock_out),
+    const payload: Record<string, unknown> = {
+      employee_id, location_id: locationId,
+      work_date: date, clock_in_at: buildISO(date, clock_in), clock_out_at: buildISO(date, clock_out, clock_in || undefined),
       break_minutes: parseInt(mForm.break_minutes) || 0,
     }
+    if (emp?.user_id) payload.user_id = emp.user_id
     let err: { message: string } | null = null
     if (modal?.mode === 'add') {
       ;({ error: err } = await supabase.from('shift_clock_ins').insert(payload))
@@ -295,6 +321,42 @@ export function AttendanceView({
     if (!r.clock_in_at || !r.clock_out_at) return 0
     const gross = Math.round((new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60_000)
     return Math.max(0, gross - (r.break_minutes ?? 0))
+  }
+
+  // Minutes worked between 23:00 and 06:00
+  function nightMin(r: ClockEntry): number {
+    if (!r.clock_in_at || !r.clock_out_at) return 0
+    const inMs  = new Date(r.clock_in_at).getTime()
+    const outMs = new Date(r.clock_out_at).getTime()
+    const [ry, rmo, rd] = r.work_date.split('-').map(Number)
+    let total = 0
+    for (const offset of [-1, 0]) {
+      const ns = new Date(ry, rmo - 1, rd + offset,     23, 0, 0, 0).getTime()
+      const ne = new Date(ry, rmo - 1, rd + offset + 1,  6, 0, 0, 0).getTime()
+      const s = Math.max(inMs, ns)
+      const e = Math.min(outMs, ne)
+      if (e > s) total += Math.round((e - s) / 60_000)
+    }
+    return total
+  }
+
+  const LEAVE_LABELS: Record<string, string> = {
+    vacation: 'Urlop wypoczynkowy', sick: 'L4', unpaid: 'Bezpłatny', other: 'Inny',
+  }
+
+  function empLeaveInMonth(empId: string) {
+    const [ly, lm] = month.split('-').map(Number)
+    const monthStart = new Date(ly, lm - 1, 1).getTime()
+    const monthEnd   = new Date(ly, lm, 0, 23, 59, 59, 999).getTime()
+    return leaveData
+      .filter(l => l.employee_id === empId)
+      .map(l => {
+        const from = Math.max(new Date(l.date_from).getTime(), monthStart)
+        const to   = Math.min(new Date(l.date_to).getTime(), monthEnd)
+        const days = to >= from ? Math.round((to - from) / 86_400_000) + 1 : 0
+        return { type: LEAVE_LABELS[l.leave_type] ?? l.leave_type, from: l.date_from, to: l.date_to, days, note: l.note }
+      })
+      .filter(x => x.days > 0)
   }
 
   // Overtime: days > 8h, weeks > 40h
@@ -361,65 +423,181 @@ export function AttendanceView({
 
   function exportExcel() {
     const wb = XLSX.utils.book_new()
+
+    const nRate = parseFloat(nightRate) || 0
+    const eRate = parseFloat(equivalentRate) || 0
+
+    // ── Sheet 1: Summary ──
+    const summaryHeader = [
+      'Pracownik', 'Pozycja', 'Stawka godz.', 'Dni pracy', 'Godziny', 'Godz. nocne',
+      'Urlop (dni)', 'Rodzaj urlopu',
+      ...(nRate ? ['Dopłata nocna (zł)'] : []),
+      ...(eRate ? ['Ekwiwalent (zł)'] : []),
+      'Szac. koszt',
+    ]
+    const totalNightMins = summary.reduce((s, e) => s + e.records.reduce((sr, r) => sr + nightMin(r), 0), 0)
     const ws1 = XLSX.utils.aoa_to_sheet([
-      [`Ewidencja czasu pracy — ${locationName} — ${monthLabel()}`], [],
-      ['Pracownik', 'Pozycja', 'Stawka godz.', 'Dni pracy', 'Godziny', 'Minuty ogółem', 'Śr./dzień', 'Szac. koszt'],
-      ...summary.map(e => [
-        e.full_name, e.position ?? '—', e.base_rate ? `${e.base_rate} zł` : '—',
-        e.days, fmtHM(e.totalMinutes), e.totalMinutes,
-        e.days > 0 ? fmtHM(Math.round(e.totalMinutes / e.days)) : '—',
-        e.base_rate ? `${((e.base_rate * e.totalMinutes) / 60).toFixed(2)} zł` : '—',
-      ]),
-      [], ['RAZEM', '', '', totalDaysAll, fmtHM(totalMinAll), totalMinAll, '', ''],
+      [`Ewidencja czasu pracy — ${locationName} — ${monthLabel()}`],
+      nRate || eRate ? [`Dopłata nocna: ${nRate ? nRate + ' zł/h' : '—'}   Ekwiwalent: ${eRate ? eRate + ' zł/h' : '—'}`] : [],
+      [],
+      summaryHeader,
+      ...summary.map(e => {
+        const nightTotal = e.records.reduce((s, r) => s + nightMin(r), 0)
+        const leave = empLeaveInMonth(e.id)
+        const leaveDays = leave.reduce((s, l) => s + l.days, 0)
+        const leaveTypes = leave.map(l => `${l.type} (${l.days}d)`).join(', ') || '—'
+        const nightPay = nRate ? `${((nightTotal / 60) * nRate).toFixed(2)} zł` : null
+        const equiv    = eRate ? `${((e.totalMinutes / 60) * eRate).toFixed(2)} zł` : null
+        return [
+          e.full_name, e.position ?? '—', e.base_rate ? `${e.base_rate} zł` : '—',
+          e.days, fmtHM(e.totalMinutes), nightTotal > 0 ? fmtHM(nightTotal) : '—',
+          leaveDays || '—', leaveTypes,
+          ...(nRate ? [nightPay ?? '—'] : []),
+          ...(eRate ? [equiv ?? '—'] : []),
+          e.base_rate ? `${((e.base_rate * e.totalMinutes) / 60).toFixed(2)} zł` : '—',
+        ]
+      }),
+      [],
+      [
+        'RAZEM', '', '', totalDaysAll, fmtHM(totalMinAll), fmtHM(totalNightMins), '', '',
+        ...(nRate ? [`${((totalNightMins / 60) * nRate).toFixed(2)} zł`] : []),
+        ...(eRate ? [`${((totalMinAll / 60) * eRate).toFixed(2)} zł`] : []),
+        '',
+      ],
     ])
-    ws1['!cols'] = [{ wch: 26 }, { wch: 15 }, { wch: 13 }, { wch: 10 }, { wch: 14 }, { wch: 13 }, { wch: 12 }, { wch: 14 }]
+    ws1['!cols'] = [{ wch: 26 }, { wch: 15 }, { wch: 13 }, { wch: 10 }, { wch: 14 }, { wch: 13 }, { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 }]
     XLSX.utils.book_append_sheet(wb, ws1, 'Podsumowanie')
+
+    // ── Sheet 2: Daily detail ──
     const ws2 = XLSX.utils.aoa_to_sheet([
-      ['Pracownik', 'Data', 'Przyjście', 'Wyjście', 'Czas pracy', 'Minuty'],
+      ['Pracownik', 'Data', 'Przyjście', 'Wyjście', 'Czas pracy', 'Godz. nocne', 'Przerwa (min)'],
       ...summary.flatMap(e => e.records.map(r => [
         e.full_name, r.work_date,
         fmtTime(r.clock_in_at), r.clock_out_at ? fmtTime(r.clock_out_at) : 'W trakcie',
-        fmtHM(recMin(r)), recMin(r),
+        fmtHM(recMin(r)), nightMin(r) > 0 ? fmtHM(nightMin(r)) : '—',
+        r.break_minutes ?? 0,
       ])),
     ])
-    ws2['!cols'] = [{ wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 8 }]
+    ws2['!cols'] = [{ wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 13 }, { wch: 13 }]
     XLSX.utils.book_append_sheet(wb, ws2, 'Szczegóły')
+
+    // ── Sheet 3: Leave ──
+    const allLeaveRows = summary.flatMap(e =>
+      empLeaveInMonth(e.id).map(l => [e.full_name, e.position ?? '—', l.type, l.from, l.to, l.days, l.note ?? ''])
+    )
+    const ws3 = XLSX.utils.aoa_to_sheet([
+      [`Urlopy zatwierdzone — ${locationName} — ${monthLabel()}`], [],
+      ['Pracownik', 'Pozycja', 'Rodzaj', 'Od', 'Do', 'Dni', 'Notatka'],
+      ...(allLeaveRows.length > 0 ? allLeaveRows : [['Brak zatwierdzonych urlopów w tym miesiącu']]),
+    ])
+    ws3['!cols'] = [{ wch: 26 }, { wch: 15 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 6 }, { wch: 30 }]
+    XLSX.utils.book_append_sheet(wb, ws3, 'Urlopy')
+
     XLSX.writeFile(wb, `ewidencja-${locationName.replace(/\s+/g, '-')}-${month}.xlsx`)
   }
 
   function exportPDF() {
-    const sumRows = summary.map(e => `
-      <tr>
+    const nRate = parseFloat(nightRate) || 0
+    const eRate = parseFloat(equivalentRate) || 0
+    const totalNightAll = summary.reduce((s, e) => s + e.records.reduce((sr, r) => sr + nightMin(r), 0), 0)
+
+    const sumRows = summary.map(e => {
+      const nightTotal = e.records.reduce((s, r) => s + nightMin(r), 0)
+      const leave = empLeaveInMonth(e.id)
+      const leaveDays = leave.reduce((s, l) => s + l.days, 0)
+      const leaveStr = leave.map(l => `${l.type} ${l.days}d`).join(', ') || '—'
+      const nightPay = nRate > 0 ? ((nightTotal / 60) * nRate).toFixed(2) + ' zł' : null
+      const equiv    = eRate > 0 ? ((e.totalMinutes / 60) * eRate).toFixed(2) + ' zł' : null
+      return `<tr>
         <td>${e.full_name}</td><td>${e.position ?? '—'}</td>
-        <td class="c">${e.days}</td><td class="r">${fmtHM(e.totalMinutes)}</td>
-        <td class="r">${e.days > 0 ? fmtHM(Math.round(e.totalMinutes / e.days)) : '—'}</td>
+        <td class="c">${e.days}</td>
+        <td class="r">${fmtHM(e.totalMinutes)}</td>
+        <td class="r night">${nightTotal > 0 ? fmtHM(nightTotal) : '—'}</td>
+        <td class="c leave">${leaveDays > 0 ? leaveDays + 'd' : '—'}<br><small>${leaveStr !== '—' ? leaveStr : ''}</small></td>
+        ${nRate > 0 ? `<td class="r pay">${nightPay}</td>` : ''}
+        ${eRate > 0 ? `<td class="r equiv">${equiv}</td>` : ''}
         <td class="r">${e.base_rate ? ((e.base_rate * e.totalMinutes) / 60).toFixed(2) + ' zł' : '—'}</td>
-      </tr>`).join('')
-    const detailRows = summary.flatMap(e => e.records.map(r => `
-      <tr>
+      </tr>`
+    }).join('')
+
+    const detailRows = summary.flatMap(e => e.records.map(r => {
+      const nm = nightMin(r)
+      return `<tr>
         <td>${e.full_name}</td><td>${r.work_date}</td>
         <td class="c">${fmtTime(r.clock_in_at)}</td>
         <td class="c">${r.clock_out_at ? fmtTime(r.clock_out_at) : '<em>W trakcie</em>'}</td>
         <td class="r">${fmtHM(recMin(r))}</td>
-      </tr>`)).join('')
+        <td class="r night">${nm > 0 ? fmtHM(nm) : '—'}</td>
+        <td class="c">${r.break_minutes ?? 0} min</td>
+      </tr>`
+    })).join('')
+
+    const leaveRows = summary.flatMap(e =>
+      empLeaveInMonth(e.id).map(l =>
+        `<tr><td>${e.full_name}</td><td>${l.type}</td><td class="c">${l.from}</td><td class="c">${l.to}</td><td class="c">${l.days}</td><td>${l.note ?? ''}</td></tr>`
+      )
+    ).join('')
+    const leaveSection = leaveRows
+      ? `<h2>Urlopy zatwierdzone</h2>
+         <table><thead><tr><th>Pracownik</th><th>Rodzaj</th><th class="c">Od</th><th class="c">Do</th><th class="c">Dni</th><th>Notatka</th></tr></thead>
+         <tbody>${leaveRows}</tbody></table>`
+      : `<h2>Urlopy zatwierdzone</h2><p class="no-leave">Brak zatwierdzonych urlopów w tym miesiącu</p>`
+
+    const ratesInfo = (nRate > 0 || eRate > 0)
+      ? `<div class="rates">${nRate > 0 ? `Dopłata nocna: <strong>${nRate} zł/h</strong>` : ''}${nRate > 0 && eRate > 0 ? ' &nbsp;|&nbsp; ' : ''}${eRate > 0 ? `Ekwiwalent: <strong>${eRate} zł/h</strong>` : ''}</div>`
+      : ''
+
+    const sumExtraHeaders = `${nRate > 0 ? '<th class="r">Dopłata nocna</th>' : ''}${eRate > 0 ? '<th class="r">Ekwiwalent</th>' : ''}`
+    const footExtraCells = `${nRate > 0 ? `<td class="r pay"><strong>${((totalNightAll / 60) * nRate).toFixed(2)} zł</strong></td>` : ''}${eRate > 0 ? `<td class="r equiv"><strong>${((totalMinAll / 60) * eRate).toFixed(2)} zł</strong></td>` : ''}`
+
     const html = `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8">
       <title>Ewidencja — ${locationName} — ${monthLabel()}</title>
-      <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:28px}
-      h1{font-size:17px;font-weight:700;margin-bottom:3px}.meta{color:#666;font-size:11px;margin-bottom:20px}
-      h2{font-size:12px;font-weight:700;margin:22px 0 6px;color:#1D4ED8;text-transform:uppercase;letter-spacing:.06em}
+      <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:10.5px;color:#111;padding:24px}
+      h1{font-size:16px;font-weight:700;margin-bottom:3px}.meta{color:#666;font-size:10px;margin-bottom:6px}
+      .rates{font-size:10px;color:#374151;background:#F3F4F6;border:1px solid #E5E7EB;border-radius:6px;padding:5px 10px;margin-bottom:14px;display:inline-block}
+      h2{font-size:11px;font-weight:700;margin:20px 0 5px;color:#1D4ED8;text-transform:uppercase;letter-spacing:.06em}
       table{width:100%;border-collapse:collapse}thead tr{background:#1D4ED8;color:#fff}
-      th{padding:7px 10px;font-size:10px;font-weight:600;text-align:left}td{padding:6px 10px;border-bottom:1px solid #E5E7EB}
-      tr:nth-child(even) td{background:#F9FAFB}.foot td{font-weight:700;border-top:2px solid #1D4ED8;background:#EFF6FF}
-      .c{text-align:center}.r{text-align:right}@media print{@page{margin:16mm}}</style></head><body>
+      th{padding:6px 8px;font-size:9.5px;font-weight:600;text-align:left}
+      td{padding:5px 8px;border-bottom:1px solid #E5E7EB;font-size:10px}
+      tr:nth-child(even) td{background:#F9FAFB}
+      .foot td{font-weight:700;border-top:2px solid #1D4ED8;background:#EFF6FF}
+      .night{color:#4F46E5}.leave{color:#059669}.pay{color:#7C3AED}.equiv{color:#0369A1}
+      .c{text-align:center}.r{text-align:right}
+      .no-leave{font-size:10px;color:#9CA3AF;padding:8px 0}
+      small{font-size:8.5px;color:#6B7280}
+      @media print{@page{size:A4 landscape;margin:10mm}}</style></head><body>
       <h1>Ewidencja czasu pracy</h1>
       <p class="meta">${locationName} &bull; ${monthLabel()} &bull; Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</p>
+      ${ratesInfo}
+
       <h2>Podsumowanie</h2>
-      <table><thead><tr><th>Pracownik</th><th>Pozycja</th><th class="c">Dni</th><th class="r">Godziny</th><th class="r">Śr./dzień</th><th class="r">Szac. koszt</th></tr></thead>
-      <tbody>${sumRows}<tr class="foot"><td colspan="2">RAZEM (${activeWorkers} pracowników)</td>
-      <td class="c">${totalDaysAll}</td><td class="r">${fmtHM(totalMinAll)}</td><td></td><td></td></tr></tbody></table>
+      <table><thead><tr>
+        <th>Pracownik</th><th>Pozycja</th><th class="c">Dni</th>
+        <th class="r">Godz. pracy</th><th class="r">Godz. nocne</th>
+        <th class="c">Urlop</th>
+        ${sumExtraHeaders}
+        <th class="r">Szac. koszt</th>
+      </tr></thead>
+      <tbody>${sumRows}
+      <tr class="foot">
+        <td colspan="2">RAZEM (${activeWorkers} pracowników)</td>
+        <td class="c">${totalDaysAll}</td>
+        <td class="r">${fmtHM(totalMinAll)}</td>
+        <td class="r night">${totalNightAll > 0 ? fmtHM(totalNightAll) : '—'}</td>
+        <td></td>
+        ${footExtraCells}
+        <td></td>
+      </tr></tbody></table>
+
       <h2>Szczegóły odbitek</h2>
-      <table><thead><tr><th>Pracownik</th><th>Data</th><th class="c">Przyjście</th><th class="c">Wyjście</th><th class="r">Czas pracy</th></tr></thead>
+      <table><thead><tr>
+        <th>Pracownik</th><th>Data</th><th class="c">Przyjście</th><th class="c">Wyjście</th>
+        <th class="r">Czas pracy</th><th class="r">Godz. nocne</th><th class="c">Przerwa</th>
+      </tr></thead>
       <tbody>${detailRows}</tbody></table>
+
+      ${leaveSection}
+
       <script>window.onload=()=>window.print()</script></body></html>`
     const win = window.open('', '_blank')
     win?.document.write(html); win?.document.close()
@@ -448,6 +626,33 @@ export function AttendanceView({
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Rate inputs for export calculations */}
+      <div className="flex flex-wrap items-center gap-3 mb-5 p-3 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB]">
+        <span className="text-[12px] font-semibold text-[#374151] shrink-0">Stawki do eksportu:</span>
+        <div className="flex items-center gap-1.5">
+          <label className="text-[11px] text-[#6B7280] whitespace-nowrap">Dopłata nocna (zł/h)</label>
+          <input
+            type="number" min="0" step="0.01" value={nightRate}
+            onChange={e => setNightRate(e.target.value)}
+            placeholder="np. 3.50"
+            className="w-24 px-2 py-1.5 rounded-lg border border-[#E5E7EB] text-[13px] text-right focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <label className="text-[11px] text-[#6B7280] whitespace-nowrap">Ekwiwalent (zł/h)</label>
+          <input
+            type="number" min="0" step="0.01" value={equivalentRate}
+            onChange={e => setEquivalentRate(e.target.value)}
+            placeholder="np. 28.00"
+            className="w-24 px-2 py-1.5 rounded-lg border border-[#E5E7EB] text-[13px] text-right focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+          />
+        </div>
+        {(nightRate || equivalentRate) && (
+          <button onClick={() => { setNightRate(''); setEquivalentRate('') }}
+            className="text-[11px] text-[#9CA3AF] hover:text-red-400 ml-auto">Wyczyść</button>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">

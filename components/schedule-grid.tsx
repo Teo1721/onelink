@@ -148,7 +148,9 @@ const calcHours = (start: string, end: string): number => {
   if (!start || !end) return 0
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
-  return Math.max(0, ((eh * 60 + em) - (sh * 60 + sm)) / 60)
+  let mins = (eh * 60 + em) - (sh * 60 + sm)
+  if (mins < 0) mins += 24 * 60 // overnight shift (e.g. 22:00 → 03:00)
+  return Math.max(0, mins / 60)
 }
 
 const fmt = (t?: string | null) => (t ?? '').slice(0, 5)
@@ -732,7 +734,10 @@ export function ScheduleGrid({
                                       {shift.is_posted && shift.accepted_by && <span className="text-green-600 text-[9px] font-bold">&#10003;</span>}
                                     </div>
                                     {shift.position && <div className="opacity-70 truncate text-[9px]">{POSITION_MAP[shift.position]?.label ?? shift.position}</div>}
-                                    <div className="opacity-50 text-[9px]">{calcHours(fmt(shift.time_start), fmt(shift.time_end)).toFixed(1)}h</div>
+                                    <div className="opacity-50 text-[9px] flex items-center gap-1">
+                                      {calcHours(fmt(shift.time_start), fmt(shift.time_end)).toFixed(1)}h
+                                      {fmt(shift.time_end) < fmt(shift.time_start) && <span title="Zmiana nocna (do nast. dnia)">🌙</span>}
+                                    </div>
                                   </>
                                 )}
                               </button>

@@ -71,16 +71,46 @@ export async function POST(req: NextRequest) {
   const { data: location } = await admin
     .from('locations').select('name').eq('id', locationId).single()
 
-  const today = new Date().toLocaleDateString('sv-SE') // YYYY-MM-DD in local time
+  // Business day: before 6 AM belongs to the previous day's shift
+  // e.g. restaurant closes at 3 AM — clock-out at 2:30 AM is still Monday's shift
+  const BUSINESS_DAY_CUTOFF = 6
+  const now = new Date()
+  const businessDate = (() => {
+    if (now.getHours() < BUSINESS_DAY_CUTOFF) {
+      const prev = new Date(now)
+      prev.setDate(prev.getDate() - 1)
+      return prev.toLocaleDateString('sv-SE')
+    }
+    return now.toLocaleDateString('sv-SE')
+  })()
 
-  // Fetch today's record
-  const { data: record } = await admin
+  // Look for an open shift on today's business date.
+  // Also fall back to an unclosed shift from yesterday to handle cross-day edge cases.
+  let { data: record } = await admin
     .from('shift_clock_ins')
     .select('id, work_date, clock_in_at, clock_out_at, clock_in_photo_url, clock_out_photo_url')
     .eq('employee_id', employee_id)
     .eq('location_id', locationId)
-    .eq('work_date', today)
+    .eq('work_date', businessDate)
     .maybeSingle()
+
+  // If no record found on business date, look for any unclosed shift in the past 24 h
+  if (!record) {
+    const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: openShift } = await admin
+      .from('shift_clock_ins')
+      .select('id, work_date, clock_in_at, clock_out_at, clock_in_photo_url, clock_out_photo_url')
+      .eq('employee_id', employee_id)
+      .eq('location_id', locationId)
+      .is('clock_out_at', null)
+      .gte('clock_in_at', cutoff)
+      .order('clock_in_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    record = openShift
+  }
+
+  const today = businessDate
 
   if (action === 'status') {
     return NextResponse.json({

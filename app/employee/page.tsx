@@ -77,7 +77,9 @@ const calcHours = (start: string, end: string, breakMins = 0) => {
   if (!start || !end) return 0
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
-  return Math.max(0, (eh * 60 + em - sh * 60 - sm - breakMins) / 60)
+  let mins = eh * 60 + em - sh * 60 - sm - breakMins
+  if (mins < 0) mins += 24 * 60 // overnight shift
+  return Math.max(0, mins / 60)
 }
 
 const getWeekStart = (iso: string) => {

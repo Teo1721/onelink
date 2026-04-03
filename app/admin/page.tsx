@@ -726,6 +726,7 @@ export default function AdminDashboard() {
   const [filterLocationId, setFilterLocationId] = useState<'all' | string>('all')
   const [adminName, setAdminName] = useState('')
   const [adminId, setAdminId] = useState('')
+  const [adminRole, setAdminRole] = useState('')
   const [companyId, setCompanyId] = useState('')
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
@@ -857,6 +858,7 @@ export default function AdminDashboard() {
       
       const { data: profile } = await supabase.from('user_profiles').select('full_name, role, company_id, subscription_plan').eq('id', user.id).single()
       setAdminName(profile?.full_name || user.email || 'Admin')
+      setAdminRole(profile?.role || '')
       setCompanyId(profile?.company_id || '')
       setSubscriptionPlan((profile as any)?.subscription_plan || null)
 
@@ -2016,6 +2018,7 @@ export default function AdminDashboard() {
         pendingInvoiceCount={pendingInvoices.length}
         pendingInventoryCount={submittedJobs.length}
         unreadNotifications={unreadCount}
+        userRole={adminRole}
       />
 
       <main className="flex-1 ml-[216px] p-8">

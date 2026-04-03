@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   LayoutDashboard, FileText, ClipboardList, LogOut, MapPin,
   Calendar, Users, Settings, CalendarDays, MoreHorizontal, X, QrCode, Clock,
   Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen, Banknote, UserCheck,
+  ArrowLeftRight,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -47,6 +49,7 @@ export function OpsSidebar({
   onSwitchLocation,
 }: OpsSidebarProps) {
   const [moreOpen, setMoreOpen] = useState(false)
+  const router = useRouter()
 
   const navigate = (key: string) => {
     onNavigate(key)
@@ -99,7 +102,26 @@ export function OpsSidebar({
         </nav>
 
         {/* Footer */}
-        <div className="px-2 py-2 border-t border-[#E5E7EB] shrink-0">
+        <div className="px-2 py-2 border-t border-[#E5E7EB] shrink-0 space-y-0.5">
+          {/* Mode switcher */}
+          <div className="flex items-center gap-1 p-1 mb-1 rounded-lg bg-[#F3F4F6]">
+            <button
+              onClick={() => router.push('/admin')}
+              className="flex-1 flex items-center justify-center h-6 rounded-md text-[11px] font-medium text-[#6B7280] hover:bg-white hover:text-[#374151] hover:shadow-sm transition-all"
+            >
+              Admin
+            </button>
+            <span className="flex-1 flex items-center justify-center h-6 rounded-md bg-white shadow-sm text-[11px] font-bold text-[#2563EB] border border-[#E5E7EB]">
+              OPS
+            </span>
+          </div>
+          <button
+            onClick={() => router.push('/admin')}
+            className="w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium text-[#6B7280] hover:bg-[#EFF6FF] hover:text-[#2563EB] transition-colors"
+          >
+            <ArrowLeftRight className="w-[15px] h-[15px] shrink-0" />
+            Przełącz na Admin
+          </button>
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium text-[#6B7280] hover:bg-[#FEF2F2] hover:text-[#DC2626] transition-colors"
@@ -188,6 +210,15 @@ export function OpsSidebar({
                 </button>
               )
             })}
+            <div className="pt-2 mt-1 border-t border-[#F3F4F6]">
+              <button
+                onClick={() => router.push('/admin')}
+                className="w-full flex items-center gap-3 px-3 h-12 rounded-xl text-[14px] font-medium text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] transition-colors"
+              >
+                <ArrowLeftRight className="w-5 h-5 shrink-0" />
+                Przełącz na panel Admin
+              </button>
+            </div>
           </div>
         </div>
       )}

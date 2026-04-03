@@ -1,11 +1,13 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   LayoutDashboard, FileText, Receipt, ClipboardList, Package,
   Calendar, RefreshCw, Lock, BarChart3, History, FileSpreadsheet,
   LogOut, Bell, CheckSquare, DollarSign, AlertTriangle, Truck, Users, Settings,
   Clock, Umbrella, GitCompare, GraduationCap, FolderOpen, LayoutGrid, Banknote, UserCheck,
+  ArrowLeftRight,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -17,6 +19,7 @@ type SidebarProps = {
   pendingInventoryCount?: number
   unreadNotifications?: number
   subscriptionPlan?: string | null
+  userRole?: string
 }
 
 export function Sidebar({
@@ -28,7 +31,10 @@ export function Sidebar({
   pendingInventoryCount = 0,
   unreadNotifications = 0,
   subscriptionPlan,
+  userRole = '',
 }: SidebarProps) {
+  const router = useRouter()
+  const canSwitchToOps = ['superadmin', 'owner'].includes(userRole)
   const navGroups = [
     {
       label: 'Overview',
@@ -184,6 +190,29 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="px-2 py-2 border-t border-[#E5E7EB] shrink-0 space-y-0.5">
+        {/* Mode switcher — only for superadmin / owner */}
+        {canSwitchToOps && (
+          <>
+            <div className="flex items-center gap-1 p-1 mb-1 rounded-lg bg-[#F3F4F6]">
+              <span className="flex-1 flex items-center justify-center h-6 rounded-md bg-white shadow-sm text-[11px] font-bold text-[#2563EB] border border-[#E5E7EB]">
+                Admin
+              </span>
+              <button
+                onClick={() => router.push('/ops')}
+                className="flex-1 flex items-center justify-center h-6 rounded-md text-[11px] font-medium text-[#6B7280] hover:bg-white hover:text-[#374151] hover:shadow-sm transition-all"
+              >
+                OPS
+              </button>
+            </div>
+            <button
+              onClick={() => router.push('/ops')}
+              className="w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium text-[#6B7280] hover:bg-[#F0FDF4] hover:text-[#16A34A] transition-colors"
+            >
+              <ArrowLeftRight className="w-[15px] h-[15px] shrink-0" />
+              Przełącz na OPS
+            </button>
+          </>
+        )}
         <button
           onClick={() => onNavigate('account')}
           className={[
