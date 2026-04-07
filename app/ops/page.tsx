@@ -2495,7 +2495,7 @@ export default function OpsDashboard() {
   const lossesVal = Number(salesForm.losses) || 0
   const refundsVal = Number(salesForm.refunds) || 0
   const dailyOpsTotal = pettyExpense + lossesVal + refundsVal
-  const planNet = planGross > 0 ? planGross / (1 + VAT_RATE) : 0
+  const planNet = planGross // user now enters plan as netto directly
   const planRealisation = planNet > 0 ? net / planNet : 0
   const aov = tx > 0 ? net / tx : 0
   const online = Number(salesForm.online) || 0
@@ -3504,7 +3504,7 @@ export default function OpsDashboard() {
               {/* S2: Plan */}
               <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">2. Plan vs wykonanie</h3>
               <div className="grid grid-cols-2 gap-6 mb-4 bg-gray-50 p-6 rounded border border-gray-200">
-                <div className="space-y-2"><Label>Plan brutto</Label><Input type="number" placeholder="0" value={salesForm.targetGross} onChange={e => setSalesForm({...salesForm, targetGross: e.target.value})} disabled={isReadOnly} className="bg-white" /></div>
+                <div className="space-y-2"><Label>Plan netto</Label><Input type="number" placeholder="0" value={salesForm.targetGross} onChange={e => setSalesForm({...salesForm, targetGross: e.target.value})} disabled={isReadOnly} className="bg-white" /></div>
                 <div className="space-y-2"><Label>Plan transakcji</Label><Input type="number" placeholder="0" value={salesForm.targetTx} onChange={e => setSalesForm({...salesForm, targetTx: e.target.value})} disabled={isReadOnly} className="bg-white" /></div>
               </div>
 
