@@ -31,6 +31,8 @@ import { EmployeesManager } from '@/components/employees-manager'
 import { ScheduleGrid } from '@/components/schedule-grid'
 import type { ScheduleEmployee } from '@/components/schedule-grid'
 import type { WeekDay } from '@/components/dashboard-charts'
+import { HelpDrawer } from '@/components/help-drawer'
+import { WelcomeChecklist } from '@/components/welcome-checklist'
 
 
 // ================= Ingredients DB =================
@@ -2147,6 +2149,15 @@ export default function AdminDashboard() {
               )}
             </div>
 
+            {/* Setup checklist for new users */}
+            {companyId && (
+              <WelcomeChecklist
+                supabase={supabase}
+                companyId={companyId}
+                onNavigate={(v) => setActiveView(v as ActiveView)}
+              />
+            )}
+
             {/* Pending actions */}
             <div className="grid grid-cols-4 gap-3">
               {[
@@ -3905,6 +3916,8 @@ export default function AdminDashboard() {
         )}
         </>}
       </main>
+
+      <HelpDrawer activeView={activeView} />
     </div>
   )
 }

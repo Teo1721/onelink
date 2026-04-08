@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import QRCode from 'react-qr-code'
+import { HelpDrawer } from '@/components/help-drawer'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -4455,6 +4456,21 @@ export default function OpsDashboard() {
         )}
 
       </main>
+
+      <HelpDrawer
+        activeView={activeView}
+        keyMap={{
+          attendance: 'hr_attendance',
+          leave: 'hr_leave',
+          swaps: 'hr_swaps',
+          certs: 'hr_certs',
+          documents: 'hr_documents',
+          tips: 'hr_tips',
+          onboarding: 'hr_onboarding',
+          scheduling: 'schedule',
+          dashboard: 'hr_dashboard',
+        }}
+      />
     </div>
   )
 }
