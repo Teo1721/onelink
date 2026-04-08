@@ -5,7 +5,7 @@ import {
   AlertCircle, FileSpreadsheet, Save, Plus, Trash2, AlertTriangle,
   FileText, Loader2, RefreshCw, Clock, Calendar, User,
   Umbrella, Building2, GitCompare, GraduationCap, FolderOpen,
-  Upload, BellRing, Download, Eye, TrendingUp,
+  Upload, BellRing, Download, Eye, TrendingUp, X, CheckCircle,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { getPolishHolidays } from '@/lib/polish-holidays'
@@ -43,8 +43,26 @@ export type Cert = {
 }
 
 export type EmpDoc = {
-  id: string; employee_id: string; name: string; file_url: string
+  id: string; employee_id: string; location_id?: string; name: string; file_url: string
   file_size: number | null; file_type: string | null; created_at: string
+  doc_type?: string | null; contract_expiry_date?: string | null
+}
+
+const DOC_TYPES: { value: string; label: string }[] = [
+  { value: 'contract',    label: 'Umowa o pracę'      },
+  { value: 'certificate', label: 'Certyfikat'          },
+  { value: 'medical',     label: 'Badania medyczne'    },
+  { value: 'statement',   label: 'Zaświadczenie'       },
+  { value: 'other',       label: 'Inne'                },
+]
+
+function docExpiryStatus(doc: EmpDoc): 'expired' | 'soon' | 'warning' | 'ok' | null {
+  if (!doc.contract_expiry_date) return null
+  const days = Math.ceil((new Date(doc.contract_expiry_date).getTime() - Date.now()) / 86_400_000)
+  if (days < 0)  return 'expired'
+  if (days <= 7) return 'soon'
+  if (days <= 30) return 'warning'
+  return 'ok'
 }
 
 /* ================================================================== */
@@ -1548,7 +1566,9 @@ export function DocumentsView({
   const [loading,     setLoading]     = useState(true)
   const [selectedEmp, setSelectedEmp] = useState<string | null>(null)
   const [uploading,   setUploading]   = useState(false)
-  const [uploadEmp,   setUploadEmp]   = useState<string | null>(null)
+  const [uploadModal, setUploadModal] = useState<{
+    empId: string; file: File | null; docType: string; expiryDate: string
+  } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const BUCKET = 'employee-documents'
 
@@ -1567,7 +1587,7 @@ export function DocumentsView({
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  async function handleUpload(empId: string, file: File) {
+  async function handleUpload(empId: string, file: File, docType: string, expiryDate: string) {
     setUploading(true)
     const path = `${locationId}/${empId}/${Date.now()}_${file.name}`
     try {
@@ -1579,10 +1599,13 @@ export function DocumentsView({
         employee_id: empId, location_id: locationId,
         name: file.name, file_url: urlData.publicUrl,
         file_size: file.size, file_type: file.type,
+        doc_type: docType || 'other',
+        contract_expiry_date: expiryDate || null,
       })
       fetchData()
     } finally {
-      setUploading(false); setUploadEmp(null)
+      setUploading(false)
+      setUploadModal(null)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
@@ -1601,18 +1624,124 @@ export function DocumentsView({
     return `${(bytes / 1048576).toFixed(1)} MB`
   }
 
+  function daysUntil(dateStr: string) {
+    return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000)
+  }
+
+  const expiryAlerts = docs
+    .filter(d => d.contract_expiry_date)
+    .map(d => ({
+      ...d,
+      empName: employees.find(e => e.id === d.employee_id)?.full_name ?? '?',
+      daysLeft: daysUntil(d.contract_expiry_date!),
+    }))
+    .filter(d => d.daysLeft <= 30)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+
   const displayEmps = selectedEmp ? employees.filter(e => e.id === selectedEmp) : employees
 
   return (
     <div className="max-w-3xl mx-auto py-6 px-2">
       <h2 className="text-[22px] font-bold text-[#111827] mb-1">Dokumenty pracowników</h2>
-      <p className="text-[13px] text-[#9CA3AF] mb-6">Umowy, certyfikaty, zaświadczenia — pliki przypisane do pracowników</p>
+      <p className="text-[13px] text-[#9CA3AF] mb-4">Umowy, certyfikaty, zaświadczenia — pliki przypisane do pracowników</p>
 
+      {/* ── Expiry alerts banner ── */}
+      {expiryAlerts.length > 0 && (
+        <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
+            <p className="text-[13px] font-semibold text-orange-800">
+              {expiryAlerts.length === 1 ? '1 dokument wygasa wkrótce' : `${expiryAlerts.length} dokumenty wygasają wkrótce`}
+            </p>
+          </div>
+          {expiryAlerts.map(d => {
+            const expired = d.daysLeft < 0
+            const urgent  = d.daysLeft <= 7
+            return (
+              <div key={d.id} className={`flex items-center justify-between px-3 py-2 rounded-lg text-[12px] ${expired ? 'bg-red-100 text-red-800' : urgent ? 'bg-orange-100 text-orange-800' : 'bg-yellow-50 text-yellow-800'}`}>
+                <span className="font-medium">{d.empName} — <span className="font-normal">{d.name}</span></span>
+                <span className="font-bold shrink-0 ml-2">
+                  {expired ? 'Wygasło' : d.daysLeft === 0 ? 'Dziś!' : `Za ${d.daysLeft} dni`}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* hidden file input — used only when modal is open */}
       <input ref={fileRef} type="file" className="hidden" accept="*/*"
-        onChange={async e => {
+        onChange={e => {
           const file = e.target.files?.[0]
-          if (file && uploadEmp) await handleUpload(uploadEmp, file)
+          if (file && uploadModal) setUploadModal(m => m ? { ...m, file } : null)
+          if (fileRef.current) fileRef.current.value = ''
         }} />
+
+      {/* ── Upload modal ── */}
+      {uploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[15px] font-bold text-[#111827]">Dodaj dokument</p>
+              <button onClick={() => setUploadModal(null)} className="text-[#9CA3AF] hover:text-[#374151]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* File picker */}
+            <div>
+              <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide mb-1.5">Plik</p>
+              {uploadModal.file ? (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
+                  <FolderOpen className="w-4 h-4 text-blue-500 shrink-0" />
+                  <span className="text-[13px] text-[#111827] truncate flex-1">{uploadModal.file.name}</span>
+                  <button onClick={() => { setUploadModal(m => m ? { ...m, file: null } : null) }} className="text-[#9CA3AF] hover:text-red-500">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => fileRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 h-10 rounded-lg border-2 border-dashed border-[#D1D5DB] text-[13px] text-[#6B7280] hover:border-blue-400 hover:text-blue-500 transition-colors">
+                  <Upload className="w-4 h-4" />Wybierz plik
+                </button>
+              )}
+            </div>
+
+            {/* Doc type */}
+            <div>
+              <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide mb-1.5">Typ dokumentu</p>
+              <select value={uploadModal.docType} onChange={e => setUploadModal(m => m ? { ...m, docType: e.target.value } : null)}
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-[13px] text-[#374151] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+
+            {/* Expiry date */}
+            <div>
+              <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide mb-1.5">
+                Data ważności <span className="font-normal normal-case text-[#9CA3AF]">(opcjonalnie)</span>
+              </p>
+              <input type="date" value={uploadModal.expiryDate}
+                onChange={e => setUploadModal(m => m ? { ...m, expiryDate: e.target.value } : null)}
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-[13px] text-[#374151] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setUploadModal(null)}
+                className="flex-1 h-9 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">
+                Anuluj
+              </button>
+              <button
+                disabled={!uploadModal.file || uploading}
+                onClick={() => { if (uploadModal.file) handleUpload(uploadModal.empId, uploadModal.file, uploadModal.docType, uploadModal.expiryDate) }}
+                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-blue-600 text-white text-[13px] font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Prześlij
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
         <button onClick={() => setSelectedEmp(null)}
@@ -1633,51 +1762,84 @@ export function DocumentsView({
         <div className="space-y-4">
           {displayEmps.map(emp => {
             const empDocs = docs.filter(d => d.employee_id === emp.id)
+            const hasExpiring = empDocs.some(d => { const s = docExpiryStatus(d); return s === 'expired' || s === 'soon' || s === 'warning' })
             return (
               <div key={emp.id} className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#F3F4F6]">
-                  <div>
-                    <p className="font-semibold text-[14px] text-[#111827]">{emp.full_name}</p>
-                    <p className="text-[11px] text-[#9CA3AF]">{empDocs.length} dokumentów</p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="font-semibold text-[14px] text-[#111827]">{emp.full_name}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{empDocs.length} dokumentów</p>
+                    </div>
+                    {hasExpiring && <AlertTriangle className="w-3.5 h-3.5 text-orange-400 shrink-0" />}
                   </div>
-                  <button onClick={() => { setUploadEmp(emp.id); setTimeout(() => fileRef.current?.click(), 50) }}
+                  <button
+                    onClick={() => setUploadModal({ empId: emp.id, file: null, docType: 'other', expiryDate: '' })}
                     disabled={uploading}
                     className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 text-[12px] font-semibold disabled:opacity-50">
-                    {uploading && uploadEmp === emp.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                    Dodaj plik
+                    <Upload className="w-3.5 h-3.5" />Dodaj plik
                   </button>
                 </div>
                 {empDocs.length === 0 ? (
                   <div className="px-4 py-3 text-[12px] text-[#9CA3AF] italic">Brak dokumentów</div>
                 ) : (
                   <div className="divide-y divide-[#F3F4F6]">
-                    {empDocs.map(doc => (
-                      <div key={doc.id} className="flex items-center justify-between px-4 py-2.5 gap-3">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <FolderOpen className="w-4 h-4 text-[#9CA3AF] shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-[#111827] truncate">{doc.name}</p>
-                            <p className="text-[11px] text-[#9CA3AF]">
-                              {fmtSize(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString('pl-PL')}
-                            </p>
+                    {empDocs.map(doc => {
+                      const status = docExpiryStatus(doc)
+                      const docTypeLabel = DOC_TYPES.find(t => t.value === doc.doc_type)?.label
+                      const daysLeft = doc.contract_expiry_date ? daysUntil(doc.contract_expiry_date) : null
+                      return (
+                        <div key={doc.id} className="flex items-center justify-between px-4 py-2.5 gap-3">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FolderOpen className="w-4 h-4 text-[#9CA3AF] shrink-0" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-[13px] font-medium text-[#111827] truncate">{doc.name}</p>
+                                {docTypeLabel && (
+                                  <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#F3F4F6] text-[#6B7280]">
+                                    {docTypeLabel}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <p className="text-[11px] text-[#9CA3AF]">
+                                  {fmtSize(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString('pl-PL')}
+                                </p>
+                                {doc.contract_expiry_date && (
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                    status === 'expired' ? 'bg-red-100 text-red-700' :
+                                    status === 'soon'    ? 'bg-orange-100 text-orange-700' :
+                                    status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                                                           'bg-green-100 text-green-700'
+                                  }`}>
+                                    {status === 'expired'
+                                      ? `Wygasło ${new Date(doc.contract_expiry_date).toLocaleDateString('pl-PL')}`
+                                      : daysLeft === 0 ? 'Wygasa dziś'
+                                      : daysLeft! <= 30 ? `Wygasa za ${daysLeft} dni`
+                                      : `Ważne do ${new Date(doc.contract_expiry_date).toLocaleDateString('pl-PL')}`
+                                    }
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <a href={doc.file_url} target="_blank" rel="noreferrer"
+                              className="h-7 w-7 flex items-center justify-center rounded hover:bg-blue-50 text-[#9CA3AF] hover:text-blue-600 transition-colors">
+                              <Eye className="w-3.5 h-3.5" />
+                            </a>
+                            <a href={doc.file_url} download={doc.name}
+                              className="h-7 w-7 flex items-center justify-center rounded hover:bg-green-50 text-[#9CA3AF] hover:text-green-600 transition-colors">
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
+                            <button onClick={() => deleteDoc(doc)}
+                              className="h-7 w-7 flex items-center justify-center rounded hover:bg-red-50 text-[#9CA3AF] hover:text-red-500 transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
-                          <a href={doc.file_url} target="_blank" rel="noreferrer"
-                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-blue-50 text-[#9CA3AF] hover:text-blue-600 transition-colors">
-                            <Eye className="w-3.5 h-3.5" />
-                          </a>
-                          <a href={doc.file_url} download={doc.name}
-                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-green-50 text-[#9CA3AF] hover:text-green-600 transition-colors">
-                            <Download className="w-3.5 h-3.5" />
-                          </a>
-                          <button onClick={() => deleteDoc(doc)}
-                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-red-50 text-[#9CA3AF] hover:text-red-500 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>

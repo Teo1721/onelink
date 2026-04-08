@@ -881,19 +881,26 @@ function KioskView({ locationId, locationName }: { locationId: string; locationN
         Pracownicy nie mogą się odbić poza lokalem.
       </p>
 
-      {qrData && (
-        <div className="mt-4 p-3 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
-          <p className="text-[11px] text-[#9CA3AF] mb-1">Link do kiosku (pełny ekran)</p>
-          <a
-            href={`/kiosk?location=${locationId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[13px] text-blue-600 hover:underline break-all"
-          >
-            {typeof window !== 'undefined' ? `${window.location.origin}/kiosk?location=${locationId}` : `/kiosk?location=${locationId}`}
+      {/* Links */}
+      <div className="mt-4 space-y-3">
+        {qrData && (
+          <div className="p-3 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
+            <p className="text-[11px] text-[#9CA3AF] mb-1">🔲 Kiosk QR — pracownicy skanują własnym telefonem</p>
+            <a href={`/kiosk?location=${locationId}`} target="_blank" rel="noopener noreferrer"
+              className="text-[13px] text-blue-600 hover:underline break-all">
+              {typeof window !== 'undefined' ? `${window.location.origin}/kiosk?location=${locationId}` : `/kiosk?location=${locationId}`}
+            </a>
+          </div>
+        )}
+        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+          <p className="text-[11px] text-purple-600 font-semibold mb-1">🔢 Kiosk PIN — pracownicy wpisują PIN na urządzeniu firmowym</p>
+          <p className="text-[11px] text-[#9CA3AF] mb-1.5">Otwórz na firmowym tablecie/telefonie. Zaloguj się raz — pracownicy odbijają się PINem.</p>
+          <a href={`/kiosk-pin?location=${locationId}`} target="_blank" rel="noopener noreferrer"
+            className="text-[13px] text-purple-700 hover:underline break-all font-medium">
+            {typeof window !== 'undefined' ? `${window.location.origin}/kiosk-pin?location=${locationId}` : `/kiosk-pin?location=${locationId}`}
           </a>
         </div>
-      )}
+      </div>
     </div>
   )
 }

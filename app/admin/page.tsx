@@ -500,6 +500,41 @@ const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> 
   trial: { label: 'Trial',   color: '#92400E', bg: '#FEF3C7' },
 }
 
+const PLAN_FEATURES: Record<string, { text: string; included: boolean }[]> = {
+  trial: [
+    { text: 'Dashboard & P&L',           included: true  },
+    { text: 'Raporty dzienne (1 lokal)',  included: true  },
+    { text: 'Faktury & SEMIS',           included: false },
+    { text: 'Moduł HR (urlopy, grafik)', included: false },
+    { text: 'Wiele lokali',              included: false },
+    { text: 'Priorytetowe wsparcie',     included: false },
+  ],
+  plan1: [
+    { text: 'Dashboard & P&L',           included: true  },
+    { text: 'Raporty dzienne',           included: true  },
+    { text: 'Faktury & SEMIS',           included: false },
+    { text: 'Moduł HR (urlopy, grafik)', included: false },
+    { text: 'Wiele lokali',              included: false },
+    { text: 'Priorytetowe wsparcie',     included: false },
+  ],
+  plan2: [
+    { text: 'Dashboard & P&L',           included: true  },
+    { text: 'Raporty dzienne',           included: true  },
+    { text: 'Faktury & SEMIS',           included: true  },
+    { text: 'Moduł HR (urlopy, grafik)', included: true  },
+    { text: 'Wiele lokali',              included: false },
+    { text: 'Priorytetowe wsparcie',     included: false },
+  ],
+  plan3: [
+    { text: 'Dashboard & P&L',           included: true },
+    { text: 'Raporty dzienne',           included: true },
+    { text: 'Faktury & SEMIS',           included: true },
+    { text: 'Moduł HR (urlopy, grafik)', included: true },
+    { text: 'Wiele lokali',              included: true },
+    { text: 'Priorytetowe wsparcie',     included: true },
+  ],
+}
+
 type AccountProfile = {
   email: string; full_name: string
   subscription_plan: string | null; stripe_customer_id: string | null
@@ -648,6 +683,44 @@ function AdminAccountView({ supabase, router }: { supabase: ReturnType<typeof cr
           )}
         </CardContent>
       </Card>
+
+      {/* Plan features */}
+      {(() => {
+        const key = profile?.subscription_plan ?? 'trial'
+        const features = PLAN_FEATURES[key] ?? PLAN_FEATURES['trial']
+        const planInfo = PLAN_LABELS[key] ?? PLAN_LABELS['trial']
+        const isUpgradable = key === 'trial' || key === 'plan1' || key === 'plan2'
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-gray-500" />Twój plan
+                <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: planInfo.color, background: planInfo.bg }}>
+                  {planInfo.label}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {features.map(f => (
+                <div key={f.text} className="flex items-center gap-2.5">
+                  {f.included
+                    ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                    : <X className="w-4 h-4 text-gray-300 shrink-0" />}
+                  <span className={`text-sm ${f.included ? 'text-gray-800' : 'text-gray-400'}`}>{f.text}</span>
+                </div>
+              ))}
+              {isUpgradable && (
+                <div className="pt-3">
+                  <button onClick={() => router.push('/pricing')}
+                    className="w-full flex items-center justify-center gap-2 h-9 rounded-lg bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-sm font-semibold hover:opacity-90 transition-all shadow shadow-blue-500/20">
+                    <ChevronRight className="w-4 h-4" />Ulepsz plan
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Sign out */}
       <Card>

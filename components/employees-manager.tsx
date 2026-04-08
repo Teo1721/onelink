@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Plus, Upload, Save, Trash2, Edit2, X, Loader2, Mail, CheckCircle2, AlertCircle, Users, Phone } from 'lucide-react'
+import { Plus, Upload, Save, Trash2, Edit2, X, Loader2, Mail, CheckCircle2, AlertCircle, Users, Phone, KeyRound } from 'lucide-react'
 
 const POSITIONS = ['kucharz','kelner','kasjer','manager','zmywak','barista','dostawa','inne']
 
@@ -20,6 +20,7 @@ type Employee = {
   user_id: string | null
   location_id: string | null
   locations?: { name: string } | null
+  kiosk_pin_hash?: string | null
 }
 
 type AuthStatus = { id: string; confirmed_at: string | null; last_sign_in: string | null }
@@ -79,6 +80,12 @@ export function EmployeesManager({
   const [resetting, setResetting]         = useState<Record<string, boolean>>({})
   const [tempPasswords, setTempPasswords] = useState<Record<string, string>>({})
 
+  // PIN kiosk
+  const [pinModal, setPinModal]   = useState<{ empId: string; hasPinSet: boolean; name: string } | null>(null)
+  const [pinInput, setPinInput]   = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
+  const [pinMsg, setPinMsg]       = useState('')
+
   // csv
   const [parsed, setParsed]               = useState<ParsedEmployee[]>([])
   const [parseError, setParseError]       = useState('')
@@ -91,13 +98,25 @@ export function EmployeesManager({
     setLoading(true)
     const locationIds = locations.map(l => l.id)
     if (!locationIds.length) { setEmployees([]); setLoading(false); return }
-    let q = supabase
-      .from('employees')
-      .select('id, full_name, email, phone, position, status, real_hour_cost, base_rate, user_id, location_id, locations(name)')
-      .order('full_name')
-    if (filterLoc !== 'all') q = q.eq('location_id', filterLoc)
-    else q = q.in('location_id', locationIds)
-    const { data } = await q
+
+    const buildQuery = (withPin: boolean) => {
+      const cols = withPin
+        ? 'id, full_name, email, phone, position, status, real_hour_cost, base_rate, user_id, location_id, kiosk_pin_hash, locations(name)'
+        : 'id, full_name, email, phone, position, status, real_hour_cost, base_rate, user_id, location_id, locations(name)'
+      let q = supabase.from('employees').select(cols).order('full_name')
+      if (filterLoc !== 'all') q = q.eq('location_id', filterLoc)
+      else q = q.in('location_id', locationIds)
+      return q
+    }
+
+    let { data, error } = await buildQuery(true)
+
+    // kiosk_pin_hash column not yet created — fall back without it
+    if (error) {
+      const fallback = await buildQuery(false)
+      data = fallback.data
+    }
+
     const emps = (data as unknown as Employee[]) ?? []
     setEmployees(emps)
 
@@ -213,6 +232,25 @@ export function EmployeesManager({
     if (!confirm('Usunąć tego pracownika?')) return
     await supabase.from('employees').delete().eq('id', id)
     fetchEmployees()
+  }
+
+  const savePin = async () => {
+    if (!pinModal) return
+    if (pinInput && (pinInput.length !== 4 || !/^\d{4}$/.test(pinInput))) {
+      setPinMsg('PIN musi mieć dokładnie 4 cyfry.'); return
+    }
+    setPinSaving(true); setPinMsg('')
+    const res = await fetch('/api/employees/set-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employee_id: pinModal.empId, pin: pinInput }),
+    })
+    const json = await res.json()
+    setPinSaving(false)
+    if (!res.ok) { setPinMsg(json.error ?? 'Błąd'); return }
+    setPinMsg(pinInput ? '✓ PIN ustawiony' : '✓ PIN usunięty')
+    fetchEmployees()
+    setTimeout(() => { setPinModal(null); setPinInput(''); setPinMsg('') }, 900)
   }
 
   // ── csv parse ──
@@ -574,6 +612,12 @@ export function EmployeesManager({
 
                       {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => { setPinModal({ empId: emp.id, hasPinSet: !!emp.kiosk_pin_hash, name: emp.full_name }); setPinInput(''); setPinMsg('') }}
+                          title={emp.kiosk_pin_hash ? 'Zmień/usuń PIN kiosku' : 'Ustaw PIN kiosku'}
+                          className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-colors ${emp.kiosk_pin_hash ? 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100' : 'border-[#E5E7EB] text-[#6B7280] hover:text-purple-600 hover:border-purple-300 hover:bg-purple-50'}`}>
+                          <KeyRound className="w-3.5 h-3.5" />
+                        </button>
                         <button onClick={() => startEdit(emp)} className="h-8 w-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#2563EB] hover:border-blue-300 hover:bg-blue-50 transition-colors">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -587,6 +631,64 @@ export function EmployeesManager({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── PIN Modal ── */}
+      {pinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-bold text-[#111827]">PIN kiosku</p>
+                <p className="text-[12px] text-[#6B7280] mt-0.5">{pinModal.name}</p>
+              </div>
+              <button onClick={() => { setPinModal(null); setPinInput(''); setPinMsg('') }}
+                className="text-[#9CA3AF] hover:text-[#374151]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {pinModal.hasPinSet && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+                <KeyRound className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                <p className="text-[12px] text-green-700 font-medium">PIN już ustawiony. Wpisz nowy aby zmienić, zostaw puste aby usunąć.</p>
+              </div>
+            )}
+
+            <div>
+              <label className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide block mb-1.5">
+                4-cyfrowy PIN
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                value={pinInput}
+                onChange={e => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinMsg('') }}
+                placeholder={pinModal.hasPinSet ? 'Nowy PIN (zostaw puste = usuń)' : '_ _ _ _'}
+                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-[14px] text-center tracking-[0.5em] font-bold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {pinMsg && (
+              <p className={`text-[12px] font-medium text-center ${pinMsg.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>
+                {pinMsg}
+              </p>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => { setPinModal(null); setPinInput(''); setPinMsg('') }}
+                className="flex-1 h-9 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">
+                Anuluj
+              </button>
+              <button onClick={savePin} disabled={pinSaving}
+                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-blue-600 text-white text-[13px] font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                {pinSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                {pinModal.hasPinSet && !pinInput ? 'Usuń PIN' : 'Zapisz PIN'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
