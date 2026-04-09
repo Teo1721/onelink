@@ -33,6 +33,7 @@ import type { ScheduleEmployee } from '@/components/schedule-grid'
 import type { WeekDay } from '@/components/dashboard-charts'
 import { HelpDrawer } from '@/components/help-drawer'
 import { WelcomeChecklist } from '@/components/welcome-checklist'
+import { AiDirectors } from '@/components/ai-directors'
 
 
 // ================= Ingredients DB =================
@@ -2157,6 +2158,9 @@ export default function AdminDashboard() {
                 onNavigate={(v) => setActiveView(v as ActiveView)}
               />
             )}
+
+            {/* AI Directors morning briefing */}
+            <AiDirectors />
 
             {/* Pending actions */}
             <div className="grid grid-cols-4 gap-3">
