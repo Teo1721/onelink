@@ -274,27 +274,35 @@ function DashboardMockup() {
         </div>
         <div className="flex-1 mx-4 h-6 rounded-md bg-white/8 flex items-center px-3">
           <div className="w-2 h-2 rounded-full bg-[#10B981] mr-2" />
-          <span className="text-[10px] text-white/30 font-mono">app.onelink.pl/admin</span>
+          <span className="text-[10px] text-white/30 font-mono">onelink.pl/console</span>
         </div>
       </div>
 
       {/* Sidebar + content */}
-      <div className="flex" style={{ minHeight: 420 }}>
+      <div className="flex" style={{ minHeight: 440 }}>
         {/* Sidebar */}
-        <div className="w-[160px] border-r border-white/8 p-3 flex flex-col gap-0.5 shrink-0">
-          <div className="h-8 px-3 mb-3 flex items-center">
+        <div className="w-[150px] border-r border-white/8 p-3 flex flex-col gap-0.5 shrink-0">
+          <div className="h-8 px-2 mb-2 flex items-center">
             <span className="text-[12px] font-bold text-white">OneLink</span>
           </div>
           {[
             { icon: BarChart3, label: "Dashboard", active: true },
-            { icon: PieChart, label: "P&L" },
-            { icon: Receipt, label: "Faktury" },
-            { icon: Package, label: "Magazyn" },
-            { icon: FileText, label: "Raporty" },
+            { icon: PieChart,  label: "P&L" },
+            { icon: Clock,     label: "Czas pracy", badge: '3' },
+            { icon: Users,     label: "HR", badge: '!' },
+            { icon: Calendar,  label: "Grafik" },
+            { icon: Receipt,   label: "Faktury" },
+            { icon: Package,   label: "Magazyn" },
+            { icon: FileText,  label: "Raporty" },
           ].map((item, i) => (
-            <div key={i} className={`flex items-center gap-2 h-8 px-2.5 rounded-lg text-[11px] font-medium ${item.active ? 'bg-[#1E3A8A] text-[#93C5FD]' : 'text-white/30'}`}>
-              <item.icon className="w-3.5 h-3.5 shrink-0" />
-              {item.label}
+            <div key={i} className={`flex items-center gap-2 h-7 px-2.5 rounded-lg text-[10px] font-medium ${item.active ? 'bg-[#1E3A8A] text-[#93C5FD]' : 'text-white/30'}`}>
+              <item.icon className="w-3 h-3 shrink-0" />
+              <span className="flex-1 truncate">{item.label}</span>
+              {item.badge && (
+                <span className={`text-[8px] font-bold px-1 py-0.5 rounded-sm leading-none ${item.badge === '!' ? 'bg-amber-500/25 text-amber-400' : 'bg-blue-500/25 text-blue-300'}`}>
+                  {item.badge}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -305,9 +313,9 @@ function DashboardMockup() {
           <div className="grid grid-cols-4 gap-2">
             {[
               { label: 'Sprzedaż netto', val: '18 340 zł', sub: 'Plan: 18 000 zł', color: '#fff' },
-              { label: 'Transakcje', val: '428', sub: 'AOV: 42,80 zł', color: '#fff' },
-              { label: 'Food cost', val: '31,2%', sub: 'Cel: 35%', color: '#10B981' },
-              { label: 'EBIT', val: '4 210 zł', sub: 'Marża: 22,9%', color: '#10B981' },
+              { label: 'Pracownicy dziś', val: '3 / 8',    sub: 'Kiosk PIN aktywny', color: '#F59E0B' },
+              { label: 'Food cost',       val: '31,2%',    sub: 'Cel: 35%',          color: '#10B981' },
+              { label: 'EBIT',            val: '4 210 zł', sub: 'Marża: 22,9%',      color: '#10B981' },
             ].map((t, i) => (
               <div key={i} className="bg-white/5 border border-white/8 rounded-xl p-3">
                 <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-1">{t.label}</p>
@@ -322,7 +330,7 @@ function DashboardMockup() {
             {/* Area chart mockup */}
             <div className="col-span-2 bg-white/5 border border-white/8 rounded-xl p-3">
               <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-3">Trend sprzedaży — 7 dni</p>
-              <div className="relative h-[90px]">
+              <div className="relative h-[80px]">
                 <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
@@ -349,7 +357,7 @@ function DashboardMockup() {
             <div className="bg-white/5 border border-white/8 rounded-xl p-3">
               <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-2">Koszty</p>
               <div className="flex justify-center mb-2">
-                <svg viewBox="0 0 80 80" className="w-16 h-16">
+                <svg viewBox="0 0 80 80" className="w-14 h-14">
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#06B6D4" strokeWidth="10" strokeDasharray="52 124" strokeDashoffset="31" />
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#3B82F6" strokeWidth="10" strokeDasharray="37 124" strokeDashoffset="-21" />
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#8B5CF6" strokeWidth="10" strokeDasharray="21 124" strokeDashoffset="-58" />
@@ -367,10 +375,16 @@ function DashboardMockup() {
             </div>
           </div>
 
-          {/* Alert bar */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-[#10B981]/10 border border-[#10B981]/25 rounded-lg">
-            <ShieldCheck className="w-3 h-3 text-[#10B981] shrink-0" />
-            <span className="text-[9px] text-[#10B981] font-semibold">Rentowność OK · Brak krytycznych odchyleń</span>
+          {/* Status bar — dual alerts */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#10B981]/10 border border-[#10B981]/25 rounded-lg">
+              <ShieldCheck className="w-3 h-3 text-[#10B981] shrink-0" />
+              <span className="text-[9px] text-[#10B981] font-semibold">Rentowność OK · Food cost 31,2%</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/25 rounded-lg">
+              <Clock className="w-3 h-3 text-[#F59E0B] shrink-0" />
+              <span className="text-[9px] text-[#F59E0B] font-semibold">HR: 3 na zmianie · 1 umowa wygasa wkrótce</span>
+            </div>
           </div>
         </div>
       </div>
