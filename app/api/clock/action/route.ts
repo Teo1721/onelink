@@ -17,8 +17,9 @@ async function uploadPhoto(
     const b64 = base64.replace(/^data:image\/\w+;base64,/, '')
     const buffer = Buffer.from(b64, 'base64')
 
-    // Ensure bucket exists (idempotent)
+    // Ensure bucket exists and is public
     await admin.storage.createBucket(BUCKET, { public: true }).catch(() => {})
+    await admin.storage.updateBucket(BUCKET, { public: true }).catch(() => {})
 
     const { data: uploaded, error } = await admin.storage
       .from(BUCKET)
