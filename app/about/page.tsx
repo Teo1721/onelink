@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 export const metadata = {
   title: "O nas — OneLink",
-  description: "Poznaj zespół za OneLink — system zarządzania P&L, food cost i magazynem dla restauracji i sieci gastronomicznych.",
+  description: "Poznaj zespół za OneLink — kompletny system dla restauratorów: P&L, ewidencja czasu pracy, HR, magazyn i faktury w jednym panelu.",
 };
 
 export default function AboutPage() {
@@ -30,7 +30,7 @@ export default function AboutPage() {
             Zbudowaliśmy OneLink, bo sami widzieliśmy jak restauratorzy tracą na danych, których nie widzą.
           </h1>
           <p className="text-[17px] text-[#6B7280] leading-relaxed">
-            Właściciele restauracji, piekarni i kawiarni są świetni w gotowaniu, obsłudze klientów i budowaniu miejsca, do którego chce się wracać. Ale zarządzanie liczbami — P&L, food cost, stan magazynu, faktury — to osobna praca, która często spada na koniec listy.
+            Właściciele restauracji, piekarni i kawiarni są świetni w gotowaniu, obsłudze klientów i budowaniu miejsca, do którego chce się wracać. Ale zarządzanie liczbami — P&L, food cost, czas pracy pracowników, faktury, dokumenty HR — to osobna praca, która często spada na koniec listy albo ginie w arkuszach Excel.
           </p>
         </div>
 
@@ -40,7 +40,7 @@ export default function AboutPage() {
             Widzieliśmy z bliska jak właściciele dowiadują się o stratach dopiero na koniec miesiąca — kiedy jest już za późno, żeby zareagować. Jak managerowie wysyłają dane przez WhatsApp albo wpisują je do Excela, który nikt nie czyta. Jak <span className="text-[#111827] font-semibold">food cost wymyka się spod kontroli</span>, bo nikt nie porównuje zużycia teoretycznego z rzeczywistym.
           </p>
           <p>
-            Odpowiedzią nie były kolejne moduły ERP za 500+ zł miesięcznie, których konfiguracja trwa miesiąc i wymaga konsultanta. Odpowiedzią był <span className="text-[#111827] font-semibold">prosty, szybki panel właściciela</span> — z danymi na żywo, gotowy w 20 minut, dostępny z telefonu.
+            Odpowiedzią nie były kolejne moduły ERP za 500+ zł miesięcznie, których konfiguracja trwa miesiąc i wymaga konsultanta. Odpowiedzią był <span className="text-[#111827] font-semibold">kompletny, szybki panel właściciela</span> — P&L na żywo, kiosk PIN do rejestracji czasu pracy, pełny moduł HR, magazyn i faktury w jednym miejscu. Gotowy w 20 minut, dostępny z telefonu.
           </p>
           <p>
             OneLink to produkt <a href="https://innowacyjneai.pl/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 transition-colors font-semibold">InnowacyjneAI</a> — agencji, która buduje inteligentne oprogramowanie dla małego i średniego biznesu w Polsce. Jesteśmy małym zespołem, który stawia na konkretne wyniki, nie na funkcje dla samych funkcji.
@@ -50,8 +50,8 @@ export default function AboutPage() {
         {/* Values */}
         <div className="mt-16 grid sm:grid-cols-2 gap-4">
           {[
-            { title: 'Prosto i szybko', desc: 'Konfiguracja w 20 minut. Żadnego działu IT, żadnych szkoleń. Jeśli potrzebujesz miesiąca żeby wdrożyć system — to nie jest właściwy system.' },
-            { title: 'Dane na żywo', desc: 'P&L codziennie, nie raz w miesiącu. Alerty zanim problem stanie się stratą. Informacje, które pozwalają działać — nie tylko dokumentować.' },
+            { title: 'Prosto i szybko', desc: 'Konfiguracja w 20 minut. Żadnego działu IT, żadnych szkoleń. Kiosk PIN dla pracowników gotowy w kilka kliknięć.' },
+            { title: 'Kompletny — nie tylko P&L', desc: 'Ewidencja czasu pracy, grafik, urlopy, dokumenty, certyfikaty, faktury, magazyn — wszystko w jednym systemie zamiast 5 osobnych narzędzi.' },
             { title: 'Dla właścicieli, nie księgowych', desc: 'Interfejs zaprojektowany dla osoby, która rano otwiera lokal i wieczorem chce wiedzieć czy zarobi na czynsz. Nie dla specjalisty finansowego.' },
             { title: 'Cena uczciwa', desc: 'Od 19,99 zł miesięcznie. Bez ukrytych opłat, bez długich umów. Możesz anulować kiedy chcesz.' },
           ].map(v => (

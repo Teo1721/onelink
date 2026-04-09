@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
-import { Check, Zap, Building2, Globe, TrendingUp, ShieldCheck, BarChart3, Package, Receipt, Users } from "lucide-react";
+import { Check, Zap, Building2, Globe, TrendingUp, ShieldCheck, BarChart3, Package, Receipt, Users, Clock, Calendar } from "lucide-react";
 
 type Plan = {
   id: string;
@@ -23,16 +23,18 @@ const PLANS: Plan[] = [
     id: "plan1",
     name: "Start",
     subtitle: "Dla jednego lokalu",
-    description: "Wszystko czego potrzebujesz, żeby mieć pełną kontrolę nad jednym miejscem.",
+    description: "Pełna kontrola jednego lokalu — sprzedaż, czas pracy, HR i raporty dzienne.",
     price: "19.99",
     period: "/ miesiąc",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1 ?? "",
     cta: "Zacznij 7-dniowy trial",
     features: [
       "1 lokal · 1 manager",
-      "Panel właściciela z raportami sprzedaży",
-      "Panel Ops do wprowadzania danych",
       "Raport dzienny P&L",
+      "Ewidencja czasu pracy (Kiosk PIN + QR)",
+      "Grafik pracowników",
+      "Wnioski urlopowe i zamiany zmian",
+      "Aplikacja dla pracowników",
       "Alerty i powiadomienia",
       "Wsparcie e-mail",
     ],
@@ -41,7 +43,7 @@ const PLANS: Plan[] = [
     id: "plan2",
     name: "Rozwój",
     subtitle: "Dla rosnącej sieci",
-    description: "Pełna kontrola operacyjna — faktury, magazyn, food cost i zaawansowane raporty.",
+    description: "Pełna kontrola operacyjna — faktury, magazyn, food cost, HR i zaawansowane raporty.",
     price: "39.99",
     period: "/ miesiąc",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN2 ?? "",
@@ -49,10 +51,12 @@ const PLANS: Plan[] = [
     popular: true,
     features: [
       "Do 2 lokali · 2 managerów",
-      "Sprzedaż + faktury zakupowe",
+      "Sprzedaż + faktury (COS i SEMIS)",
       "Moduł inwentaryzacji i magazynu",
-      "Alerty cenowe i raporty food cost",
-      "Symulacje cen menu",
+      "Pełny moduł HR (dokumenty, certyfikaty)",
+      "Alerty wygasania umów i certyfikatów",
+      "Symulacje cen menu i food cost",
+      "Zamknięcie miesiąca z walidacją",
       "Priorytetowe wsparcie",
     ],
   },
@@ -60,7 +64,7 @@ const PLANS: Plan[] = [
     id: "plan3",
     name: "Sieć",
     subtitle: "Dla większych operacji",
-    description: "Dla sieci firm — pełen dostęp, raporty cross-lokalizacyjne i API.",
+    description: "Dla sieci firm — pełen dostęp, HR dla całej sieci, raporty cross-lokalizacyjne.",
     price: "59.99",
     period: "/ miesiąc",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3 ?? "",
@@ -68,9 +72,11 @@ const PLANS: Plan[] = [
     features: [
       "Do 5 lokali · 5 managerów",
       "Pełny dostęp P&L i EBIT",
+      "HR dla całej sieci — raporty zagregowane",
       "Panel regionalny i finansowy",
-      "Zaawansowane raporty i analizy",
+      "Zaawansowane raporty cross-lokalizacyjne",
       "Eksport danych i integracje",
+      "Onboarding pracowników multi-lokal",
       "Dedykowany opiekun konta",
     ],
   },
@@ -85,11 +91,13 @@ const METRICS = [
 
 const FEATURES = [
   { icon: BarChart3, title: "Dashboard P&L w czasie rzeczywistym", desc: "Widzisz rentowność każdego dnia — przychody, COGS, labor i EBIT na jednym ekranie." },
-  { icon: Receipt, title: "Zatwierdzanie faktur", desc: "Managerowie przesyłają faktury, Ty zatwierdzasz lub odrzucasz jednym kliknięciem." },
-  { icon: Package, title: "Moduł magazynowy", desc: "Pełna kontrola stanów, transferów między lokalami i wykrywanie odchyleń." },
+  { icon: Clock, title: "Ewidencja czasu pracy i Kiosk", desc: "Pracownicy rejestrują czas przez PIN lub QR na firmowym urządzeniu. Zdjęcie przy każdym odbiciu." },
+  { icon: Users, title: "Pełny moduł HR", desc: "Grafik, urlopy, zamiany zmian, dokumenty i certyfikaty — z alertami wygasania umów." },
+  { icon: Receipt, title: "Faktury COS i SEMIS", desc: "Managerowie przesyłają faktury, Ty zatwierdzasz jednym kliknięciem. Pełna historia kosztów." },
+  { icon: Package, title: "Magazyn i food cost", desc: "Pełna kontrola stanów, transferów między lokalami i wykrywanie odchyleń." },
+  { icon: Calendar, title: "Grafik i planowanie zmian", desc: "Planuj zmiany tygodniowo lub miesięcznie. Pracownicy widzą grafik w swojej aplikacji." },
   { icon: TrendingUp, title: "Symulator cen menu", desc: "Sprawdź jak zmiana ceny składnika wpłynie na marżę każdego dania." },
-  { icon: Users, title: "Multi-lokalizacja", desc: "Zarządzaj kilkoma lokalami z jednego panelu. Raporty zagregowane lub per-lokal." },
-  { icon: ShieldCheck, title: "Alerty i powiadomienia", desc: "Natychmiastowe powiadomienia o przekroczeniu progów — labor, food cost, gotówka." },
+  { icon: ShieldCheck, title: "Alerty i powiadomienia", desc: "Natychmiastowe powiadomienia o przekroczeniu progów — labor, food cost, wygasające dokumenty." },
 ];
 
 export default function PricingPage() {

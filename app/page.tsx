@@ -6,7 +6,7 @@ import { OneLinkLogo } from "@/components/onelink-logo";
 import {
   TrendingUp, BarChart3, Package, Receipt, ShieldCheck,
   ChevronRight, Check, ArrowRight, Zap, Star,
-  Clock, PieChart, FileText, ChevronDown, CheckCircle,
+  Clock, PieChart, FileText, ChevronDown, CheckCircle, Users, Calendar,
 } from "lucide-react";
 
 /* ── tiny helpers ── */
@@ -39,6 +39,20 @@ const FEATURES = [
     items: ["Sprzedaż netto i brutto", "Koszt pracy i food cost %", "EBIT i marża netto", "Alertuj przy odchyleniu"],
   },
   {
+    icon: Clock,
+    color: "#F59E0B",
+    title: "Ewidencja czasu pracy i Kiosk",
+    desc: "Pracownicy rejestrują wejście i wyjście przez PIN lub QR na firmowym urządzeniu — system robi zdjęcie automatycznie przy każdym odbiciu.",
+    items: ["Kiosk PIN na urządzeniu firmowym", "Kiosk QR — skanowanie osobistego kodu", "Automatyczne zdjęcie przy każdym odbiciu", "Raport godzin i kosztów pracy w czasie rzeczywistym"],
+  },
+  {
+    icon: Users,
+    color: "#EC4899",
+    title: "Pełny moduł HR",
+    desc: "Grafik zmian, urlopy, zamiany, dokumenty pracownicze i certyfikaty — wszystko zarządzane z jednego panelu z alertami wygasania.",
+    items: ["Grafik tygodniowy i miesięczny", "Wnioski urlopowe i zamiany zmian", "Dokumenty i certyfikaty z alertami wygasania", "Onboarding i certyfikacje nowych pracowników"],
+  },
+  {
     icon: Package,
     color: "#8B5CF6",
     title: "Magazyn i odchylenia składników",
@@ -56,8 +70,8 @@ const FEATURES = [
     icon: Receipt,
     color: "#10B981",
     title: "Faktury i zatwierdzenia",
-    desc: "Managerowie przesyłają faktury, Ty je zatwierdzasz jednym kliknięciem — wszystko z pełną historią i statusami.",
-    items: ["Workflow zatwierdzania faktur", "Historia kosztów per lokalizacja", "Powiadomienia w czasie rzeczywistym", "Eksport do księgowości"],
+    desc: "Managerowie przesyłają faktury COS i SEMIS, Ty je zatwierdzasz jednym kliknięciem — pełna historia i eksport do księgowości.",
+    items: ["Faktury COS (żywność) i SEMIS (koszty stałe)", "Workflow zatwierdzania z historią", "Powiadomienia w czasie rzeczywistym", "Eksport do księgowości"],
   },
 ];
 
@@ -68,10 +82,10 @@ const TESTIMONIALS = [
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Załóż konto — 3 minuty", desc: "Rejestrujesz się, łączysz swój system kasowy (lub wgrywasz CSV) i zapraszasz managera — wszystko z jednego panelu." },
-  { step: "02", title: "Managerowie wpisują dane z telefonu", desc: "Sprzedaż, faktury, stany magazynu — managerowie wpisują przez prosty formularz na telefonie lub tablecie. Żadnych arkuszy Excel." },
-  { step: "03", title: "Ty widzisz wszystko — w czasie rzeczywistym", desc: "P&L, marże, koszty i alerty o odchyleniach — na jednym ekranie, dostępnym 24/7 z telefonu, tabletu i komputera." },
-  { step: "04", title: "Działaj na danych, nie na przeczuciu", desc: "System alarmuje Cię zanim problem stanie się stratą. Odchylenia food cost, niezatwierdzone faktury, niska marża — dostajesz powiadomienie, nie niespodziankę na koniec miesiąca." },
+  { step: "01", title: "Załóż konto — 3 minuty", desc: "Rejestrujesz się, dodajesz lokalizację, zapraszasz managera i ustawiasz kiosk do rejestracji czasu pracy — wszystko z jednego panelu, bez IT." },
+  { step: "02", title: "Pracownicy rejestrują czas przez kiosk", desc: "Na firmowym telefonie lub tablecie wpisują PIN lub skanują QR. System robi zdjęcie automatycznie — pełna ewidencja bez żadnych arkuszy." },
+  { step: "03", title: "Managerowie wpisują dane z telefonu", desc: "Sprzedaż, faktury COS i SEMIS, stany magazynu, grafik — managerowie wpisują przez prosty formularz na telefonie. Żadnych Exceli." },
+  { step: "04", title: "Ty widzisz wszystko — P&L, HR i alerty na żywo", desc: "Marże, koszty pracy, odchylenia, wygasające dokumenty pracowników — jeden panel, dostępny 24/7. Reagujesz zanim problem stanie się stratą." },
 ];
 
 /* ── FAQ data ── */
@@ -83,7 +97,9 @@ const FAQ_ITEMS = [
   { q: "Czy mogę zarządzać kilkoma lokalami z jednego konta?", a: "Tak. OneLink jest zaprojektowany do zarządzania wieloma lokalizacjami z jednego panelu właściciela. Możesz porównywać wyniki, transferować stany między lokalami i zatwierdzać faktury z każdego z nich." },
   { q: "Czy moje dane są bezpieczne?", a: "Tak. Dane są szyfrowane i przechowywane na serwerach w UE (Supabase). Płatności obsługuje Stripe — jeden z najbardziej zaufanych procesorów płatności na świecie. Danych kart nie przechowujemy — Stripe ma PCI DSS Level 1. Nie udostępniamy danych podmiotom trzecim." },
   { q: "Co się stanie z moimi danymi po anulowaniu subskrypcji?", a: "Twoje dane są przechowywane przez 30 dni po anulowaniu. W tym czasie możesz je wyeksportować. Po upływie 30 dni dane są trwale usuwane z naszych serwerów." },
-  { q: "Jak OneLink porównuje się do arkuszy Excel?", a: "Excel wymaga ręcznego wprowadzania danych, formuł i nie daje alertów w czasie rzeczywistym. OneLink automatyzuje zbieranie danych od managerów, oblicza P&L na bieżąco i alarmuje przy odchyleniach — bez żadnych formuł. Zamknięcie dnia trwa 10 minut zamiast godziny." },
+  { q: "Jak działa ewidencja czasu pracy i kiosk PIN?", a: "Na firmowym telefonie lub tablecie otwierasz adres kiosku. Pracownicy wybierają swoje imię i wpisują 4-cyfrowy PIN — system automatycznie robi zdjęcie aparatem urządzenia jako dowód obecności. Możesz też użyć kiosku QR, gdzie pracownik skanuje swój osobisty kod. Wszystkie odbicia trafiają do ewidencji w czasie rzeczywistym." },
+  { q: "Czy pracownicy mają własny dostęp do systemu?", a: "Tak. Każdy pracownik może zalogować się do aplikacji pracowniczej (/workspace) gdzie widzi swój grafik, może złożyć wniosek urlopowy, zgłosić zamianę zmian i zobaczyć swoje godziny pracy. Nie ma dostępu do danych finansowych." },
+  { q: "Jak OneLink porównuje się do arkuszy Excel?", a: "Excel wymaga ręcznego wprowadzania danych, formuł i nie daje alertów w czasie rzeczywistym. OneLink automatyzuje zbieranie danych od managerów, oblicza P&L na bieżąco, prowadzi ewidencję czasu pracy i alarmuje przy odchyleniach — bez żadnych formuł. Zamknięcie dnia trwa 10 minut zamiast godziny." },
 ];
 
 /* ── Lead Capture ── */
@@ -416,8 +432,8 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-8 text-center">
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-          <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-red-500/10 border border-red-500/25 text-[11px] font-semibold text-red-400">
-            ⏰ Ceny Early Adopter — tylko do końca marca
+          <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-blue-500/10 border border-blue-500/25 text-[11px] font-semibold text-blue-500">
+            ✨ P&L · Magazyn · HR · Ewidencja czasu pracy · Kiosk PIN
           </span>
         </div>
 
@@ -428,7 +444,7 @@ export default function HomePage() {
         </h1>
 
         <p className="text-[18px] text-[#6B7280] max-w-2xl mx-auto leading-relaxed mb-10">
-          Właściciele firm, którzy używają OneLink, zamykają dzień w 10 minut i widzą swój P&amp;L na żywo — zamiast dowiadywać się o stracie dopiero na koniec miesiąca.
+          OneLink to kompletny system dla restauratorów — P&amp;L na żywo, ewidencja czasu pracy z kioskiem PIN, pełny moduł HR i magazyn. Zamknięcie dnia w 10 minut, wszystko na jednym ekranie.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
@@ -583,6 +599,40 @@ export default function HomePage() {
                   )}
                   {i === 1 && (
                     <>
+                      <p className="text-[9px] font-semibold uppercase tracking-widest text-white/35 mb-1">Ewidencja czasu pracy — dziś</p>
+                      {[['Anna K.','08:02','16:45','8h 43min','#10B981'],['Tomasz W.','09:15',null,'W pracy','#3B82F6'],['Maria S.','07:30','15:00','7h 30min','#10B981']].map(([name,ci,co,time,c])=>(
+                        <div key={String(name)} className="flex items-center justify-between px-3 py-2 bg-white/5 border border-white/8 rounded-lg gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-blue-500/25 flex items-center justify-center text-[9px] font-bold text-blue-300 shrink-0">{String(name)[0]}</div>
+                            <span className="text-[11px] text-white/60 font-medium">{name}</span>
+                          </div>
+                          <span className="text-[9px] text-green-400 font-mono">{ci}</span>
+                          <span className="text-[9px] text-orange-400 font-mono">{co ?? '—'}</span>
+                          <span className="text-[10px] font-bold shrink-0" style={{color:c as string}}>{time}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-lg">
+                        <span className="text-[9px] text-[#F59E0B] font-semibold">🔢 Kiosk PIN aktywny · 3 odbicia dziś · 📷 zdjęcia zapisane</span>
+                      </div>
+                    </>
+                  )}
+                  {i === 2 && (
+                    <>
+                      {[
+                        ['Grafik — tydzień','12 zmian zaplanowanych','#3B82F6'],
+                        ['Urlopy — oczekujące','2 wnioski do zatwierdzenia','#F59E0B'],
+                        ['Dokumenty — alert','1 umowa wygasa za 14 dni','#DC2626'],
+                        ['Certyfikaty — aktywne','8 / 10 certyfikatów ważnych','#10B981'],
+                      ].map(([label,value,c])=>(
+                        <div key={String(label)} className="flex items-center justify-between px-3 py-2.5 bg-white/5 border border-white/8 rounded-xl">
+                          <span className="text-[10px] text-white/45">{label}</span>
+                          <span className="text-[10px] font-semibold" style={{color:c}}>{value}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {i === 3 && (
+                    <>
                       <div className="grid grid-cols-3 gap-2">
                         {[['Na stanie','284 kg','#fff'],['Zarezerwowane','42 kg','#06B6D4'],['Alerty','2','#DC2626']].map(([l,v,c])=>(
                           <div key={l} className="bg-white/5 rounded-xl p-3 border border-white/8 text-center">
@@ -600,7 +650,7 @@ export default function HomePage() {
                       ))}
                     </>
                   )}
-                  {i === 2 && (
+                  {i === 4 && (
                     <>
                       {[
                         ['Burger Wołowy','14,20 zł','42,00 zł','33,8%','#10B981','OK'],
@@ -621,7 +671,7 @@ export default function HomePage() {
                       ))}
                     </>
                   )}
-                  {i === 3 && (
+                  {i === 5 && (
                     <>
                       {[
                         ['FV/2026/041','Sysco Polska','1 240 zł','submitted','#3B82F6'],
