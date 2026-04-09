@@ -145,7 +145,7 @@ function LeadCapture() {
                 Wyślij mi arkusz
               </button>
             </form>
-            <p className="text-[11px] text-[#9CA3AF] mt-3">Bez spamu. Jeden e-mail z arkuszem.</p>
+            <p className="text-[11px] text-[#6B7280] mt-3">Bez spamu. Jeden e-mail z arkuszem.</p>
           </>
         )}
       </div>
@@ -178,7 +178,7 @@ function FAQSection() {
               aria-expanded={openIndex === i}
             >
               <span className="text-[15px] font-semibold text-[#111827] leading-snug">{item.q}</span>
-              <ChevronDown className={`w-4 h-4 shrink-0 text-[#9CA3AF] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 shrink-0 text-[#6B7280] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`} />
             </button>
             <div
               className="overflow-hidden transition-all duration-300"
@@ -274,7 +274,7 @@ function DashboardMockup() {
         </div>
         <div className="flex-1 mx-4 h-6 rounded-md bg-white/8 flex items-center px-3">
           <div className="w-2 h-2 rounded-full bg-[#10B981] mr-2" />
-          <span className="text-[10px] text-white/30 font-mono">onelink.pl/console</span>
+          <span className="text-[10px] text-white/50 font-mono">onelink.pl/console</span>
         </div>
       </div>
 
@@ -295,7 +295,7 @@ function DashboardMockup() {
             { icon: Package,   label: "Magazyn" },
             { icon: FileText,  label: "Raporty" },
           ].map((item, i) => (
-            <div key={i} className={`flex items-center gap-2 h-7 px-2.5 rounded-lg text-[10px] font-medium ${item.active ? 'bg-[#1E3A8A] text-[#93C5FD]' : 'text-white/30'}`}>
+            <div key={i} className={`flex items-center gap-2 h-7 px-2.5 rounded-lg text-[10px] font-medium ${item.active ? 'bg-[#1E3A8A] text-[#93C5FD]' : 'text-white/50'}`}>
               <item.icon className="w-3 h-3 shrink-0" />
               <span className="flex-1 truncate">{item.label}</span>
               {item.badge && (
@@ -318,9 +318,9 @@ function DashboardMockup() {
               { label: 'EBIT',            val: '4 210 zł', sub: 'Marża: 22,9%',      color: '#10B981' },
             ].map((t, i) => (
               <div key={i} className="bg-white/5 border border-white/8 rounded-xl p-3">
-                <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-1">{t.label}</p>
+                <p className="text-[8px] font-semibold uppercase tracking-widest text-white/55 mb-1">{t.label}</p>
                 <p className="text-[16px] font-black leading-none mb-1" style={{ color: t.color }}>{t.val}</p>
-                <p className="text-[8px] text-white/25">{t.sub}</p>
+                <p className="text-[8px] text-white/50">{t.sub}</p>
               </div>
             ))}
           </div>
@@ -329,7 +329,7 @@ function DashboardMockup() {
           <div className="grid grid-cols-3 gap-2">
             {/* Area chart mockup */}
             <div className="col-span-2 bg-white/5 border border-white/8 rounded-xl p-3">
-              <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-3">Trend sprzedaży — 7 dni</p>
+              <p className="text-[8px] font-semibold uppercase tracking-widest text-white/55 mb-3">Trend sprzedaży — 7 dni</p>
               <div className="relative h-[80px]">
                 <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
                   <defs>
@@ -347,7 +347,7 @@ function DashboardMockup() {
                 </svg>
                 <div className="absolute bottom-0 left-0 right-0 flex justify-between px-1">
                   {['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].map(d => (
-                    <span key={d} className="text-[7px] text-white/25">{d}</span>
+                    <span key={d} className="text-[7px] text-white/50">{d}</span>
                   ))}
                 </div>
               </div>
@@ -355,7 +355,7 @@ function DashboardMockup() {
 
             {/* Donut mockup */}
             <div className="bg-white/5 border border-white/8 rounded-xl p-3">
-              <p className="text-[8px] font-semibold uppercase tracking-widest text-white/35 mb-2">Koszty</p>
+              <p className="text-[8px] font-semibold uppercase tracking-widest text-white/55 mb-2">Koszty</p>
               <div className="flex justify-center mb-2">
                 <svg viewBox="0 0 80 80" className="w-14 h-14">
                   <circle cx="40" cy="40" r="28" fill="none" stroke="#06B6D4" strokeWidth="10" strokeDasharray="52 124" strokeDashoffset="31" />
@@ -367,7 +367,7 @@ function DashboardMockup() {
               <div className="space-y-1">
                 {[['COGS','#06B6D4','31%'],['Praca','#3B82F6','24%'],['OPEX','#8B5CF6','22%'],['Zysk','#10B981','23%']].map(([l,c,v])=>(
                   <div key={l} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-sm" style={{background:c}}/><span className="text-[8px] text-white/35">{l}</span></div>
+                    <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-sm" style={{background:c}}/><span className="text-[8px] text-white/55">{l}</span></div>
                     <span className="text-[8px] font-bold" style={{color:c}}>{v}</span>
                   </div>
                 ))}
@@ -417,7 +417,7 @@ export default function HomePage() {
           <span className="text-[12px] font-bold" style={{ background: 'linear-gradient(90deg, #8B5CF6, #3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             InnowacyjneAI
           </span>
-          <span className="text-[11px] text-[#9CA3AF]">→ innowacyjneai.pl</span>
+          <span className="text-[11px] text-[#6B7280]">→ innowacyjneai.pl</span>
         </a>
       </div>
 
@@ -473,7 +473,7 @@ export default function HomePage() {
         </div>
 
         {/* Reassurance bar */}
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-12 text-[12px] text-[#9CA3AF]">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-12 text-[12px] text-[#6B7280]">
           <span className="flex items-center gap-1.5">🔒 Bezpieczna płatność Stripe</span>
           <span className="text-[#D1D5DB]">·</span>
           <span>Anuluj kiedy chcesz</span>
@@ -494,7 +494,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-semibold">Zaufali nam:</p>
+            <p className="text-[10px] uppercase tracking-widest text-[#6B7280] font-semibold">Zaufali nam:</p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {['Fabryka Pączków', 'Piekarnia Matusik', 'Swojska Spiżarnia'].map(name => (
                 <span key={name} className="px-3 py-1 rounded-full text-[11px] font-medium text-[#6B7280] bg-white border border-[#E5E7EB] shadow-sm">
@@ -524,12 +524,12 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <p className="text-center text-[11px] text-[#9CA3AF] mt-4">* Średnie wyniki wśród klientów OneLink w pierwszych 90 dniach od wdrożenia</p>
+        <p className="text-center text-[11px] text-[#6B7280] mt-4">* Średnie wyniki wśród klientów OneLink w pierwszych 90 dniach od wdrożenia</p>
       </section>
 
       {/* ── INTEGRATIONS STRIP ── */}
       <section className="relative max-w-5xl mx-auto px-6 pb-20">
-        <p className="text-center text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-6">Integruje się z</p>
+        <p className="text-center text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-6">Integruje się z</p>
         <div className="flex flex-wrap items-center justify-center gap-4">
           {[
             { name: 'Stripe', desc: 'Płatności', color: '#635BFF' },
@@ -541,12 +541,12 @@ export default function HomePage() {
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
               <div>
                 <p className="text-[12px] font-bold text-[#374151]">{s.name}</p>
-                <p className="text-[10px] text-[#9CA3AF]">{s.desc}</p>
+                <p className="text-[10px] text-[#6B7280]">{s.desc}</p>
               </div>
             </div>
           ))}
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#E5E7EB] bg-white">
-            <span className="text-[12px] text-[#9CA3AF]">+21 integracji wkrótce</span>
+            <span className="text-[12px] text-[#6B7280]">+21 integracji wkrótce</span>
           </div>
         </div>
       </section>
@@ -592,13 +592,13 @@ export default function HomePage() {
                       <div className="grid grid-cols-2 gap-2">
                         {[['Sprzedaż netto','18 340 zł','#fff'],['EBIT','4 210 zł','#10B981']].map(([l,v,c])=>(
                           <div key={l} className="bg-white/5 rounded-xl p-3 border border-white/8">
-                            <p className="text-[9px] uppercase tracking-widest text-white/35 mb-1">{l}</p>
+                            <p className="text-[9px] uppercase tracking-widest text-white/55 mb-1">{l}</p>
                             <p className="text-[18px] font-black leading-none" style={{color:c}}>{v}</p>
                           </div>
                         ))}
                       </div>
                       <div className="bg-white/5 border border-white/8 rounded-xl p-3">
-                        <p className="text-[9px] uppercase tracking-widest text-white/35 mb-2">Trend tygodniowy</p>
+                        <p className="text-[9px] uppercase tracking-widest text-white/55 mb-2">Trend tygodniowy</p>
                         <div className="flex items-end gap-1.5 h-14">
                           {[40,58,52,71,63,80,74].map((h,j)=>(
                             <div key={j} className="flex-1 rounded-t-sm" style={{height:`${h}%`, background: j===5?'#3B82F6':'rgba(59,130,246,0.3)'}}/>
@@ -613,7 +613,7 @@ export default function HomePage() {
                   )}
                   {i === 1 && (
                     <>
-                      <p className="text-[9px] font-semibold uppercase tracking-widest text-white/35 mb-1">Ewidencja czasu pracy — dziś</p>
+                      <p className="text-[9px] font-semibold uppercase tracking-widest text-white/55 mb-1">Ewidencja czasu pracy — dziś</p>
                       {[['Anna K.','08:02','16:45','8h 43min','#10B981'],['Tomasz W.','09:15',null,'W pracy','#3B82F6'],['Maria S.','07:30','15:00','7h 30min','#10B981']].map(([name,ci,co,time,c])=>(
                         <div key={String(name)} className="flex items-center justify-between px-3 py-2 bg-white/5 border border-white/8 rounded-lg gap-2">
                           <div className="flex items-center gap-2">
@@ -639,7 +639,7 @@ export default function HomePage() {
                         ['Certyfikaty — aktywne','8 / 10 certyfikatów ważnych','#10B981'],
                       ].map(([label,value,c])=>(
                         <div key={String(label)} className="flex items-center justify-between px-3 py-2.5 bg-white/5 border border-white/8 rounded-xl">
-                          <span className="text-[10px] text-white/45">{label}</span>
+                          <span className="text-[10px] text-white/60">{label}</span>
                           <span className="text-[10px] font-semibold" style={{color:c}}>{value}</span>
                         </div>
                       ))}
@@ -650,7 +650,7 @@ export default function HomePage() {
                       <div className="grid grid-cols-3 gap-2">
                         {[['Na stanie','284 kg','#fff'],['Zarezerwowane','42 kg','#06B6D4'],['Alerty','2','#DC2626']].map(([l,v,c])=>(
                           <div key={l} className="bg-white/5 rounded-xl p-3 border border-white/8 text-center">
-                            <p className="text-[8px] uppercase tracking-widest text-white/30 mb-1">{l}</p>
+                            <p className="text-[8px] uppercase tracking-widest text-white/50 mb-1">{l}</p>
                             <p className="text-[16px] font-black leading-none" style={{color:c}}>{v}</p>
                           </div>
                         ))}
@@ -658,7 +658,7 @@ export default function HomePage() {
                       {[['Łosoś atlantycki','12.4 kg','OK','#10B981'],['Wołowina','3.1 kg','Niski','#DC2626'],['Masło','8.0 kg','OK','#10B981']].map(([name,qty,status,c])=>(
                         <div key={name} className="flex items-center justify-between px-3 py-2 bg-white/5 border border-white/8 rounded-lg">
                           <span className="text-[11px] text-white/60 font-medium">{name}</span>
-                          <span className="text-[11px] text-white/35">{qty}</span>
+                          <span className="text-[11px] text-white/55">{qty}</span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{color:c, background:`${c}18`}}>{status}</span>
                         </div>
                       ))}
@@ -677,8 +677,8 @@ export default function HomePage() {
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{color:c, background:`${c}18`}}>{status}</span>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="text-[10px] text-white/35">Koszt: <span className="text-white/60">{cost}</span></span>
-                            <span className="text-[10px] text-white/35">Menu: <span className="text-white/60">{price}</span></span>
+                            <span className="text-[10px] text-white/55">Koszt: <span className="text-white/60">{cost}</span></span>
+                            <span className="text-[10px] text-white/55">Menu: <span className="text-white/60">{price}</span></span>
                             <span className="text-[10px] font-bold" style={{color:c}}>FC: {pct}</span>
                           </div>
                         </div>
@@ -695,7 +695,7 @@ export default function HomePage() {
                         <div key={nr} className="flex items-center justify-between px-4 py-3 bg-white/5 border border-white/8 rounded-xl">
                           <div>
                             <p className="text-[11px] font-semibold text-white">{sup}</p>
-                            <p className="text-[9px] text-white/30 mt-0.5">{nr}</p>
+                            <p className="text-[9px] text-white/50 mt-0.5">{nr}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-[12px] font-bold text-white">{amt}</span>
@@ -787,7 +787,7 @@ export default function HomePage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[13px] font-bold text-[#111827]">{t.name}</p>
-                  <p className="text-[11px] text-[#9CA3AF] mt-0.5">{t.role}</p>
+                  <p className="text-[11px] text-[#6B7280] mt-0.5">{t.role}</p>
                 </div>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-[10px] font-semibold text-green-700 shrink-0">
                   <CheckCircle className="w-3 h-3" />
@@ -797,7 +797,7 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <p className="text-center text-[11px] text-[#9CA3AF] mt-6">Opinie wczesnych użytkowników OneLink. Wyniki indywidualne mogą się różnić.</p>
+        <p className="text-center text-[11px] text-[#6B7280] mt-6">Opinie wczesnych użytkowników OneLink. Wyniki indywidualne mogą się różnić.</p>
 
         {/* Inline CTA after testimonials */}
         <div className="mt-10 text-center">
@@ -822,7 +822,7 @@ export default function HomePage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#E5E7EB]">
-                <th className="text-[12px] font-bold uppercase tracking-widest text-[#9CA3AF] py-4 px-6 w-[40%]">Funkcja</th>
+                <th className="text-[12px] font-bold uppercase tracking-widest text-[#6B7280] py-4 px-6 w-[40%]">Funkcja</th>
                 <th className="text-[13px] font-bold text-blue-600 py-4 px-6 text-center bg-blue-50">OneLink</th>
                 <th className="text-[13px] font-bold text-[#6B7280] py-4 px-6 text-center">Arkusz Excel</th>
                 <th className="text-[13px] font-bold text-[#6B7280] py-4 px-6 text-center">Systemy ERP</th>
@@ -848,7 +848,7 @@ export default function HomePage() {
                           ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100"><Check className="w-3.5 h-3.5 text-green-600" /></span>
                           : <span className="text-[#D1D5DB] text-lg leading-none">—</span>
                       ) : (
-                        <span className={`text-[12px] font-semibold ${j === 0 ? 'text-blue-600' : 'text-[#9CA3AF]'}`}>{val as string}</span>
+                        <span className={`text-[12px] font-semibold ${j === 0 ? 'text-blue-600' : 'text-[#6B7280]'}`}>{val as string}</span>
                       )}
                     </td>
                   ))}
@@ -870,7 +870,7 @@ export default function HomePage() {
             <h2 className="text-[36px] md:text-[52px] font-black tracking-tight mt-6 mb-4 text-white">
               Od <GradientText>19,99 zł</GradientText> miesięcznie
             </h2>
-            <p className="text-[15px] text-white/45 max-w-lg mx-auto mb-8 leading-relaxed">
+            <p className="text-[15px] text-white/60 max-w-lg mx-auto mb-8 leading-relaxed">
               7 dni za darmo — karta Stripe wymagana do aktywacji, żadna opłata przez 7 dni. Anuluj kiedy chcesz.
             </p>
 
@@ -884,8 +884,8 @@ export default function HomePage() {
                 <div key={p.name} className={`rounded-xl p-3 border ${p.popular ? 'border-blue-400/40 bg-blue-400/8' : 'border-white/10 bg-white/4'}`}>
                   <p className={`text-[11px] font-bold mb-1 ${p.popular ? 'text-blue-300' : 'text-white/50'}`}>{p.name}{p.popular ? ' ★' : ''}</p>
                   <p className="text-[18px] font-black text-white leading-none">{p.price}</p>
-                  <p className="text-[10px] text-white/35 mt-1">/ mies. + VAT</p>
-                  <p className="text-[10px] text-white/40 mt-1">{p.sub}</p>
+                  <p className="text-[10px] text-white/55 mt-1">/ mies. + VAT</p>
+                  <p className="text-[10px] text-white/55 mt-1">{p.sub}</p>
                 </div>
               ))}
             </div>
@@ -898,7 +898,7 @@ export default function HomePage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-5">
               {['Karta Stripe do aktywacji', 'Anuluj kiedy chcesz', 'Pełny dostęp przez 7 dni', 'Wsparcie w języku polskim'].map(item => (
-                <div key={item} className="flex items-center gap-2 text-[12px] text-white/35">
+                <div key={item} className="flex items-center gap-2 text-[12px] text-white/55">
                   <Check className="w-3.5 h-3.5 text-[#10B981]" />
                   {item}
                 </div>
@@ -937,7 +937,7 @@ export default function HomePage() {
 
             {/* Text */}
             <div className="flex-1 text-center sm:text-left">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#9CA3AF] mb-1">Zaprojektowane i zbudowane przez</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#6B7280] mb-1">Zaprojektowane i zbudowane przez</p>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
                 <span className="text-[20px] font-black tracking-tight"
                   style={{ background: 'linear-gradient(90deg, #8B5CF6 0%, #3B82F6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -983,9 +983,9 @@ export default function HomePage() {
                 <div className="w-[220px] h-[420px] rounded-[36px] border-[6px] border-white/10 bg-[#0D1425] overflow-hidden shadow-2xl shadow-blue-500/20">
                   {/* Status bar */}
                   <div className="h-8 bg-[#0D1425] flex items-center justify-between px-5 pt-1">
-                    <span className="text-[9px] text-white/40 font-semibold">9:41</span>
+                    <span className="text-[9px] text-white/55 font-semibold">9:41</span>
                     <div className="w-16 h-3 bg-black rounded-full" />
-                    <span className="text-[9px] text-white/40">●●●</span>
+                    <span className="text-[9px] text-white/55">●●●</span>
                   </div>
                   {/* App UI preview */}
                   <div className="px-4 pt-3 space-y-3">
@@ -1041,7 +1041,7 @@ export default function HomePage() {
               {/* Download coming soon */}
               <div className="pt-2">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-                  <div className="w-8 h-8 rounded-lg bg-[#F3F4F6] flex items-center justify-center text-[#9CA3AF] flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] flex-shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth="1.5">
                       <rect x="5" y="2" width="14" height="20" rx="2" />
                       <path d="M12 18h.01" />
@@ -1049,13 +1049,13 @@ export default function HomePage() {
                   </div>
                   <div>
                     <p className="text-[12px] font-semibold text-[#374151]">Aplikacja mobilna — wkrótce</p>
-                    <p className="text-[11px] text-[#9CA3AF]">iOS & Android — w przygotowaniu</p>
+                    <p className="text-[11px] text-[#6B7280]">iOS & Android — w przygotowaniu</p>
                   </div>
                   <span className="ml-auto px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-600">
                     Soon
                   </span>
                 </div>
-                <p className="text-[11px] text-[#9CA3AF] mt-2">
+                <p className="text-[11px] text-[#6B7280] mt-2">
                   Webowa wersja pracownicza już dostępna pod{' '}
                   <Link href="/employee" className="text-blue-500 hover:text-blue-600 transition-colors">/employee</Link>
                 </p>
@@ -1081,7 +1081,7 @@ export default function HomePage() {
             <div key={a.title} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
               <span className="inline-flex items-center h-5 px-2.5 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 mb-3">{a.tag}</span>
               <h3 className="text-[14px] font-bold text-[#111827] leading-snug mb-3">{a.title}</h3>
-              <p className="text-[11px] text-[#9CA3AF]">{a.date}</p>
+              <p className="text-[11px] text-[#6B7280]">{a.date}</p>
             </div>
           ))}
         </div>
@@ -1104,7 +1104,7 @@ export default function HomePage() {
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <OneLinkLogo iconSize={22} textSize="text-[13px]" />
-              <p className="text-[12px] text-[#9CA3AF] mt-3 leading-relaxed">
+              <p className="text-[12px] text-[#6B7280] mt-3 leading-relaxed">
                 System zarządzania dla firm, sklepów i sieci MŚP.
               </p>
               <a href="mailto:kontakt@onelink.pl" className="text-[12px] text-[#6B7280] hover:text-[#111827] transition-colors mt-3 block">
@@ -1114,7 +1114,7 @@ export default function HomePage() {
 
             {/* Product */}
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Produkt</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-4">Produkt</p>
               <div className="space-y-2.5">
                 <Link href="/#features" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Funkcje</Link>
                 <Link href="/pricing" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Cennik</Link>
@@ -1125,7 +1125,7 @@ export default function HomePage() {
 
             {/* Company */}
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Firma</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-4">Firma</p>
               <div className="space-y-2.5">
                 <Link href="/about" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">O nas</Link>
                 <Link href="/contact" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Kontakt</Link>
@@ -1136,7 +1136,7 @@ export default function HomePage() {
 
             {/* Legal */}
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Prawne</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-4">Prawne</p>
               <div className="space-y-2.5">
                 <Link href="/privacy" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Polityka Prywatności</Link>
                 <Link href="/terms" className="block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Regulamin</Link>
@@ -1147,12 +1147,12 @@ export default function HomePage() {
 
           {/* Bottom row */}
           <div className="border-t border-[#F3F4F6] pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-[12px] text-[#9CA3AF]">
+            <p className="text-[12px] text-[#6B7280]">
               © 2026 OneLink · InnowacyjneAI sp. z o.o. · kontakt@onelink.pl
             </p>
             <div className="flex items-center gap-5">
-              <Link href="/auth/login" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Logowanie</Link>
-              <Link href="/auth/sign-up" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Rejestracja</Link>
+              <Link href="/auth/login" className="text-[12px] text-[#6B7280] hover:text-[#6B7280] transition-colors">Logowanie</Link>
+              <Link href="/auth/sign-up" className="text-[12px] text-[#6B7280] hover:text-[#6B7280] transition-colors">Rejestracja</Link>
             </div>
           </div>
         </div>
