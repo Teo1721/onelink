@@ -16,7 +16,10 @@ function getToday() {
 }
 
 type BriefingResult = {
-  summary: string
+  dzieje: string
+  dlaczego: string
+  wplyw: string
+  zrob: string
   status: 'ok' | 'warning' | 'critical'
   metric: { label: string; value: string; delta: string }
 }
@@ -46,12 +49,20 @@ Trend 7 dni: ${salesTrend?.map((s: any) => `${s.date}: ${s.net_revenue} zł`).jo
 
   const res = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    max_tokens: 150,
+    max_tokens: 250,
     response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: 'Jesteś Profit Directorem restauracji. Briefing poranny: 2-3 zdania, konkretne liczby, po polsku. Wskaż najważniejszy insight i co zrobić. Odpowiedz JSON: {"summary":"...","status":"ok|warning|critical"}',
+        content: `Jesteś Markiem — analitykiem finansowym restauracji. Odpowiadasz po polsku, krótko i konkretnie.
+Odpowiedz JSON z dokładnie tymi polami:
+{
+  "dzieje": "1 zdanie — co się faktycznie dzieje z liczbami",
+  "dlaczego": "1 zdanie — konkretna przyczyna",
+  "wplyw": "1 zdanie — co to oznacza dla biznesu",
+  "zrob": "1 zdanie — dokładnie co właściciel ma zrobić TERAZ",
+  "status": "ok|warning|critical"
+}`,
       },
       { role: 'user', content: context },
     ],
@@ -59,8 +70,11 @@ Trend 7 dni: ${salesTrend?.map((s: any) => `${s.date}: ${s.net_revenue} zł`).jo
 
   const parsed = JSON.parse(res.choices[0]?.message?.content ?? '{}')
   return {
-    summary: parsed.summary ?? 'Brak wystarczających danych. Dodaj raporty dzienne, aby aktywować analizę.',
-    status: parsed.status ?? 'ok',
+    dzieje:   parsed.dzieje   ?? 'Brak danych sprzedaży za wczoraj.',
+    dlaczego: parsed.dlaczego ?? 'Raporty dzienne nie zostały zatwierdzone.',
+    wplyw:    parsed.wplyw    ?? 'Nie można obliczyć marży i food cost.',
+    zrob:     parsed.zrob     ?? 'Dodaj raport dzienny w module Raporty.',
+    status:   parsed.status   ?? 'ok',
     metric: { label: 'Sprzedaż netto wczoraj', value: totalRevenue > 0 ? `${totalRevenue.toFixed(0)} zł` : '—', delta: `${pendingCount} faktur do zatwierdzenia` },
   }
 }
@@ -89,12 +103,20 @@ Dziś (${today}):
 
   const res = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    max_tokens: 150,
+    max_tokens: 250,
     response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: 'Jesteś HR Directorem restauracji. Briefing poranny o zespole: 2-3 zdania, konkretne liczby, po polsku. Wskaż obsadzenie zmiany i ewentualne problemy. Odpowiedz JSON: {"summary":"...","status":"ok|warning|critical"}',
+        content: `Jesteś Anią — specjalistką HR restauracji. Odpowiadasz po polsku, krótko i konkretnie.
+Odpowiedz JSON z dokładnie tymi polami:
+{
+  "dzieje": "1 zdanie — stan obsadzenia zmiany dziś",
+  "dlaczego": "1 zdanie — konkretna przyczyna problemu lub potwierdzenie że OK",
+  "wplyw": "1 zdanie — co to oznacza dla operacji dziś",
+  "zrob": "1 zdanie — dokładnie co właściciel ma zrobić TERAZ",
+  "status": "ok|warning|critical"
+}`,
       },
       { role: 'user', content: context },
     ],
@@ -102,8 +124,11 @@ Dziś (${today}):
 
   const parsed = JSON.parse(res.choices[0]?.message?.content ?? '{}')
   return {
-    summary: parsed.summary ?? 'Brak danych o czasie pracy. Skonfiguruj kiosk, aby aktywować analizę HR.',
-    status: parsed.status ?? 'ok',
+    dzieje:   parsed.dzieje   ?? 'Brak danych o obecności dziś.',
+    dlaczego: parsed.dlaczego ?? 'Kiosk nie jest skonfigurowany lub nikt nie odbił.',
+    wplyw:    parsed.wplyw    ?? 'Nie można śledzić czasu pracy pracowników.',
+    zrob:     parsed.zrob     ?? 'Skonfiguruj kiosk PIN w ustawieniach.',
+    status:   parsed.status   ?? 'ok',
     metric: { label: 'Na zmianie teraz', value: total > 0 ? `${clockedIn} / ${total}` : '—', delta: `${pendingLeaves ?? 0} wniosków urlopowych` },
   }
 }
@@ -137,12 +162,20 @@ Magazyn:
 
   const res = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    max_tokens: 150,
+    max_tokens: 250,
     response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: 'Jesteś Inventory Directorem restauracji. Briefing poranny: 2-3 zdania, konkretne, po polsku. Wskaż odchylenia i co zamówić. Odpowiedz JSON: {"summary":"...","status":"ok|warning|critical"}',
+        content: `Jesteś Kubą — specjalistą ds. magazynu restauracji. Odpowiadasz po polsku, krótko i konkretnie.
+Odpowiedz JSON z dokładnie tymi polami:
+{
+  "dzieje": "1 zdanie — aktualny stan magazynu i inwentaryzacji",
+  "dlaczego": "1 zdanie — konkretna przyczyna odchyleń lub potwierdzenie że OK",
+  "wplyw": "1 zdanie — co to oznacza dla kosztów lub operacji",
+  "zrob": "1 zdanie — dokładnie co właściciel ma zrobić TERAZ",
+  "status": "ok|warning|critical"
+}`,
       },
       { role: 'user', content: context },
     ],
@@ -150,8 +183,11 @@ Magazyn:
 
   const parsed = JSON.parse(res.choices[0]?.message?.content ?? '{}')
   return {
-    summary: parsed.summary ?? 'Brak danych magazynowych. Wykonaj pierwszą inwentaryzację, aby aktywować analizę.',
-    status: parsed.status ?? 'ok',
+    dzieje:   parsed.dzieje   ?? 'Brak danych magazynowych.',
+    dlaczego: parsed.dlaczego ?? 'Inwentaryzacja nie została wykonana.',
+    wplyw:    parsed.wplyw    ?? 'Nie można kontrolować food cost i stanów.',
+    zrob:     parsed.zrob     ?? 'Wykonaj inwentaryzację w module Magazyn.',
+    status:   parsed.status   ?? 'ok',
     metric: { label: 'Odchylenia stanów', value: `${varianceCount}`, delta: `${overdueCount} inwentaryzacji do wykonania` },
   }
 }
@@ -187,17 +223,20 @@ export async function GET() {
     return NextResponse.json({ briefings: [], cached: false })
   }
 
-  const fallback = (director: string, msg: string): BriefingResult & { director: string } => ({
+  const fallback = (director: string): BriefingResult & { director: string } => ({
     director,
-    summary: msg,
-    status: 'ok',
+    dzieje:   'Brak danych do analizy.',
+    dlaczego: 'Dane nie zostały jeszcze wprowadzone do systemu.',
+    wplyw:    'Analiza niedostępna do czasu uzupełnienia danych.',
+    zrob:     'Wprowadź dane w odpowiednim module, aby aktywować analizę.',
+    status:   'ok',
     metric: { label: 'Status', value: '—', delta: 'brak danych' },
   })
 
   const [profitData, hrData, inventoryData] = await Promise.all([
-    generateProfitBriefing(admin, locationIds).catch(() => fallback('profit', 'Brak danych sprzedaży. Dodaj raporty dzienne, aby aktywować analizę.')),
-    generateHRBriefing(admin, locationIds).catch(() => fallback('hr', 'Brak danych o czasie pracy. Skonfiguruj kiosk, aby aktywować analizę HR.')),
-    generateInventoryBriefing(admin, locationIds).catch(() => fallback('inventory', 'Brak danych magazynowych. Wykonaj pierwszą inwentaryzację.')),
+    generateProfitBriefing(admin, locationIds).catch(() => fallback('profit')),
+    generateHRBriefing(admin, locationIds).catch(() => fallback('hr')),
+    generateInventoryBriefing(admin, locationIds).catch(() => fallback('inventory')),
   ])
 
   const rows = [

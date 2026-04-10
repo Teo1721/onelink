@@ -2566,7 +2566,7 @@ export default function OpsDashboard() {
   const validateReport = (): ValidationError[] => {
     const e: ValidationError[] = []
     if (!gross && !netManual) e.push({ field: 'gross', message: 'Utarg brutto lub netto jest wymagany.' })
-    if (gross > 0 && Math.abs(card + cash + online - gross) > 0.5)
+    if (gross > 0 && Math.abs(card + cash + online - gross) > 10)
       e.push({ field: 'card_cash', message: `Karty + Gotówka + Online ≠ Brutto. Różnica: ${fmt2(Math.abs(card + cash + online - gross))}` })
     if (gross > 0 && net > gross)
       e.push({ field: 'gross', message: `Netto (${fmt2(net)} zł) nie może być wyższe niż Brutto (${fmt2(gross)} zł).` })
@@ -3492,7 +3492,7 @@ export default function OpsDashboard() {
                       disabled={isReadOnly} className="bg-gray-50 h-12 text-lg pl-8" /></div></div>
               </div>
 
-              {gross > 0 && Math.abs(card + cash + online - gross) > 0.5 && (
+              {gross > 0 && Math.abs(card + cash + online - gross) > 10 && (
                 <div className="mb-4 bg-yellow-50 border border-yellow-300 text-yellow-800 p-3 rounded flex items-center gap-2 text-sm">
                   <AlertTriangle className="w-4 h-4" />Karty + Gotówka + Online = {fmt2(card + cash + online)} ≠ Brutto {fmt2(gross)}</div>
               )}
