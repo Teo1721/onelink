@@ -14,7 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * }
  */
 
-type EmailType = 'schedule_published' | 'leave_status' | 'swap_status' | 'cert_expiry'
+type EmailType = 'schedule_published' | 'leave_status' | 'swap_status' | 'cert_expiry' | 'task_assigned' | 'task_completed'
 
 function buildEmail(type: EmailType, payload: Record<string, any>): { subject: string; html: string } {
   switch (type) {
@@ -64,6 +64,32 @@ function buildEmail(type: EmailType, payload: Record<string, any>): { subject: s
             wygasa <strong>${payload.expiryDate}</strong>.</p>
           <p>Zaloguj się do panelu, aby zaktualizować certyfikat.</p>
           <br><p style="color:#9CA3AF;font-size:12px">OneLink — zarządzanie grafikiem</p>
+        `,
+      }
+    case 'task_assigned':
+      return {
+        subject: `Nowe zadanie od ${payload.directorName} · ${payload.locationName}`,
+        html: `
+          <p>Cześć <strong>${payload.employeeName}</strong>,</p>
+          <p>Dyrektor AI <strong>${payload.directorName}</strong> przydzielił zadanie dla lokalizacji <strong>${payload.locationName}</strong>:</p>
+          <div style="margin:16px 0;padding:12px 16px;background:#F0F9FF;border-left:4px solid #3B82F6;border-radius:4px">
+            <p style="margin:0;font-size:14px;color:#1E3A5F">${payload.taskText}</p>
+          </div>
+          <p>Zaloguj się do panelu, aby oznaczyć zadanie jako wykonane.</p>
+          <br><p style="color:#9CA3AF;font-size:12px">OneLink · Twój zespół AI</p>
+        `,
+      }
+    case 'task_completed':
+      return {
+        subject: `Zadanie wykonane · ${payload.locationName}`,
+        html: `
+          <p>Cześć,</p>
+          <p>Manager w lokalizacji <strong>${payload.locationName}</strong> oznaczył zadanie jako wykonane:</p>
+          <div style="margin:16px 0;padding:12px 16px;background:#F0FDF4;border-left:4px solid #10B981;border-radius:4px">
+            <p style="margin:0;font-size:14px;color:#064E3B">${payload.taskText}</p>
+          </div>
+          ${payload.note ? `<p>Notatka: <em>${payload.note}</em></p>` : ''}
+          <br><p style="color:#9CA3AF;font-size:12px">OneLink · Twój zespół AI</p>
         `,
       }
     default:

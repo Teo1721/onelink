@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw, MessageSquare, ChevronRight, X, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react'
+import { RefreshCw, MessageSquare, ChevronRight, X, AlertTriangle, CheckCircle, AlertCircle, ClipboardList, UserCheck, ChevronDown } from 'lucide-react'
+
+type Location = { id: string; name: string }
 
 type BriefingStatus = 'ok' | 'warning' | 'critical'
 
@@ -49,6 +51,17 @@ const PERSONAS = [
     colorLight: '#F5F3FF',
     colorBorder: '#DDD6FE',
     colorDark: '#6D28D9',
+  },
+  {
+    key: 'revenue',
+    name: 'Zofia',
+    role: 'Przychody',
+    subtitle: 'Maksymalizuję zysk z Twojego menu',
+    initial: 'Z',
+    color: '#10B981',
+    colorLight: '#ECFDF5',
+    colorBorder: '#A7F3D0',
+    colorDark: '#059669',
   },
 ]
 
@@ -106,6 +119,42 @@ function DirectorCard({ persona, briefing }: { persona: typeof PERSONAS[0]; brie
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Assign task state
+  const [assigning, setAssigning] = useState(false)
+  const [locations, setLocations] = useState<Location[]>([])
+  const [selectedLocation, setSelectedLocation] = useState('')
+  const [assignLoading, setAssignLoading] = useState(false)
+  const [assigned, setAssigned] = useState<string | null>(null)
+
+  const openAssign = async () => {
+    setAssigning(true)
+    if (locations.length === 0) {
+      const res = await fetch('/api/ai/tasks?locations=1')
+      const data = await res.json()
+      setLocations(data.locations ?? [])
+      if (data.locations?.length > 0) setSelectedLocation(data.locations[0].id)
+    }
+  }
+
+  const handleAssign = async () => {
+    if (!selectedLocation) return
+    setAssignLoading(true)
+    const loc = locations.find(l => l.id === selectedLocation)
+    await fetch('/api/ai/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        director: persona.key,
+        task_text: briefing.zrob,
+        location_id: selectedLocation,
+        location_name: loc?.name ?? '',
+      }),
+    })
+    setAssigned(loc?.name ?? 'lokalizacji')
+    setAssigning(false)
+    setAssignLoading(false)
+  }
 
   const handleAsk = async () => {
     if (!question.trim()) return
@@ -165,6 +214,60 @@ function DirectorCard({ persona, briefing }: { persona: typeof PERSONAS[0]; brie
           <p className="text-[13px] font-semibold leading-snug" style={{ color: actionText }}>{briefing.zrob}</p>
         </div>
 
+        {/* Assign task section */}
+        {!assigned && !assigning && (
+          <button
+            onClick={openAssign}
+            className="w-full flex items-center gap-2 h-9 px-3 rounded-xl text-[12px] font-semibold transition-colors"
+            style={{ background: `${persona.color}12`, color: persona.color, border: `1px solid ${persona.colorBorder}` }}
+          >
+            <ClipboardList className="w-3.5 h-3.5 shrink-0" />
+            Przydziel zadanie managerowi
+          </button>
+        )}
+
+        {assigning && !assigned && (
+          <div className="rounded-xl border p-3 space-y-2.5" style={{ borderColor: persona.colorBorder, background: persona.colorLight }}>
+            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: persona.color }}>Przydziel zadanie</p>
+            <p className="text-[12px] text-[#4B5563] leading-snug bg-white rounded-lg px-3 py-2 border border-[#E5E7EB]">
+              {briefing.zrob}
+            </p>
+            {locations.length === 0 ? (
+              <p className="text-[11px] text-[#9CA3AF]">Brak lokalizacji w firmie.</p>
+            ) : (
+              <select
+                value={selectedLocation}
+                onChange={e => setSelectedLocation(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-[#D1D5DB] text-[12px] text-[#111827] bg-white focus:outline-none"
+              >
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleAssign}
+                disabled={assignLoading || !selectedLocation}
+                className="flex-1 h-9 rounded-lg text-[12px] font-bold text-white flex items-center justify-center gap-1 disabled:opacity-50"
+                style={{ background: persona.color }}
+              >
+                {assignLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <><UserCheck className="w-3.5 h-3.5" /> Przydziel</>}
+              </button>
+              <button onClick={() => setAssigning(false)} className="h-9 w-9 rounded-lg border border-[#E5E7EB] bg-white flex items-center justify-center text-[#9CA3AF] hover:text-[#6B7280]">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {assigned && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0]">
+            <CheckCircle className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+            <span className="text-[12px] text-[#059669] font-semibold">Zadanie przydzielone do lokalizacji: {assigned}</span>
+          </div>
+        )}
+
         {/* Ask section */}
         {!asking && !answer && (
           <button
@@ -212,6 +315,86 @@ function DirectorCard({ persona, briefing }: { persona: typeof PERSONAS[0]; brie
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+type CompletedTask = {
+  id: string
+  director: string
+  task_text: string
+  location_name: string | null
+  assigned_by_name: string | null
+  completed_at: string | null
+  note: string | null
+}
+
+function CompletedTasksPanel() {
+  const [tasks, setTasks] = useState<CompletedTask[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [fetched, setFetched] = useState(false)
+
+  const fetch_ = async () => {
+    if (fetched) return
+    setLoading(true)
+    const res = await fetch('/api/ai/tasks?completed=1')
+    const data = await res.json()
+    setTasks((data.tasks ?? []).slice(0, 10))
+    setFetched(true)
+    setLoading(false)
+  }
+
+  useEffect(() => { fetch_() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = () => setOpen(o => !o)
+
+  const persona = (key: string) => PERSONAS.find(p => p.key === key)
+
+  return (
+    <div className="mt-4">
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-[#E5E7EB] bg-white hover:bg-[#F9FAFB] transition-colors text-[12px] font-semibold text-[#6B7280] shadow-sm"
+      >
+        <span className="flex items-center gap-2">
+          <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
+          Wykonane zadania {tasks.length > 0 && <span className="text-[#10B981]">({tasks.length})</span>}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="mt-2 rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <RefreshCw className="w-4 h-4 text-[#9CA3AF] animate-spin" />
+            </div>
+          ) : tasks.length === 0 ? (
+            <p className="text-center text-[12px] text-[#9CA3AF] py-5">Brak wykonanych zadań.</p>
+          ) : (
+            <div className="divide-y divide-[#F3F4F6]">
+              {tasks.map(t => {
+                const p = persona(t.director)
+                return (
+                  <div key={t.id} className="px-4 py-3 flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: p?.color ?? '#9CA3AF' }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] text-[#374151] leading-snug">{t.task_text}</p>
+                      <p className="text-[10px] text-[#9CA3AF] mt-0.5">
+                        {t.location_name} · {p?.name ?? t.director}
+                        {t.completed_at && ` · ${new Date(t.completed_at).toLocaleDateString('pl-PL')}`}
+                      </p>
+                      {t.note && <p className="text-[11px] text-[#6B7280] mt-0.5 italic">"{t.note}"</p>}
+                    </div>
+                    <CheckCircle className="w-3.5 h-3.5 text-[#10B981] shrink-0 mt-0.5" />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -269,7 +452,7 @@ export function AiDirectors() {
         </button>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {PERSONAS.map(p => (
           loading
             ? <SkeletonCard key={p.key} persona={p} />
@@ -278,6 +461,8 @@ export function AiDirectors() {
               : <SkeletonCard key={p.key} persona={p} />
         ))}
       </div>
+
+      <CompletedTasksPanel />
     </div>
   )
 }

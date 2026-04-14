@@ -18,18 +18,22 @@ async function uploadPhoto(
     const buffer = Buffer.from(b64, 'base64')
 
     // Ensure bucket exists and is public
-    await admin.storage.createBucket(BUCKET, { public: true }).catch(() => {})
-    await admin.storage.updateBucket(BUCKET, { public: true }).catch(() => {})
+    const { error: cbErr } = await admin.storage.createBucket(BUCKET, { public: true })
+    if (cbErr && !cbErr.message.includes('already exists')) console.error('[uploadPhoto] createBucket error:', cbErr.message)
+    const { error: ubErr } = await admin.storage.updateBucket(BUCKET, { public: true })
+    if (ubErr) console.error('[uploadPhoto] updateBucket error:', ubErr.message)
 
     const { data: uploaded, error } = await admin.storage
       .from(BUCKET)
       .upload(path, buffer, { contentType: 'image/jpeg', upsert: true })
 
-    if (error || !uploaded?.path) return null
+    if (error) { console.error('[uploadPhoto] storage error:', error.message); return null }
+    if (!uploaded?.path) { console.error('[uploadPhoto] no path returned'); return null }
 
     const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(uploaded.path)
     return urlData?.publicUrl ?? null
-  } catch {
+  } catch (e) {
+    console.error('[uploadPhoto] exception:', e)
     return null
   }
 }

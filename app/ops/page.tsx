@@ -2144,6 +2144,22 @@ export default function OpsDashboard() {
   const [deleteError, setDeleteError] = useState('')
   const [accountError, setAccountError] = useState('')
 
+  // ── AI Tasks ──
+  const [aiTasks, setAiTasks] = useState<{ id: string; director: string; task_text: string; assigned_by_name: string | null; location_name: string | null; created_at: string; status: string }[]>([])
+
+  const fetchAiTasks = async () => {
+    try {
+      const res = await fetch('/api/ai/tasks')
+      const data = await res.json()
+      setAiTasks((data.tasks ?? []).filter((t: any) => t.status === 'pending'))
+    } catch {}
+  }
+
+  const markTaskDone = async (id: string) => {
+    setAiTasks(prev => prev.filter(t => t.id !== id))
+    await fetch('/api/ai/tasks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+  }
+
   // ── Closing person ──
   const [closingPersonName, setClosingPersonName] = useState('')
   const [closingPersonEmail, setClosingPersonEmail] = useState('')
@@ -2235,6 +2251,7 @@ export default function OpsDashboard() {
       setUserRole(role)
       setClosingPersonName(profile?.full_name || user.email || 'Nieznany')
       if (['regional_manager', 'accounting', 'employee'].includes(role)) setIsReadOnly(true)
+      fetchAiTasks()
 
       const { data: access } = await supabase
         .from('user_access')
@@ -3140,6 +3157,47 @@ export default function OpsDashboard() {
       />
 
       <main className="flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 p-4 md:p-8">
+
+        {/* ── AI Director Tasks inbox ── */}
+        {aiTasks.length > 0 && (
+          <div className="mb-6 space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#1D4ED8] to-[#8B5CF6] flex items-center justify-center">
+                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              </div>
+              <span className="text-[13px] font-bold text-[#111827]">Zadania od AI Directors</span>
+              <span className="ml-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#8B5CF6] text-white text-[10px] font-bold px-1">{aiTasks.length}</span>
+            </div>
+            {aiTasks.map(task => {
+              const COLORS: Record<string, { color: string; bg: string; name: string }> = {
+                profit:    { color: '#3B82F6', bg: '#EFF6FF', name: 'Marek · Finanse' },
+                hr:        { color: '#EC4899', bg: '#FDF2F8', name: 'Ania · HR' },
+                inventory: { color: '#8B5CF6', bg: '#F5F3FF', name: 'Kuba · Magazyn' },
+                revenue:   { color: '#10B981', bg: '#ECFDF5', name: 'Zofia · Przychody' },
+              }
+              const cfg = COLORS[task.director] ?? { color: '#6B7280', bg: '#F9FAFB', name: task.director }
+              return (
+                <div key={task.id} className="flex items-start gap-3 bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 shadow-sm">
+                  <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: cfg.color }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: cfg.color }}>{cfg.name}</p>
+                    <p className="text-[13px] text-[#111827] font-semibold leading-snug">{task.task_text}</p>
+                    <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+                      {task.location_name && <span>📍 {task.location_name} · </span>}
+                      {task.assigned_by_name && <span>od {task.assigned_by_name}</span>}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => markTaskDone(task.id)}
+                    className="shrink-0 flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[#D1D5DB] text-[11px] font-semibold text-[#6B7280] hover:bg-[#F0FDF4] hover:text-[#059669] hover:border-[#BBF7D0] transition-colors"
+                  >
+                    ✓ Wykonane
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  0. SCHEDULING (WEEKLY GRID)                            ║ */}

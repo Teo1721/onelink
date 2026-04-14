@@ -192,8 +192,104 @@ Odpowiedz JSON z dokładnie tymi polami:
   }
 }
 
+async function generateRevenueBriefing(admin: ReturnType<typeof createAdminClient>, locationIds: string[], companyId: string): Promise<BriefingResult> {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const [{ data: dishes }, { data: salesTrend }, { data: recentInvoices }] = await Promise.all([
+    // Get all active dishes with price + targets
+    admin.from('dishes')
+      .select('id, dish_name, menu_price_gross, menu_price_net, food_cost_target, margin_target')
+      .eq('company_id', companyId)
+      .eq('status', 'active')
+      .limit(20),
+    // 7-day revenue trend
+    admin.from('sales_daily')
+      .select('date, net_revenue, gross_revenue')
+      .in('location_id', locationIds)
+      .gte('date', sevenDaysAgo.toLocaleDateString('sv-SE'))
+      .order('date', { ascending: false }),
+    // Recent COS invoices (food cost indicator)
+    admin.from('invoices')
+      .select('supplier_name, total_amount, invoice_type, service_date')
+      .in('location_id', locationIds)
+      .eq('invoice_type', 'COS')
+      .order('service_date', { ascending: false })
+      .limit(5),
+  ])
+
+  // Calculate food costs per dish using the RPC
+  const dishCosts: { name: string; price: number; cost: number; fc_pct: number; target: number }[] = []
+  if (dishes && dishes.length > 0) {
+    const costResults = await Promise.all(
+      dishes.slice(0, 10).map(async (d: any) => {
+        const { data: cost } = await admin.rpc('calculate_dish_foodcost', { dish_id_param: d.id })
+        return { name: d.dish_name, price: d.menu_price_gross ?? 0, cost: cost ?? 0, target: (d.food_cost_target ?? 0.35) * 100 }
+      })
+    )
+    for (const r of costResults) {
+      if (r.price > 0) {
+        dishCosts.push({ ...r, fc_pct: r.price > 0 ? Math.round((r.cost / r.price) * 100 * 10) / 10 : 0 })
+      }
+    }
+  }
+
+  const totalRevenue7d = salesTrend?.reduce((s: number, r: any) => s + (r.net_revenue || 0), 0) ?? 0
+  const totalCOSWeek = recentInvoices?.reduce((s: number, r: any) => s + (r.total_amount || 0), 0) ?? 0
+  const overTargetDishes = dishCosts.filter(d => d.fc_pct > d.target)
+  const underTargetDishes = dishCosts.filter(d => d.fc_pct > 0 && d.fc_pct <= d.target)
+
+  const context = `
+Dane menu (${dishes?.length ?? 0} aktywnych dań):
+${dishCosts.slice(0, 8).map(d => `- ${d.name}: cena ${d.price} zł, koszt produkcji ${d.cost.toFixed(2)} zł, food cost ${d.fc_pct}% (cel: ${d.target}%)`).join('\n') || 'brak danych o daniach'}
+
+Dania powyżej celu food cost (za drogie w produkcji): ${overTargetDishes.map(d => d.name).join(', ') || 'brak'}
+Dania poniżej celu (dobra marża): ${underTargetDishes.map(d => d.name).join(', ') || 'brak'}
+
+Przychód netto 7 dni: ${totalRevenue7d.toFixed(0)} zł
+Faktury COS (żywność) ostatnio: ${totalCOSWeek.toFixed(0)} zł
+`.trim()
+
+  const res = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    max_tokens: 250,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `Jesteś Zofią — ekspertką od przychodów i menu restauracji. Odpowiadasz po polsku, krótko i konkretnie.
+Odpowiedz JSON z dokładnie tymi polami:
+{
+  "dzieje": "1 zdanie — który element menu generuje problem z marżą",
+  "dlaczego": "1 zdanie — konkretna przyczyna (wysoki food cost, niska cena, drogi składnik)",
+  "wplyw": "1 zdanie — ile traci restauracja przez ten problem",
+  "zrob": "1 zdanie — dokładnie co właściciel ma zrobić: podnieść cenę X o Y zł lub sprawdzić recepturę Z",
+  "status": "ok|warning|critical"
+}`,
+      },
+      { role: 'user', content: context },
+    ],
+  })
+
+  const parsed = JSON.parse(res.choices[0]?.message?.content ?? '{}')
+  const worstDish = dishCosts.sort((a, b) => b.fc_pct - a.fc_pct)[0]
+
+  return {
+    dzieje:   parsed.dzieje   ?? 'Brak danych o menu. Dodaj dania i receptury.',
+    dlaczego: parsed.dlaczego ?? 'Receptury lub ceny nie zostały skonfigurowane.',
+    wplyw:    parsed.wplyw    ?? 'Nie można ocenić rentowności poszczególnych dań.',
+    zrob:     parsed.zrob     ?? 'Skonfiguruj menu i receptury w module Kalkulator.',
+    status:   parsed.status   ?? 'ok',
+    metric: {
+      label: 'Najwyższy food cost',
+      value: worstDish ? `${worstDish.fc_pct}%` : '—',
+      delta: worstDish ? worstDish.name : 'brak danych',
+    },
+  }
+}
+
 /* ── GET: fetch today's briefings (cached or generate) ── */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -210,10 +306,13 @@ export async function GET() {
   const companyId = profile.company_id
   const today = getToday()
 
-  // Return cached briefings if already generated today
-  const { data: cached } = await admin.from('ai_briefings').select('*').eq('company_id', companyId).eq('date', today)
-  if (cached && cached.length >= 3) {
-    return NextResponse.json({ briefings: cached, cached: true })
+  // Return cached briefings if already generated today (unless force=1)
+  const force = req.nextUrl.searchParams.get('force') === '1'
+  if (!force) {
+    const { data: cached } = await admin.from('ai_briefings').select('*').eq('company_id', companyId).eq('date', today)
+    if (cached && cached.length >= 4) {
+      return NextResponse.json({ briefings: cached, cached: true })
+    }
   }
 
   const { data: locations } = await admin.from('locations').select('id').eq('company_id', companyId)
@@ -233,16 +332,18 @@ export async function GET() {
     metric: { label: 'Status', value: '—', delta: 'brak danych' },
   })
 
-  const [profitData, hrData, inventoryData] = await Promise.all([
+  const [profitData, hrData, inventoryData, revenueData] = await Promise.all([
     generateProfitBriefing(admin, locationIds).catch(() => fallback('profit')),
     generateHRBriefing(admin, locationIds).catch(() => fallback('hr')),
     generateInventoryBriefing(admin, locationIds).catch(() => fallback('inventory')),
+    generateRevenueBriefing(admin, locationIds, companyId).catch(() => fallback('revenue')),
   ])
 
   const rows = [
     { company_id: companyId, director: 'profit',    ...profitData,    date: today },
     { company_id: companyId, director: 'hr',         ...hrData,        date: today },
     { company_id: companyId, director: 'inventory',  ...inventoryData, date: today },
+    { company_id: companyId, director: 'revenue',    ...revenueData,   date: today },
   ]
 
   await admin.from('ai_briefings').upsert(rows, { onConflict: 'company_id,director,date' })
@@ -288,12 +389,20 @@ export async function POST(req: NextRequest) {
   } else if (director === 'inventory') {
     const { data: jobs } = await admin.from('inventory_jobs').select('type, status, due_date').in('location_id', locationIds).order('due_date', { ascending: false }).limit(10)
     contextData = `Inwentaryzacje: ${JSON.stringify(jobs)}`
+  } else if (director === 'revenue') {
+    const [{ data: dishes }, { data: ingredients }, { data: sales }] = await Promise.all([
+      admin.from('dishes').select('id, dish_name, menu_price_gross, food_cost_target, margin_target').eq('company_id', profile.company_id).eq('status', 'active').limit(20),
+      admin.from('ingredients').select('name, last_price, base_unit').eq('company_id', profile.company_id).limit(30),
+      admin.from('sales_daily').select('date, net_revenue').in('location_id', locationIds).order('date', { ascending: false }).limit(14),
+    ])
+    contextData = `Dania: ${JSON.stringify(dishes)}\nSkładniki z cenami: ${JSON.stringify(ingredients)}\nSprzedaż 14 dni: ${JSON.stringify(sales)}`
   }
 
   const SYSTEM: Record<string, string> = {
-    profit:    'Jesteś Profit Directorem restauracji. Odpowiadasz konkretnie po polsku na pytania finansowe, używając dostarczonych danych. Bądź bezpośredni i podawaj liczby.',
-    hr:        'Jesteś HR Directorem restauracji. Odpowiadasz konkretnie po polsku na pytania o zespół i czas pracy, używając dostarczonych danych.',
-    inventory: 'Jesteś Inventory Directorem restauracji. Odpowiadasz konkretnie po polsku na pytania o magazyn, używając dostarczonych danych.',
+    profit:    'Jesteś Markiem — analitykiem finansowym restauracji. Odpowiadasz konkretnie po polsku na pytania finansowe, używając dostarczonych danych. Bądź bezpośredni i podawaj liczby.',
+    hr:        'Jesteś Anią — specjalistką HR restauracji. Odpowiadasz konkretnie po polsku na pytania o zespół i czas pracy, używając dostarczonych danych.',
+    inventory: 'Jesteś Kubą — specjalistą ds. magazynu restauracji. Odpowiadasz konkretnie po polsku na pytania o magazyn, używając dostarczonych danych.',
+    revenue:   'Jesteś Zofią — ekspertką od przychodów i menu restauracji. Odpowiadasz konkretnie po polsku na pytania o ceny, food cost i rentowność dań, używając dostarczonych danych. Podawaj konkretne liczby i sugestie cenowe.',
   }
 
   const res = await openai.chat.completions.create({

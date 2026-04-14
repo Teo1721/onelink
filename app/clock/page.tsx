@@ -35,6 +35,7 @@ function statusOf(emp: Employee) {
 function useCamera(active: boolean) {
   const videoRef   = useRef<HTMLVideoElement>(null)
   const streamRef  = useRef<MediaStream | null>(null)
+  const readyRef   = useRef(false)
   const [ready, setReady]     = useState(false)
   const [denied, setDenied]   = useState(false)
 
@@ -42,6 +43,7 @@ function useCamera(active: boolean) {
     if (!active) {
       streamRef.current?.getTracks().forEach(t => t.stop())
       streamRef.current = null
+      readyRef.current = false
       setReady(false)
       return
     }
@@ -52,6 +54,7 @@ function useCamera(active: boolean) {
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
         streamRef.current = stream
         if (videoRef.current) { videoRef.current.srcObject = stream }
+        readyRef.current = true
         setReady(true)
       })
       .catch(() => { if (!cancelled) setDenied(true) })
@@ -60,12 +63,13 @@ function useCamera(active: boolean) {
       cancelled = true
       streamRef.current?.getTracks().forEach(t => t.stop())
       streamRef.current = null
+      readyRef.current = false
     }
   }, [active])
 
   function capture(): string | null {
     const video = videoRef.current
-    if (!video || !ready) return null
+    if (!video || !readyRef.current) return null
     const MAX = 480
     const scale  = Math.min(1, MAX / (video.videoWidth || MAX))
     const canvas = document.createElement('canvas')
