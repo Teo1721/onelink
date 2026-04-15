@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/employee'
+  // For invite type, always land on set-password. Otherwise honour ?next or default to /employee
+  const isInvite = type === 'invite'
+  const next = isInvite ? '/auth/set-password' : (searchParams.get('next') ?? '/employee')
 
   const cookieStore = await cookies()
 

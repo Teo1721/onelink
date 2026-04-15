@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? req.headers.get('origin') ?? 'http://localhost:3000').replace(/\/$/, '')
 
   const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${siteUrl}/auth/confirm?next=/auth/set-password`,
+    redirectTo: `${siteUrl}/auth/confirm`,
     data: { full_name: name ?? '' },
   })
 
