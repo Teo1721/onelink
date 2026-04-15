@@ -2124,7 +2124,7 @@ export default function OpsDashboard() {
   const [loading, setLoading] = useState(true)
   const [myLocations, setMyLocations] = useState<LocationData[]>([])
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null)
-  const [, setUserRole] = useState('')
+  const [userRole, setUserRole] = useState('')
   const [userId, setUserId] = useState('')
   const [activeView, setActiveView] = useState<ActiveView>('reporting')
   const [reportDate, setReportDate] = useState('')
@@ -3154,6 +3154,7 @@ export default function OpsDashboard() {
         onNavigate={(v: string) => setActiveView(v as ActiveView)}
         onLogout={async () => { await supabase.auth.signOut(); router.push('/auth/login') }}
         onSwitchLocation={() => setSelectedLocation(null)}
+        canSwitchToAdmin={['owner', 'superadmin'].includes(userRole)}
       />
 
       <main className="flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 p-4 md:p-8">
