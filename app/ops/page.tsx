@@ -2246,22 +2246,39 @@ export default function OpsDashboard() {
       setUserId(user.id)
 
       const { data: profile } = await supabase
-        .from('user_profiles').select('role, full_name').eq('id', user.id).single()
+        .from('user_profiles').select('role, full_name, company_id').eq('id', user.id).single()
       const role = profile?.role || 'employee'
       setUserRole(role)
       setClosingPersonName(profile?.full_name || user.email || 'Nieznany')
       if (['regional_manager', 'accounting', 'employee'].includes(role)) setIsReadOnly(true)
       fetchAiTasks()
 
-      const { data: access } = await supabase
-        .from('user_access')
-        .select('location_id, locations ( id, name, company_id )')
-        .eq('user_id', user.id)
-      if (access) {
-        // @ts-expect-error - Supabase join type mismatch
-        setMyLocations(access)
-        // @ts-expect-error - Supabase join type mismatch
-        if (access.length === 1) setSelectedLocation(access[0])
+      // Owners/superadmins load all company locations; others use user_access
+      if (['owner', 'superadmin'].includes(role) && profile?.company_id) {
+        const { data: locs } = await supabase
+          .from('locations')
+          .select('id, name, company_id')
+          .eq('company_id', profile.company_id)
+          .order('name')
+        const mapped = (locs ?? []).map((l: any) => ({
+          location_id: l.id,
+          locations: { id: l.id, name: l.name, company_id: l.company_id },
+        }))
+        // @ts-expect-error - mapped shape
+        setMyLocations(mapped)
+        // @ts-expect-error - mapped shape
+        if (mapped.length === 1) setSelectedLocation(mapped[0])
+      } else {
+        const { data: access } = await supabase
+          .from('user_access')
+          .select('location_id, locations ( id, name, company_id )')
+          .eq('user_id', user.id)
+        if (access) {
+          // @ts-expect-error - Supabase join type mismatch
+          setMyLocations(access)
+          // @ts-expect-error - Supabase join type mismatch
+          if (access.length === 1) setSelectedLocation(access[0])
+        }
       }
       setLoading(false)
     }
