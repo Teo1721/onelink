@@ -2264,10 +2264,8 @@ export default function OpsDashboard() {
           location_id: l.id,
           locations: { id: l.id, name: l.name, company_id: l.company_id },
         }))
-        // @ts-expect-error - mapped shape
-        setMyLocations(mapped)
-        // @ts-expect-error - mapped shape
-        if (mapped.length === 1) setSelectedLocation(mapped[0])
+        setMyLocations(mapped as any)
+        if (mapped.length === 1) setSelectedLocation(mapped[0] as any)
       } else {
         const { data: access } = await supabase
           .from('user_access')

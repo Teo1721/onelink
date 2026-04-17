@@ -126,11 +126,28 @@ function ClockPageInner() {
   /* ── Clock action with photo ── */
   async function doAction(action: 'in' | 'out') {
     if (!selected) return
+
+    // Block if camera not ready
+    if (!cam.ready) {
+      setError('Poczekaj — kamera się inicjuje...')
+      return
+    }
+    if (cam.denied) {
+      setError('Zdjęcie jest wymagane. Zezwól na dostęp do kamery i odśwież stronę.')
+      return
+    }
+
     setActing(true); setError(null)
 
     // Camera flash + capture
     setFlash(true); setTimeout(() => setFlash(false), 180)
     const photoBase64 = cam.capture()
+
+    if (!photoBase64) {
+      setError('Nie udało się zrobić zdjęcia. Spróbuj ponownie.')
+      setActing(false)
+      return
+    }
 
     const res  = await fetch('/api/clock/action', {
       method: 'POST',
@@ -300,8 +317,8 @@ function ClockPageInner() {
           <div className={`w-44 h-44 rounded-full overflow-hidden border-4 ${clocked_in ? 'border-orange-500/60' : 'border-green-500/60'} bg-black/40`}>
             {cam.denied ? (
               <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                <CameraOff className="text-slate-500 w-8 h-8" />
-                <span className="text-slate-500 text-[11px] text-center px-3">Brak dostępu do kamery</span>
+                <CameraOff className="text-red-400 w-8 h-8" />
+                <span className="text-red-300 text-[11px] text-center px-3">Wymagany dostęp do kamery</span>
               </div>
             ) : (
               <>
@@ -382,17 +399,17 @@ function ClockPageInner() {
             </div>
           ) : !clocked_in ? (
             <button
-              onClick={() => doAction('in')} disabled={acting}
-              className="w-full h-14 rounded-2xl bg-green-500 hover:bg-green-400 text-white font-bold text-[18px] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              onClick={() => doAction('in')} disabled={acting || !cam.ready || cam.denied}
+              className="w-full h-14 rounded-2xl bg-green-500 hover:bg-green-400 text-white font-bold text-[18px] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {acting ? <Loader2 className="animate-spin" /> : <><Clock className="w-5 h-5" /> Rozpocznij zmianę</>}
+              {acting ? <Loader2 className="animate-spin" /> : !cam.ready ? <><Loader2 className="w-5 h-5 animate-spin" /> Inicjowanie kamery…</> : <><Clock className="w-5 h-5" /> Rozpocznij zmianę</>}
             </button>
           ) : (
             <button
-              onClick={() => doAction('out')} disabled={acting}
-              className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-[18px] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              onClick={() => doAction('out')} disabled={acting || !cam.ready || cam.denied}
+              className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-[18px] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {acting ? <Loader2 className="animate-spin" /> : <><LogOut className="w-5 h-5" /> Zakończ zmianę</>}
+              {acting ? <Loader2 className="animate-spin" /> : !cam.ready ? <><Loader2 className="w-5 h-5 animate-spin" /> Inicjowanie kamery…</> : <><LogOut className="w-5 h-5" /> Zakończ zmianę</>}
             </button>
           )}
         </div>

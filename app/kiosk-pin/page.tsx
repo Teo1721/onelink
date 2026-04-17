@@ -56,7 +56,7 @@ function useCamera(active: boolean) {
     return canvas.toDataURL('image/jpeg', 0.78)
   }
 
-  return { videoRef, ready, denied, capture }
+  return { videoRef, ready, denied, capture, readyRef }
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -196,11 +196,28 @@ function KioskPinInner() {
 
   async function doClockWithPin(pin: string, action: 'in' | 'out') {
     if (!selected || acting) return
+
+    // Block if camera not ready
+    if (cam.denied || !cam.readyRef.current) {
+      setPinError(cam.denied ? 'Zdjęcie jest wymagane. Odblokuj dostęp do kamery.' : 'Kamera się inicjuje — spróbuj ponownie.')
+      setScreen('pin')
+      pendingRef.current = null
+      return
+    }
+
     setActing(true)
 
     setFlash(true)
     setTimeout(() => setFlash(false), 180)
     const photoBase64 = cam.capture()
+
+    if (!photoBase64) {
+      setPinError('Nie udało się zrobić zdjęcia. Spróbuj ponownie.')
+      setActing(false)
+      setScreen('pin')
+      pendingRef.current = null
+      return
+    }
 
     const res  = await fetch('/api/clock/pin-action', {
       method: 'POST',
