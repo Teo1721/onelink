@@ -105,20 +105,43 @@ const FAQ_ITEMS = [
 /* ── Lead Capture ── */
 function LeadCapture() {
   const [email, setEmail] = useState('');
-  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDone(true);
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/lead-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? 'Błąd — spróbuj ponownie.'); setLoading(false); return; }
+      setDownloadUrl(data.downloadUrl);
+    } catch {
+      setError('Błąd połączenia — spróbuj ponownie.');
+    }
+    setLoading(false);
   };
 
   return (
     <section className="relative max-w-2xl mx-auto px-6 pb-20">
       <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-green-50 p-8 text-center shadow-sm">
-        {done ? (
+        {downloadUrl ? (
           <>
-            <p className="text-[22px] font-bold text-[#111827] mb-2">Dziękujemy! 🎉</p>
-            <p className="text-[14px] text-[#6B7280]">Wyślemy Ci praktyczny poradnik wkrótce.</p>
+            <p className="text-[22px] font-bold text-[#111827] mb-2">Gotowe! 🎉</p>
+            <p className="text-[14px] text-[#6B7280] mb-5">Link wysłany na <strong>{email}</strong>. Możesz też pobrać od razu:</p>
+            <a
+              href={downloadUrl}
+              download
+              className="inline-block h-11 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all shadow-sm leading-[44px]"
+            >
+              📥 Pobierz kalkulator food cost
+            </a>
+            <p className="text-[11px] text-[#9CA3AF] mt-3">Sprawdź też folder spam jeśli e-mail nie dotarł.</p>
           </>
         ) : (
           <>
@@ -137,14 +160,17 @@ function LeadCapture() {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="Twój adres e-mail"
                 className="flex-1 h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-blue-400 shadow-sm transition-all"
+                disabled={loading}
               />
               <button
                 type="submit"
-                className="h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all whitespace-nowrap shadow-sm"
+                disabled={loading}
+                className="h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all whitespace-nowrap shadow-sm disabled:opacity-60"
               >
-                Wyślij mi arkusz
+                {loading ? 'Wysyłam…' : 'Wyślij mi arkusz'}
               </button>
             </form>
+            {error && <p className="text-[12px] text-red-500 mt-2">{error}</p>}
             <p className="text-[11px] text-[#6B7280] mt-3">Bez spamu. Jeden e-mail z arkuszem.</p>
           </>
         )}
