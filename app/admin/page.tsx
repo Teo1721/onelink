@@ -841,6 +841,7 @@ export default function AdminDashboard() {
     cogs: 0, cogsPercent: 0, opex: 0, totalCosts: 0,
     grossMarginValue: 0, grossMarginPercent: 0, operatingProfit: 0, netMargin: 0,
     cashDiffTotal: 0, pettySum: 0, lossesSum: 0, refundsSum: 0,
+    invoiceCos: 0, invoiceSemis: 0, importedCos: 0, importedSemis: 0,
   })
   const [alerts, setAlerts] = useState<string[]>([])
   const [statusText, setStatusText] = useState('')
@@ -850,6 +851,7 @@ export default function AdminDashboard() {
   const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<InvoiceItem[]>([])
   const [invoiceItemsLoading, setInvoiceItemsLoading] = useState(false)
   const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([])
+  const [approvedInvoicesInPeriod, setApprovedInvoicesInPeriod] = useState<Invoice[]>([])
   const [importedCosts, setImportedCosts] = useState<any[]>([])
   const [historyInvoices, setHistoryInvoices] = useState<Invoice[]>([])
   const [historySemis, setHistorySemis] = useState<SemisReconEntry[]>([])
@@ -1349,17 +1351,22 @@ export default function AdminDashboard() {
     if (filterLocationId !== 'all') cq = cq.eq('location_id', filterLocationId)
     else if (locIds.length) cq = cq.in('location_id', locIds)
     const { data: imported } = await cq
-    let cogs = 0, opexExcel = 0
-    imported?.forEach(c => { const a = Number(c.amount) || 0; if (c.cost_type === 'COS') { cogs += a } else { opexExcel += a } })
+    let importedCos = 0, importedSemis = 0
+    imported?.forEach(c => { const a = Number(c.amount) || 0; if (c.cost_type === 'COS') { importedCos += a } else { importedSemis += a } })
 
-    let mq = supabase.from('invoices').select('total_amount, total_net, invoice_type').eq('status', 'approved').gte('service_date', start).lte('service_date', end)
+    let mq = supabase.from('invoices')
+      .select('id, supplier_name, invoice_number, service_date, total_amount, total_net, invoice_type, locations(name)')
+      .eq('status', 'approved')
+      .gte('service_date', start).lte('service_date', end)
+      .order('service_date', { ascending: false })
     if (filterLocationId !== 'all') mq = mq.eq('location_id', filterLocationId)
     else if (locIds.length) mq = mq.in('location_id', locIds)
     const { data: manual } = await mq
     let cosInv = 0, opexManual = 0
     manual?.forEach(inv => { const a = Number(inv.total_net || inv.total_amount) || 0; if (inv.invoice_type === 'COS') { cosInv += a } else { opexManual += a } })
-    cogs += cosInv
-    const opex = opexExcel + opexManual + opsExtra
+    setApprovedInvoicesInPeriod((manual as any[]) ?? [])
+    const cogs = importedCos + cosInv
+    const opex = importedSemis + opexManual + opsExtra
     const cogsPercent = netSales > 0 ? cogs / netSales : 0
     const grossMarginValue = netSales - cogs
     const grossMarginPercent = netSales > 0 ? grossMarginValue / netSales : 0
@@ -1374,7 +1381,7 @@ export default function AdminDashboard() {
     if (planNet > 0 && netSales < planNet * 0.97) newAlerts.push('Sprzedaż netto < plan o > 3%')
     if (Math.abs(cashDiffTotal) > 0.01) newAlerts.push('Różnica w gotówce')
 
-    setPnl({ netSales, grossSales, vatValue, planNet, planGross: targetGross, transactions, planTransactions: planTx, aov, salesPerHour, laborCost, laborPercent, totalHours, effectiveHourlyRate, cogs, cogsPercent, opex, totalCosts, grossMarginValue, grossMarginPercent, operatingProfit, netMargin, cashDiffTotal, pettySum, lossesSum, refundsSum })
+    setPnl({ netSales, grossSales, vatValue, planNet, planGross: targetGross, transactions, planTransactions: planTx, aov, salesPerHour, laborCost, laborPercent, totalHours, effectiveHourlyRate, cogs, cogsPercent, opex, totalCosts, grossMarginValue, grossMarginPercent, operatingProfit, netMargin, cashDiffTotal, pettySum, lossesSum, refundsSum, invoiceCos: cosInv, invoiceSemis: opexManual, importedCos, importedSemis })
     setAlerts(newAlerts)
     setStatusText(operatingProfit >= 0 && newAlerts.length === 0 ? 'Rentowność OK. Brak krytycznych odchyleń.' : 'Uwaga – ' + (newAlerts[0] || 'brak danych'))
 
@@ -2775,9 +2782,12 @@ export default function AdminDashboard() {
         {/*  P&L                                                   */}
         {/* ═══════════════════════════════════════════════════════ */}
         {activeView === 'pnl' && (
-          <div className="max-w-2xl">
-            <h1 className="text-[22px] font-bold text-[#111827] tracking-tight mb-6">Raport P&L</h1>
+          <div className="max-w-2xl space-y-5">
+            <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Raport P&L</h1>
+
+            {/* ── Main P&L card ── */}
             <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
+
               {/* Revenue */}
               <div className="px-6 pt-5 pb-4 border-b border-[#E5E7EB]">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-3">Przychody</p>
@@ -2790,27 +2800,101 @@ export default function AdminDashboard() {
                   <span className="text-[13px] text-[#6B7280] font-mono">{fmt0(pnl.grossSales)}</span>
                 </div>
               </div>
+
               {/* Costs */}
               <div className="px-6 pt-5 pb-4 border-b border-[#E5E7EB]">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-3">Koszty</p>
-                {[
-                  ['COGS', pnl.cogs, pnl.cogsPercent],
-                  ['Koszt pracy', pnl.laborCost, pnl.laborPercent],
-                  ['OPEX', pnl.opex, pnl.netSales > 0 ? pnl.opex / pnl.netSales : 0],
-                ].map(([l, v, p], i) => (
-                  <div key={i} className="flex justify-between items-baseline py-2.5 border-b border-[#F3F4F6] last:border-0">
-                    <span className="text-[13px] text-[#374151]">{l as string}</span>
+
+                {/* COGS row + sub-items */}
+                <div className="border-b border-[#F3F4F6]">
+                  <div className="flex justify-between items-baseline py-2.5">
+                    <span className="text-[13px] text-[#374151]">COGS</span>
                     <div className="flex items-baseline gap-3">
-                      <span className="text-[12px] text-[#9CA3AF]">{fmtPct(p as number)}</span>
-                      <span className="text-[14px] font-semibold text-[#111827] font-mono w-28 text-right">{fmt0(v as number)}</span>
+                      <span className="text-[12px] text-[#9CA3AF]">{fmtPct(pnl.cogsPercent)}</span>
+                      <span className="text-[14px] font-semibold text-[#111827] font-mono w-28 text-right">{fmt0(pnl.cogs)}</span>
                     </div>
                   </div>
-                ))}
-                <div className="flex justify-between items-baseline pt-3 mt-1">
+                  {(pnl.invoiceCos > 0 || pnl.importedCos > 0) && (
+                    <div className="pb-2 pl-3 space-y-1">
+                      {pnl.invoiceCos > 0 && (
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1.5">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+                            Faktury COS
+                          </span>
+                          <span className="text-[12px] font-medium text-[#374151] font-mono">{fmt0(pnl.invoiceCos)}</span>
+                        </div>
+                      )}
+                      {pnl.importedCos > 0 && (
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1.5">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#93C5FD]" />
+                            Import Excel COS
+                          </span>
+                          <span className="text-[12px] font-medium text-[#374151] font-mono">{fmt0(pnl.importedCos)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Labor row */}
+                <div className="flex justify-between items-baseline py-2.5 border-b border-[#F3F4F6]">
+                  <span className="text-[13px] text-[#374151]">Koszt pracy</span>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-[12px] text-[#9CA3AF]">{fmtPct(pnl.laborPercent)}</span>
+                    <span className="text-[14px] font-semibold text-[#111827] font-mono w-28 text-right">{fmt0(pnl.laborCost)}</span>
+                  </div>
+                </div>
+
+                {/* OPEX row + sub-items */}
+                <div>
+                  <div className="flex justify-between items-baseline py-2.5">
+                    <span className="text-[13px] text-[#374151]">OPEX</span>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-[12px] text-[#9CA3AF]">{fmtPct(pnl.netSales > 0 ? pnl.opex / pnl.netSales : 0)}</span>
+                      <span className="text-[14px] font-semibold text-[#111827] font-mono w-28 text-right">{fmt0(pnl.opex)}</span>
+                    </div>
+                  </div>
+                  {(pnl.invoiceSemis > 0 || pnl.importedSemis > 0 || (pnl.pettySum + pnl.lossesSum + pnl.refundsSum) > 0) && (
+                    <div className="pb-2 pl-3 space-y-1">
+                      {pnl.invoiceSemis > 0 && (
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1.5">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
+                            Faktury SEMIS
+                          </span>
+                          <span className="text-[12px] font-medium text-[#374151] font-mono">{fmt0(pnl.invoiceSemis)}</span>
+                        </div>
+                      )}
+                      {pnl.importedSemis > 0 && (
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1.5">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#86EFAC]" />
+                            Import Excel SEMIS
+                          </span>
+                          <span className="text-[12px] font-medium text-[#374151] font-mono">{fmt0(pnl.importedSemis)}</span>
+                        </div>
+                      )}
+                      {(pnl.pettySum + pnl.lossesSum + pnl.refundsSum) > 0 && (
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1.5">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#D1D5DB]" />
+                            Codzienne wydatki
+                          </span>
+                          <span className="text-[12px] font-medium text-[#374151] font-mono">{fmt0(pnl.pettySum + pnl.lossesSum + pnl.refundsSum)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between items-baseline pt-3 mt-1 border-t border-[#E5E7EB]">
                   <span className="text-[13px] font-semibold text-[#374151]">Suma kosztów</span>
                   <span className="text-[16px] font-bold text-[#111827] font-mono">{fmt0(pnl.totalCosts)}</span>
                 </div>
               </div>
+
               {/* Result */}
               <div className="px-6 pt-5 pb-5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-3">Wynik</p>
@@ -2824,6 +2908,56 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* ── Deliveries in period ── */}
+            {approvedInvoicesInPeriod.length > 0 && (
+              <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
+                <div className="px-6 pt-5 pb-4 border-b border-[#E5E7EB]">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF]">Dostawy w okresie</p>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-[#2563EB]" />
+                        <span className="text-[11px] text-[#6B7280]">COS</span>
+                        <span className="text-[12px] font-semibold text-[#111827] font-mono ml-1">{fmt0(pnl.invoiceCos)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-[#16A34A]" />
+                        <span className="text-[11px] text-[#6B7280]">SEMIS</span>
+                        <span className="text-[12px] font-semibold text-[#111827] font-mono ml-1">{fmt0(pnl.invoiceSemis)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="divide-y divide-[#F3F4F6]">
+                  {approvedInvoicesInPeriod.map(inv => (
+                    <div key={inv.id} className="flex items-center justify-between px-6 py-3 hover:bg-[#F9FAFB] transition-colors">
+                      <div className="min-w-0 flex-1 mr-4">
+                        <p className="text-[13px] font-medium text-[#111827] truncate">{inv.supplier_name}</p>
+                        <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+                          {(inv as any).locations?.name && <>{(inv as any).locations.name} · </>}
+                          {inv.service_date}
+                          {inv.invoice_number && <> · Nr: {inv.invoice_number}</>}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${inv.invoice_type === 'COS' ? 'bg-[#EFF6FF] text-[#2563EB]' : 'bg-[#F0FDF4] text-[#16A34A]'}`}>
+                          {inv.invoice_type}
+                        </span>
+                        <span className="text-[14px] font-semibold text-[#111827] font-mono w-24 text-right">
+                          {fmt0(Number(inv.total_net || inv.total_amount || 0))}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between px-6 py-3 bg-[#F9FAFB] border-t border-[#E5E7EB]">
+                  <span className="text-[13px] font-semibold text-[#374151]">Suma dostaw</span>
+                  <span className="text-[16px] font-bold text-[#111827] font-mono">{fmt0(pnl.invoiceCos + pnl.invoiceSemis)}</span>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
