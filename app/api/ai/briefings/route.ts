@@ -396,13 +396,36 @@ export async function POST(req: NextRequest) {
       admin.from('sales_daily').select('date, net_revenue').in('location_id', locationIds).order('date', { ascending: false }).limit(14),
     ])
     contextData = `Dania: ${JSON.stringify(dishes)}\nSkładniki z cenami: ${JSON.stringify(ingredients)}\nSprzedaż 14 dni: ${JSON.stringify(sales)}`
+  } else if (director === 'investor') {
+    const [{ data: sales56 }, { data: pendingInvoices }, { data: locations2 }] = await Promise.all([
+      admin.from('sales_daily')
+        .select('date, net_revenue, total_labor_hours, avg_hourly_rate, food_cost_amount, transaction_count')
+        .in('location_id', locationIds)
+        .order('date', { ascending: false }).limit(56),
+      admin.from('invoices').select('total_amount, invoice_type').in('location_id', locationIds).eq('status', 'submitted'),
+      admin.from('locations').select('id, name').eq('company_id', profile.company_id),
+    ])
+    const rev28  = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.net_revenue || 0), 0)
+    const rev56  = (sales56 ?? []).slice(28, 56).reduce((s: number, r: any) => s + (r.net_revenue || 0), 0)
+    const labor  = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.total_labor_hours || 0) * (r.avg_hourly_rate || 0), 0)
+    const food   = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.food_cost_amount || 0), 0)
+    const txns   = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.transaction_count || 0), 0)
+    const ebitda = rev28 - labor - food
+    const exposure = (pendingInvoices ?? []).reduce((s: number, i: any) => s + (i.total_amount || 0), 0)
+    contextData = `Lokalizacje: ${(locations2 ?? []).map((l: any) => l.name).join(', ')}
+Przychody 28d: ${rev28.toFixed(0)} zł | Poprzednie 28d: ${rev56.toFixed(0)} zł | Zmiana: ${rev56 > 0 ? ((rev28 - rev56) / rev56 * 100).toFixed(1) : '?'}%
+EBITDA 28d: ${ebitda.toFixed(0)} zł (${rev28 > 0 ? (ebitda / rev28 * 100).toFixed(1) : '?'}%)
+Koszt pracy 28d: ${labor.toFixed(0)} zł | Food cost 28d: ${food.toFixed(0)} zł
+Transakcje 28d: ${txns} | Śr. paragon: ${txns > 0 ? (rev28 / txns).toFixed(0) : '?'} zł
+Ekspozycja faktur (niezatwierdzone): ${exposure.toFixed(0)} zł`
   }
 
   const SYSTEM: Record<string, string> = {
     profit:    'Jesteś Markiem — analitykiem finansowym restauracji. Odpowiadasz konkretnie po polsku na pytania finansowe, używając dostarczonych danych. Bądź bezpośredni i podawaj liczby.',
-    hr:        'Jesteś Anią — specjalistką HR restauracji. Odpowiadasz konkretnie po polsku na pytania o zespół i czas pracy, używając dostarczonych danych.',
+    hr:        'Jesteś Martą — Dyrektorem HR restauracji. Odpowiadasz konkretnie po polsku na pytania o zespół, czas pracy, certyfikaty i koszty, używając dostarczonych danych.',
     inventory: 'Jesteś Kubą — specjalistą ds. magazynu restauracji. Odpowiadasz konkretnie po polsku na pytania o magazyn, używając dostarczonych danych.',
-    revenue:   'Jesteś Zofią — ekspertką od przychodów i menu restauracji. Odpowiadasz konkretnie po polsku na pytania o ceny, food cost i rentowność dań, używając dostarczonych danych. Podawaj konkretne liczby i sugestie cenowe.',
+    revenue:   'Jesteś Zofią — Dyrektorem Sprzedaży restauracji. Odpowiadasz konkretnie po polsku na pytania o przychody, trendy sprzedaży i rentowność dań, używając dostarczonych danych. Podawaj konkretne liczby i rekomendacje.',
+    investor:  'Jesteś Markiem — Dyrektorem Inwestorskim restauracji. Odpowiadasz po polsku jak CFO raportujący do zarządu — konkretne liczby, marże, wzrost, unit economics. Używaj dostarczonych danych.',
   }
 
   const res = await openai.chat.completions.create({

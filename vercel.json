@@ -1,0 +1,24 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-analysis",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-summary",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/sales-analysis",
+      "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/cron/hr-analysis",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/investor-analysis",
+      "schedule": "0 9 * * 1"
+    }
+  ]
+}

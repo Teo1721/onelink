@@ -34,6 +34,11 @@ import type { WeekDay } from '@/components/dashboard-charts'
 import { HelpDrawer } from '@/components/help-drawer'
 import { WelcomeChecklist } from '@/components/welcome-checklist'
 import { AiDirectors } from '@/components/ai-directors'
+import { CfoDirector } from '@/components/cfo-director'
+import { SalesDirector } from '@/components/sales-director'
+import { HrDirector } from '@/components/hr-director'
+import { InvestorDirector } from '@/components/investor-director'
+import { PushNotificationsToggle } from '@/components/push-notifications-toggle'
 import { WhatIfRoom } from '@/components/what-if-room'
 
 
@@ -452,6 +457,11 @@ type ActiveView =
   | 'central_warehouse'
   | 'admin_users' | 'employees' | 'schedule'
   | 'hr_dashboard' | 'hr_attendance' | 'hr_leave' | 'hr_swaps' | 'hr_certs' | 'hr_documents' | 'hr_tips' | 'hr_onboarding'
+  | 'cfo_director'
+  | 'sales_director'
+  | 'hr_ai_director'
+  | 'investor_director'
+  | 'what_if'
   | 'account'
 
 /* ================================================================== */
@@ -791,13 +801,13 @@ function AdminAccountView({ supabase, router }: { supabase: ReturnType<typeof cr
 /*  COMPONENT                                                          */
 /* ================================================================== */
 export default function AdminDashboard() {
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const router = useRouter()
 
   // ── Core ──
   const [loading, setLoading] = useState(false)
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily')
-  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
   const [dateLabel, setDateLabel] = useState('')
   const [locations, setLocations] = useState<LocationRow[]>([])
   const [filterLocationId, setFilterLocationId] = useState<'all' | string>('all')
@@ -2079,7 +2089,6 @@ export default function AdminDashboard() {
   // ═══════════════════════════════════════════════════════════════════
   //  RENDER
   // ═══════════════════════════════════════════════════════════════════
-  if (!selectedDate) return <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
 
   return (
     <div className="flex bg-[#F7F8FA] min-h-screen">
@@ -2124,7 +2133,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2 bg-white border border-[#E5E7EB] rounded-lg px-3 h-9">
             <Calendar className="w-3.5 h-3.5 text-[#9CA3AF]" />
-            <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="border-none h-7 w-32 p-0 text-[13px] shadow-none focus-visible:ring-0" />
+            <Input type="date" value={selectedDate} onChange={e => { if (e.target.value) setSelectedDate(e.target.value) }} className="border-none h-7 w-32 p-0 text-[13px] shadow-none focus-visible:ring-0" />
           </div>
           <div className="flex bg-white rounded-lg border border-[#E5E7EB] p-0.5 h-9 items-center">
             {(['daily', 'weekly', 'monthly'] as const).map(v => (
@@ -2146,16 +2155,19 @@ export default function AdminDashboard() {
                 <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Dashboard</h1>
                 <p className="text-[13px] text-[#6B7280] mt-0.5">{dateLabel || 'Dzisiaj'}</p>
               </div>
-              {unreadCount > 0 && (
-                <button onClick={() => setActiveView('notifications')}
-                  className="flex items-center gap-2 h-8 px-3 rounded-lg border border-[#E5E7EB] bg-white text-[13px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">
-                  <Bell className="w-3.5 h-3.5" />
-                  Powiadomienia
-                  <span className="ml-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#DC2626] text-white text-[10px] font-bold px-1">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {adminId && <PushNotificationsToggle userId={adminId} />}
+                {unreadCount > 0 && (
+                  <button onClick={() => setActiveView('notifications')}
+                    className="flex items-center gap-2 h-8 px-3 rounded-lg border border-[#E5E7EB] bg-white text-[13px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">
+                    <Bell className="w-3.5 h-3.5" />
+                    Powiadomienia
+                    <span className="ml-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#DC2626] text-white text-[10px] font-bold px-1">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Setup checklist for new users */}
@@ -2166,12 +2178,6 @@ export default function AdminDashboard() {
                 onNavigate={(v) => setActiveView(v as ActiveView)}
               />
             )}
-
-            {/* AI Directors morning briefing */}
-            <AiDirectors />
-
-            {/* What If Room */}
-            <WhatIfRoom />
 
             {/* Pending actions */}
             <div className="grid grid-cols-4 gap-3">
@@ -3992,6 +3998,32 @@ export default function AdminDashboard() {
         {/* ═══════════════════════════════════════════════════════ */}
         {/*  HR — location picker (shared across HR views)         */}
         {/* ═══════════════════════════════════════════════════════ */}
+        {activeView === 'cfo_director' && companyId && (
+          <CfoDirector supabase={supabase} companyId={companyId} />
+        )}
+
+        {activeView === 'sales_director' && companyId && (
+          <SalesDirector supabase={supabase} companyId={companyId} />
+        )}
+
+        {activeView === 'hr_ai_director' && companyId && (
+          <HrDirector supabase={supabase} companyId={companyId} />
+        )}
+
+        {activeView === 'investor_director' && companyId && (
+          <InvestorDirector supabase={supabase} companyId={companyId} />
+        )}
+
+        {activeView === 'what_if' && (
+          <div>
+            <div className="mb-5">
+              <h2 className="text-[18px] font-black text-[#111827]">Pokój "Co jeśli"</h2>
+              <p className="text-[12px] text-[#6B7280]">Symulator decyzji biznesowych oparty na Twoich realnych danych</p>
+            </div>
+            <WhatIfRoom />
+          </div>
+        )}
+
         {(['hr_dashboard', 'hr_attendance', 'hr_leave', 'hr_swaps', 'hr_certs', 'hr_documents', 'hr_tips', 'hr_onboarding'] as ActiveView[]).includes(activeView) && (
           <>
             {/* Location selector */}

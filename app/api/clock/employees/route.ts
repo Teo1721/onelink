@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     admin.from('employees')
       .select('id, full_name, position')
       .eq('location_id', locationId)
-      .in('status', ['active', 'confirmed'])
+      .neq('status', 'inactive')
       .order('full_name'),
     admin.from('shift_clock_ins')
       .select('id, employee_id, clock_in_at, clock_out_at')

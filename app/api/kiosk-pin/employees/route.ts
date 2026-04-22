@@ -34,20 +34,33 @@ export async function GET(req: NextRequest) {
     return now.toLocaleDateString('sv-SE')
   })()
 
-  const [{ data: location }, { data: employees }, { data: records }] = await Promise.all([
+  const [{ data: location }, { data: records }] = await Promise.all([
     admin.from('locations').select('id, name').eq('id', locationId).single(),
-    admin.from('employees')
-      .select('id, full_name, position, kiosk_pin_hash')
-      .eq('location_id', locationId)
-      .in('status', ['active', 'confirmed'])
-      .order('full_name'),
     admin.from('shift_clock_ins')
       .select('id, employee_id, clock_in_at, clock_out_at')
       .eq('location_id', locationId)
       .eq('work_date', businessDate),
   ])
 
-  const result = (employees ?? []).map(emp => {
+  // Try to fetch with kiosk_pin_hash; fall back if the column doesn't exist yet
+  let employees: any[] | null = null
+  const { data: withPin, error: pinErr } = await admin.from('employees')
+    .select('id, full_name, position, kiosk_pin_hash')
+    .eq('location_id', locationId)
+    .neq('status', 'inactive')
+    .order('full_name')
+  if (!pinErr) {
+    employees = withPin
+  } else {
+    const { data: withoutPin } = await admin.from('employees')
+      .select('id, full_name, position')
+      .eq('location_id', locationId)
+      .neq('status', 'inactive')
+      .order('full_name')
+    employees = withoutPin
+  }
+
+  const result = (employees ?? []).map((emp: any) => {
     const rec = (records ?? []).find(r => r.employee_id === emp.id) ?? null
     return {
       id: emp.id,

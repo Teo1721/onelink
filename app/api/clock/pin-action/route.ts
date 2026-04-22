@@ -57,13 +57,25 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id).eq('location_id', location_id).maybeSingle()
   if (!access) return NextResponse.json({ error: 'Brak dostępu do lokalizacji' }, { status: 403 })
 
-  // Get employee with PIN hash
-  const { data: employee } = await admin
+  // Get employee with PIN hash — fall back if column doesn't exist yet
+  let employee: any = null
+  const { data: withPin, error: pinColErr } = await admin
     .from('employees')
     .select('id, full_name, position, user_id, location_id, kiosk_pin_hash')
     .eq('id', employee_id)
     .eq('location_id', location_id)
     .maybeSingle()
+  if (!pinColErr) {
+    employee = withPin
+  } else {
+    const { data: withoutPin } = await admin
+      .from('employees')
+      .select('id, full_name, position, user_id, location_id')
+      .eq('id', employee_id)
+      .eq('location_id', location_id)
+      .maybeSingle()
+    employee = withoutPin
+  }
 
   if (!employee) return NextResponse.json({ error: 'Pracownik nie znaleziony' }, { status: 404 })
   if (!employee.kiosk_pin_hash) {

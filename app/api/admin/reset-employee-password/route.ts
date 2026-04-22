@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
   const tempPassword = Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 
   const supabase = createAdminClient()
-  const { error } = await supabase.auth.admin.updateUserById(user_id, { password: tempPassword })
+  // email_confirm: true so employees can log in even if they never clicked the invite link
+  const { error } = await supabase.auth.admin.updateUserById(user_id, { password: tempPassword, email_confirm: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

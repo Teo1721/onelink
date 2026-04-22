@@ -497,7 +497,7 @@ export default function EmployeeDashboard() {
       .select('id, shift_id, note, status, created_at, shift:shift_id(date, time_start, time_end), target:target_employee_id(full_name)')
       .eq('requester_employee_id', employeeId)
       .order('created_at', { ascending: false })
-    setSwapRequests((data ?? []) as SwapReq[])
+    setSwapRequests((data ?? []) as unknown as SwapReq[])
     setSwapLoading(false)
   }, [employeeId, supabase])
 

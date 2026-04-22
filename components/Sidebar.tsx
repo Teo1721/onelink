@@ -7,7 +7,7 @@ import {
   Calendar, RefreshCw, Lock, BarChart3, History, FileSpreadsheet,
   LogOut, Bell, CheckSquare, DollarSign, AlertTriangle, Truck, Users, Settings,
   Clock, Umbrella, GitCompare, GraduationCap, FolderOpen, LayoutGrid, Banknote, UserCheck,
-  ArrowLeftRight,
+  ArrowLeftRight, Brain, TrendingUp, Sparkles,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -41,7 +41,12 @@ export function Sidebar({
       items: [
         { key: 'dashboard',      label: 'Dashboard',       icon: LayoutDashboard },
         { key: 'pnl',            label: 'P&L',             icon: BarChart3 },
-        { key: 'notifications',  label: 'Powiadomienia',   icon: Bell, badge: unreadNotifications },
+        { key: 'cfo_director',     label: 'CFO Dyrektor AI',      icon: Brain },
+        { key: 'sales_director',   label: 'Dyrektor Sprzedaży',   icon: TrendingUp },
+        { key: 'hr_ai_director',   label: 'Dyrektor HR AI',        icon: Users },
+        { key: 'investor_director',label: 'Dyrektor Inwestorski',  icon: BarChart3 },
+        { key: 'what_if',          label: 'Co jeśli…',             icon: Sparkles },
+        { key: 'notifications',    label: 'Powiadomienia',          icon: Bell, badge: unreadNotifications },
       ],
     },
     {

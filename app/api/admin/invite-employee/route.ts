@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
+  // Auto-confirm the email so the employee can log in with a temp password even if
+  // they never click the invite link (invite may expire or go to spam)
+  await supabase.auth.admin.updateUserById(data.user.id, { email_confirm: true })
+
   // Fetch the employee record to get location_id and company info
   const { data: empRow } = await supabase
     .from('employees')
