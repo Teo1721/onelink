@@ -16,11 +16,11 @@ type Plan = {
   name: string;
   subtitle: string;
   description: string;
-  monthlyPrice: string;
-  annualPrice: string;
-  period: string;
-  priceId: string;
-  annualPriceId?: string;
+  monthlyPrice: string;       // e.g. "19,99"
+  annualPrice: string;        // monthly equivalent when billed annually, e.g. "15,99"
+  annualTotalPrice: string;   // total charged once per year, e.g. "191,88"
+  priceId: string;            // Stripe monthly price ID
+  annualPriceId: string;      // Stripe annual price ID
   features: string[];
   cta: string;
   popular?: boolean;
@@ -35,8 +35,9 @@ const PLANS: Plan[] = [
     description: "Pełna kontrola jednego lokalu — sprzedaż, czas pracy, HR i raporty dzienne.",
     monthlyPrice: "19,99",
     annualPrice: "15,99",
-    period: "/ miesiąc",
+    annualTotalPrice: "191,88",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1 ?? "",
+    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1_ANNUAL ?? "",
     cta: "Zacznij 7-dniowy trial",
     features: [
       "1 lokal · 1 manager",
@@ -57,8 +58,9 @@ const PLANS: Plan[] = [
     description: "Pełna kontrola operacyjna — faktury, magazyn, food cost, HR i zaawansowane raporty.",
     monthlyPrice: "39,99",
     annualPrice: "31,99",
-    period: "/ miesiąc",
+    annualTotalPrice: "383,88",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN2 ?? "",
+    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN2_ANNUAL ?? "",
     cta: "Zacznij 7-dniowy trial",
     popular: true,
     features: [
@@ -82,8 +84,9 @@ const PLANS: Plan[] = [
     description: "Dla sieci firm — pełen dostęp, HR dla całej sieci, raporty cross-lokalizacyjne.",
     monthlyPrice: "59,99",
     annualPrice: "47,99",
-    period: "/ miesiąc",
+    annualTotalPrice: "575,88",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3 ?? "",
+    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3_ANNUAL ?? "",
     cta: "Zacznij 7-dniowy trial",
     features: [
       "Do 5 lokali · 5 managerów",
@@ -186,17 +189,18 @@ function CheckCell({ val }: { val: boolean | string }) {
 export default function PricingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [annual, setAnnual] = useState(false);
+  const [annual, setAnnual] = useState(true);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   const handleSubscribe = async (plan: Plan) => {
     setLoading(true);
     setError(null);
+    const priceId = annual && plan.annualPriceId ? plan.annualPriceId : plan.priceId;
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: plan.priceId, planCode: plan.id }),
+        body: JSON.stringify({ priceId, planCode: plan.id }),
       });
       const data = await res.json();
       if (res.status === 401) { window.location.href = "/auth/login"; return; }
@@ -266,6 +270,15 @@ export default function PricingPage() {
           className="inline-flex items-center gap-4 p-1.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm"
         >
           <button
+            onClick={() => setAnnual(true)}
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
+              annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
+            }`}
+          >
+            Rocznie
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${annual ? "bg-green-500 text-white" : "bg-green-100 text-green-700"}`}>-20%</span>
+          </button>
+          <button
             onClick={() => setAnnual(false)}
             className={`px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
               !annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
@@ -273,19 +286,10 @@ export default function PricingPage() {
           >
             Miesięcznie
           </button>
-          <button
-            onClick={() => setAnnual(true)}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
-              annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
-            }`}
-          >
-            Rocznie
-            <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] font-bold">-20%</span>
-          </button>
         </motion.div>
         {annual && (
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[12px] text-green-600 font-medium mt-3">
-            Oszczędzasz 20% przy rozliczeniu rocznym
+            Oszczędzasz 20% — rozliczenie jednorazowo raz w roku
           </motion.p>
         )}
       </section>
@@ -335,17 +339,18 @@ export default function PricingPage() {
                       transition={{ duration: 0.25 }}
                       className={`text-[46px] font-black leading-none ${plan.popular ? "text-white" : "text-[#111827]"}`}
                     >
-                      {annual ? plan.annualPrice : plan.monthlyPrice}
+                      {annual ? plan.annualTotalPrice : plan.monthlyPrice}
                     </motion.span>
                   </AnimatePresence>
                   <span className={`text-[13px] font-medium ${plan.popular ? "text-white/50" : "text-[#9CA3AF]"}`}>
-                    zł / mies.
+                    {annual ? "zł / rok" : "zł / mies."}
                   </span>
                 </div>
                 {annual ? (
                   <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
-                    <span className="line-through mr-1.5 opacity-60">{plan.monthlyPrice} zł</span>
-                    rozliczane rocznie · + VAT
+                    = {plan.annualPrice} zł / mies.
+                    <span className="ml-2 line-through opacity-50">{plan.monthlyPrice} zł</span>
+                    {" "}· + VAT
                   </p>
                 ) : (
                   <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>

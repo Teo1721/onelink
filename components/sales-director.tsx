@@ -360,7 +360,9 @@ export function SalesDirector({
   const [tab, setTab] = useState('alerts')
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [lastRun, setLastRun] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -375,6 +377,19 @@ export function SalesDirector({
     setAlerts((data ?? []) as Alert[])
     setLastRefresh(new Date())
     setLoading(false)
+  }
+
+  const runAnalysis = async () => {
+    setRunning(true)
+    try {
+      await fetch('/api/ai/trigger-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ director: 'sales' }),
+      })
+      await load()
+      setLastRun(new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }))
+    } finally { setRunning(false) }
   }
 
   useEffect(() => { load() }, [companyId])
@@ -419,14 +434,16 @@ export function SalesDirector({
           {lastRefresh && (
             <span className="text-[10px] text-[#9CA3AF]">
               {lastRefresh.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+              {lastRun && ` · analiza ${lastRun}`}
             </span>
           )}
           <button
-            onClick={load}
-            disabled={loading}
-            className="h-8 w-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F9FAFB] transition-colors disabled:opacity-40"
+            onClick={runAnalysis}
+            disabled={running || loading}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[#E5E7EB] text-[12px] font-medium text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Uruchom analizę
           </button>
         </div>
       </div>

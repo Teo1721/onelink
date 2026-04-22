@@ -352,14 +352,24 @@ export async function GET(req: NextRequest) {
 }
 
 /* ── POST: ask a question to a specific director ── */
+function daysFromNow(n: number) {
+  const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE')
+}
+function daysAgoStr(n: number) {
+  const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('sv-SE')
+}
+function nextWeekday(dow: number) {
+  const d = new Date()
+  const diff = (dow - d.getDay() + 7) % 7
+  d.setDate(d.getDate() + (diff === 0 ? 7 : diff))
+  return d.toLocaleDateString('sv-SE')
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: 'AI nie jest skonfigurowane.' }, { status: 503 })
-  }
+  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'AI nie jest skonfigurowane.' }, { status: 503 })
 
   const { director, question } = await req.json()
   if (!director || !question) return NextResponse.json({ error: 'Brakujące dane' }, { status: 400 })
@@ -368,74 +378,149 @@ export async function POST(req: NextRequest) {
   const { data: profile } = await admin.from('user_profiles').select('company_id').eq('id', user.id).maybeSingle()
   if (!profile?.company_id) return NextResponse.json({ error: 'Brak firmy' }, { status: 400 })
 
-  const { data: locations } = await admin.from('locations').select('id').eq('company_id', profile.company_id)
-  const locationIds = locations?.map((l: any) => l.id) ?? []
+  const { data: locationsRaw } = await admin.from('locations').select('id, name').eq('company_id', profile.company_id)
+  const locs = locationsRaw ?? []
+  const locationIds = locs.map((l: any) => l.id)
+  const locName = (id: string) => locs.find((l: any) => l.id === id)?.name ?? id
 
-  let contextData = 'Brak danych.'
+  const todayStr   = new Date().toLocaleDateString('sv-SE')
+  const nextSatStr = nextWeekday(6)
+  const nextSunStr = nextWeekday(0)
+  const dateCtx    = `Dziś: ${todayStr} | Najbliższa sobota: ${nextSatStr} | Niedziela: ${nextSunStr}`
 
-  if (director === 'profit') {
+  let ctx = 'Brak danych.'
+  let sys = ''
+
+  /* ── HR ──────────────────────────────────────────────────────── */
+  if (director === 'hr') {
+    const [
+      { data: employees },
+      { data: shiftsUp },
+      { data: clockToday },
+      { data: leaves },
+      { data: certs },
+    ] = await Promise.all([
+      admin.from('employees').select('id, full_name, position, status, location_id, base_rate').in('location_id', locationIds).neq('status', 'inactive'),
+      admin.from('shifts').select('employee_id, date, start_time, end_time, location_id, employees(full_name, position)').in('location_id', locationIds).gte('date', todayStr).lte('date', daysFromNow(14)).order('date'),
+      admin.from('shift_clock_ins').select('employee_id, clock_in_at, clock_out_at, location_id, employees(full_name)').in('location_id', locationIds).eq('work_date', todayStr),
+      admin.from('leave_requests').select('employee_id, leave_type, date_from, date_to, status, employees(full_name)').in('location_id', locationIds).gte('date_to', todayStr).order('date_from').limit(20),
+      admin.from('employee_certifications').select('cert_name, expiry_date, employees(full_name)').in('location_id', locationIds).lte('expiry_date', daysFromNow(60)).order('expiry_date'),
+    ])
+
+    // Build shift roster per location/date
+    const roster: Record<string, Record<string, string[]>> = {}
+    for (const s of (shiftsUp ?? [])) {
+      const loc = locName(s.location_id); const date = s.date
+      if (!roster[loc]) roster[loc] = {}
+      if (!roster[loc][date]) roster[loc][date] = []
+      roster[loc][date].push(`${(s.employees as any)?.full_name ?? '?'} ${s.start_time ?? ''}–${s.end_time ?? ''}`)
+    }
+    const rosterTxt = Object.entries(roster).map(([loc, dates]) =>
+      `${loc}:\n` + Object.entries(dates).map(([d, e]) => `  ${d}: ${e.join(', ')}`).join('\n')
+    ).join('\n') || 'Brak zaplanowanych zmian'
+
+    ctx = `${dateCtx}
+
+LOKALIZACJE: ${locs.map((l: any) => l.name).join(', ')}
+
+PRACOWNICY:
+${(employees ?? []).map((e: any) => `${e.full_name} | ${e.position ?? '—'} | ${locName(e.location_id)} | ${e.base_rate ?? '—'} zł/h`).join('\n') || 'brak'}
+
+GRAFIK (dziś + 14 dni):
+${rosterTxt}
+
+OBECNOŚĆ DZIŚ (${todayStr}):
+${(clockToday ?? []).map((c: any) => `${(c.employees as any)?.full_name ?? '?'} @ ${locName(c.location_id)}: wejście ${c.clock_in_at?.slice(11,16) ?? '?'}${c.clock_out_at ? ` wyjście ${c.clock_out_at.slice(11,16)}` : ' (aktywna zmiana)'}`).join('\n') || 'nikt jeszcze nie zarejestrował wejścia'}
+
+URLOPY (nadchodzące):
+${(leaves ?? []).map((l: any) => `${(l.employees as any)?.full_name ?? '?'}: ${l.leave_type} ${l.date_from}–${l.date_to} [${l.status}]`).join('\n') || 'brak'}
+
+CERTYFIKATY WYGASAJĄCE (60 dni):
+${(certs ?? []).map((c: any) => `${(c.employees as any)?.full_name ?? '?'}: ${c.cert_name} wygasa ${c.expiry_date}`).join('\n') || 'wszystkie aktualne'}`
+
+    sys = `Jesteś Martą — Dyrektorem HR sieci restauracji. Masz dostęp do PEŁNYCH danych: grafiki, obecność, urlopy, certyfikaty.
+REGUŁY: Odpowiadaj WYŁĄCZNIE na podstawie danych. NIGDY nie mów "nie mam dostępu" — jeśli grafik jest pusty dla danego dnia/lokalizacji, powiedz wprost że nie zaplanowano zmian. Podawaj imiona, lokalizacje, godziny. Po polsku. Max 4 zdania.`
+
+  /* ── PROFIT ──────────────────────────────────────────────────── */
+  } else if (director === 'profit') {
     const [{ data: sales }, { data: invoices }] = await Promise.all([
-      admin.from('sales_daily').select('date, net_revenue, gross_revenue, status').in('location_id', locationIds).order('date', { ascending: false }).limit(14),
-      admin.from('invoices').select('supplier_name, total_amount, status, invoice_type, service_date').in('location_id', locationIds).order('service_date', { ascending: false }).limit(10),
+      admin.from('sales_daily').select('date, net_revenue, gross_revenue, food_cost_amount, total_labor_hours, avg_hourly_rate, transaction_count, status, location_id').in('location_id', locationIds).order('date', { ascending: false }).limit(28),
+      admin.from('invoices').select('supplier_name, total_amount, status, invoice_type, service_date, location_id').in('location_id', locationIds).order('service_date', { ascending: false }).limit(20),
     ])
-    contextData = `Sprzedaż (14 dni): ${JSON.stringify(sales)}\nFaktury (10 ostatnich): ${JSON.stringify(invoices)}`
-  } else if (director === 'hr') {
-    const [{ data: clockIns }, { data: employees }, { data: leaves }] = await Promise.all([
-      admin.from('shift_clock_ins').select('employee_id, work_date, clock_in_at, clock_out_at').in('location_id', locationIds).order('work_date', { ascending: false }).limit(50),
-      admin.from('employees').select('full_name, position, status').in('location_id', locationIds),
-      admin.from('leave_requests').select('employee_id, leave_type, date_from, date_to, status').in('location_id', locationIds).order('created_at', { ascending: false }).limit(10),
-    ])
-    contextData = `Pracownicy: ${JSON.stringify(employees)}\nOdbicia (50 ostatnich): ${JSON.stringify(clockIns)}\nUrlopy: ${JSON.stringify(leaves)}`
-  } else if (director === 'inventory') {
-    const { data: jobs } = await admin.from('inventory_jobs').select('type, status, due_date').in('location_id', locationIds).order('due_date', { ascending: false }).limit(10)
-    contextData = `Inwentaryzacje: ${JSON.stringify(jobs)}`
+    const byLoc: Record<string, number> = {}
+    for (const r of (sales ?? []).slice(0, 7)) { const n = locName(r.location_id); byLoc[n] = (byLoc[n] ?? 0) + (r.net_revenue || 0) }
+    ctx = `${dateCtx}
+LOKALIZACJE: ${locs.map((l: any) => l.name).join(', ')}
+PRZYCHODY 7d WG LOKALIZACJI: ${Object.entries(byLoc).map(([n, v]) => `${n}: ${v.toFixed(0)} zł`).join(' | ') || 'brak'}
+RAPORTY DZIENNE (28d):
+${(sales ?? []).map((r: any) => `${r.date} | ${locName(r.location_id)} | netto: ${r.net_revenue?.toFixed(0)} zł | FC: ${r.food_cost_amount?.toFixed(0) ?? '—'} zł | praca: ${r.total_labor_hours?.toFixed(1) ?? '—'}h`).join('\n') || 'brak'}
+FAKTURY:
+${(invoices ?? []).map((i: any) => `${i.service_date} | ${locName(i.location_id)} | ${i.supplier_name} | ${i.invoice_type} | ${i.total_amount?.toFixed(0)} zł [${i.status}]`).join('\n') || 'brak'}`
+    sys = `Jesteś Markiem — CFO sieci restauracji. Analizujesz P&L, food cost i faktury. Odpowiadaj konkretnie używając liczb z danych. Porównuj lokalizacje. Po polsku, max 4 zdania.`
+
+  /* ── REVENUE ─────────────────────────────────────────────────── */
   } else if (director === 'revenue') {
     const [{ data: dishes }, { data: ingredients }, { data: sales }] = await Promise.all([
-      admin.from('dishes').select('id, dish_name, menu_price_gross, food_cost_target, margin_target').eq('company_id', profile.company_id).eq('status', 'active').limit(20),
-      admin.from('ingredients').select('name, last_price, base_unit').eq('company_id', profile.company_id).limit(30),
-      admin.from('sales_daily').select('date, net_revenue').in('location_id', locationIds).order('date', { ascending: false }).limit(14),
+      admin.from('dishes').select('id, dish_name, menu_price_gross, food_cost_target, margin_target').eq('company_id', profile.company_id).eq('status', 'active').limit(30),
+      admin.from('ingredients').select('name, last_price, base_unit').eq('company_id', profile.company_id).limit(40),
+      admin.from('sales_daily').select('date, net_revenue, transaction_count, location_id').in('location_id', locationIds).order('date', { ascending: false }).limit(28),
     ])
-    contextData = `Dania: ${JSON.stringify(dishes)}\nSkładniki z cenami: ${JSON.stringify(ingredients)}\nSprzedaż 14 dni: ${JSON.stringify(sales)}`
-  } else if (director === 'investor') {
-    const [{ data: sales56 }, { data: pendingInvoices }, { data: locations2 }] = await Promise.all([
-      admin.from('sales_daily')
-        .select('date, net_revenue, total_labor_hours, avg_hourly_rate, food_cost_amount, transaction_count')
-        .in('location_id', locationIds)
-        .order('date', { ascending: false }).limit(56),
-      admin.from('invoices').select('total_amount, invoice_type').in('location_id', locationIds).eq('status', 'submitted'),
-      admin.from('locations').select('id, name').eq('company_id', profile.company_id),
-    ])
-    const rev28  = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.net_revenue || 0), 0)
-    const rev56  = (sales56 ?? []).slice(28, 56).reduce((s: number, r: any) => s + (r.net_revenue || 0), 0)
-    const labor  = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.total_labor_hours || 0) * (r.avg_hourly_rate || 0), 0)
-    const food   = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.food_cost_amount || 0), 0)
-    const txns   = (sales56 ?? []).slice(0, 28).reduce((s: number, r: any) => s + (r.transaction_count || 0), 0)
-    const ebitda = rev28 - labor - food
-    const exposure = (pendingInvoices ?? []).reduce((s: number, i: any) => s + (i.total_amount || 0), 0)
-    contextData = `Lokalizacje: ${(locations2 ?? []).map((l: any) => l.name).join(', ')}
-Przychody 28d: ${rev28.toFixed(0)} zł | Poprzednie 28d: ${rev56.toFixed(0)} zł | Zmiana: ${rev56 > 0 ? ((rev28 - rev56) / rev56 * 100).toFixed(1) : '?'}%
-EBITDA 28d: ${ebitda.toFixed(0)} zł (${rev28 > 0 ? (ebitda / rev28 * 100).toFixed(1) : '?'}%)
-Koszt pracy 28d: ${labor.toFixed(0)} zł | Food cost 28d: ${food.toFixed(0)} zł
-Transakcje 28d: ${txns} | Śr. paragon: ${txns > 0 ? (rev28 / txns).toFixed(0) : '?'} zł
-Ekspozycja faktur (niezatwierdzone): ${exposure.toFixed(0)} zł`
-  }
+    const dowMap: Record<number, { sum: number; cnt: number }> = {}
+    for (const r of (sales ?? [])) { const dow = new Date(r.date).getDay(); if (!dowMap[dow]) dowMap[dow] = { sum: 0, cnt: 0 }; dowMap[dow].sum += r.net_revenue || 0; dowMap[dow].cnt++ }
+    const DAYS = ['Nie','Pon','Wt','Śr','Czw','Pt','Sob']
+    ctx = `${dateCtx}
+SPRZEDAŻ WG DNIA TYGODNIA: ${Object.entries(dowMap).sort((a,b)=>+a[0]-+b[0]).map(([d,v]) => `${DAYS[+d]}: śr.${v.cnt > 0 ? (v.sum/v.cnt).toFixed(0) : '?'} zł`).join(' | ') || 'brak'}
+SPRZEDAŻ 28d: ${(sales ?? []).map((r: any) => `${r.date} ${locName(r.location_id)} ${r.net_revenue?.toFixed(0)} zł ${r.transaction_count ?? '?'}tx`).join(' | ') || 'brak'}
+MENU: ${(dishes ?? []).map((d: any) => `${d.dish_name} ${d.menu_price_gross ?? '?'} zł FC-cel:${d.food_cost_target ? (d.food_cost_target*100).toFixed(0) : '?'}%`).join(' | ') || 'brak'}
+SKŁADNIKI: ${(ingredients ?? []).map((i: any) => `${i.name} ${i.last_price ?? '?'} zł/${i.base_unit}`).join(', ') || 'brak'}`
+    sys = `Jesteś Zofią — Dyrektorem Sprzedaży. Analizujesz trendy, rentowność menu, szanse wzrostu. Konkretne liczby, rekomenduj działania. Po polsku, max 4 zdania.`
 
-  const SYSTEM: Record<string, string> = {
-    profit:    'Jesteś Markiem — analitykiem finansowym restauracji. Odpowiadasz konkretnie po polsku na pytania finansowe, używając dostarczonych danych. Bądź bezpośredni i podawaj liczby.',
-    hr:        'Jesteś Martą — Dyrektorem HR restauracji. Odpowiadasz konkretnie po polsku na pytania o zespół, czas pracy, certyfikaty i koszty, używając dostarczonych danych.',
-    inventory: 'Jesteś Kubą — specjalistą ds. magazynu restauracji. Odpowiadasz konkretnie po polsku na pytania o magazyn, używając dostarczonych danych.',
-    revenue:   'Jesteś Zofią — Dyrektorem Sprzedaży restauracji. Odpowiadasz konkretnie po polsku na pytania o przychody, trendy sprzedaży i rentowność dań, używając dostarczonych danych. Podawaj konkretne liczby i rekomendacje.',
-    investor:  'Jesteś Markiem — Dyrektorem Inwestorskim restauracji. Odpowiadasz po polsku jak CFO raportujący do zarządu — konkretne liczby, marże, wzrost, unit economics. Używaj dostarczonych danych.',
+  /* ── INVENTORY ───────────────────────────────────────────────── */
+  } else if (director === 'inventory') {
+    const { data: jobs } = await admin.from('inventory_jobs').select('id, type, status, due_date, location_id').in('location_id', locationIds).order('due_date', { ascending: false }).limit(20)
+    const overdue = (jobs ?? []).filter((j: any) => j.status !== 'completed' && j.due_date < todayStr)
+    ctx = `${dateCtx}
+LOKALIZACJE: ${locs.map((l: any) => l.name).join(', ')}
+INWENTARYZACJE:
+${(jobs ?? []).map((j: any) => `${j.due_date} | ${locName(j.location_id)} | ${j.type} [${j.status}]${j.due_date < todayStr && j.status !== 'completed' ? ' ⚠PRZETERMINOWANE' : ''}`).join('\n') || 'brak'}
+Przeterminowane: ${overdue.length}`
+    sys = `Jesteś Kubą — specjalistą ds. magazynu. Monitorujesz inwentaryzacje i odchylenia. Podawaj daty, lokalizacje, ostrzegaj o zaległościach. Po polsku, max 4 zdania.`
+
+  /* ── INVESTOR ────────────────────────────────────────────────── */
+  } else if (director === 'investor') {
+    const [{ data: sales56 }, { data: pendingInv }] = await Promise.all([
+      admin.from('sales_daily').select('date, net_revenue, total_labor_hours, avg_hourly_rate, food_cost_amount, transaction_count, location_id').in('location_id', locationIds).order('date', { ascending: false }).limit(56),
+      admin.from('invoices').select('total_amount, invoice_type').in('location_id', locationIds).eq('status', 'submitted'),
+    ])
+    const s28 = (sales56 ?? []).slice(0, 28); const s56 = (sales56 ?? []).slice(28, 56)
+    const rev28 = s28.reduce((s: number, r: any) => s + (r.net_revenue || 0), 0)
+    const rev56 = s56.reduce((s: number, r: any) => s + (r.net_revenue || 0), 0)
+    const labor = s28.reduce((s: number, r: any) => s + ((r.total_labor_hours || 0) * (r.avg_hourly_rate || 0)), 0)
+    const food  = s28.reduce((s: number, r: any) => s + (r.food_cost_amount || 0), 0)
+    const txns  = s28.reduce((s: number, r: any) => s + (r.transaction_count || 0), 0)
+    const ebitda = rev28 - labor - food
+    const byLoc: Record<string, number> = {}
+    for (const r of s28) { const n = locName(r.location_id); byLoc[n] = (byLoc[n] ?? 0) + (r.net_revenue || 0) }
+    ctx = `${dateCtx}
+LOKALIZACJE: ${locs.map((l: any) => l.name).join(', ')}
+WYNIKI 28d: przychód ${rev28.toFixed(0)} zł | poprzednie 28d: ${rev56.toFixed(0)} zł | zmiana: ${rev56 > 0 ? ((rev28-rev56)/rev56*100).toFixed(1) : '?'}%
+EBITDA: ${ebitda.toFixed(0)} zł (${rev28 > 0 ? (ebitda/rev28*100).toFixed(1) : '?'}%)
+Koszt pracy: ${labor.toFixed(0)} zł (${rev28 > 0 ? (labor/rev28*100).toFixed(1) : '?'}%) | Food cost: ${food.toFixed(0)} zł (${rev28 > 0 ? (food/rev28*100).toFixed(1) : '?'}%)
+Transakcje: ${txns} | Śr. paragon: ${txns > 0 ? (rev28/txns).toFixed(0) : '?'} zł
+Ekspozycja: ${(pendingInv ?? []).reduce((s: number, i: any) => s + (i.total_amount || 0), 0).toFixed(0)} zł
+WG LOKALIZACJI (28d): ${Object.entries(byLoc).map(([n, v]) => `${n}: ${v.toFixed(0)} zł`).join(' | ') || 'brak'}`
+    sys = `Jesteś Adamem — Dyrektorem Inwestorskim. Raportujesz jak CFO do zarządu: EBITDA, marże, wzrost, unit economics. Konkretne liczby. Po polsku, max 4 zdania.`
   }
 
   const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 200,
+    model: 'gpt-4o',
+    max_tokens: 350,
     messages: [
-      { role: 'system', content: SYSTEM[director] ?? SYSTEM.profit },
-      { role: 'user', content: `Dane firmy:\n${contextData}\n\nPytanie: ${question}` },
+      { role: 'system', content: sys || 'Jesteś asystentem restauracji. Odpowiadaj po polsku.' },
+      { role: 'user', content: `DANE:\n${ctx}\n\nPYTANIE: ${question}` },
     ],
   })
 
   return NextResponse.json({ answer: res.choices[0]?.message?.content ?? 'Brak odpowiedzi.' })
 }
+
