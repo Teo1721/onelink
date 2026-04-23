@@ -88,16 +88,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Business day cutoff — shifts before 6 AM belong to the previous calendar day
+  // Use Warsaw timezone so server UTC offset doesn't cause wrong date at e.g. 7 AM local = 5 AM UTC
   const BUSINESS_DAY_CUTOFF = 6
+  const TIMEZONE = 'Europe/Warsaw'
   const now = new Date()
-  const businessDate = (() => {
-    if (now.getHours() < BUSINESS_DAY_CUTOFF) {
-      const prev = new Date(now)
-      prev.setDate(prev.getDate() - 1)
-      return prev.toLocaleDateString('sv-SE')
-    }
-    return now.toLocaleDateString('sv-SE')
-  })()
+  const nowInWarsaw = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const warsawHour = nowInWarsaw.getHours()
+  const todayWarsaw = new Intl.DateTimeFormat('sv-SE', { timeZone: TIMEZONE }).format(now)
+  const yesterdayWarsaw = new Intl.DateTimeFormat('sv-SE', { timeZone: TIMEZONE }).format(new Date(now.getTime() - 86_400_000))
+  const businessDate = warsawHour < BUSINESS_DAY_CUTOFF ? yesterdayWarsaw : todayWarsaw
 
   // Find existing record for today's business date
   let { data: record } = await admin

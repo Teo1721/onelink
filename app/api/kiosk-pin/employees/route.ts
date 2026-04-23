@@ -24,15 +24,13 @@ export async function GET(req: NextRequest) {
   if (!access) return NextResponse.json({ error: 'Brak dostępu' }, { status: 403 })
 
   const BUSINESS_DAY_CUTOFF = 6
+  const TIMEZONE = 'Europe/Warsaw'
   const now = new Date()
-  const businessDate = (() => {
-    if (now.getHours() < BUSINESS_DAY_CUTOFF) {
-      const prev = new Date(now)
-      prev.setDate(prev.getDate() - 1)
-      return prev.toLocaleDateString('sv-SE')
-    }
-    return now.toLocaleDateString('sv-SE')
-  })()
+  const nowInWarsaw = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const warsawHour = nowInWarsaw.getHours()
+  const todayWarsaw = new Intl.DateTimeFormat('sv-SE', { timeZone: TIMEZONE }).format(now)
+  const yesterdayWarsaw = new Intl.DateTimeFormat('sv-SE', { timeZone: TIMEZONE }).format(new Date(now.getTime() - 86_400_000))
+  const businessDate = warsawHour < BUSINESS_DAY_CUTOFF ? yesterdayWarsaw : todayWarsaw
 
   const [{ data: location }, { data: records }] = await Promise.all([
     admin.from('locations').select('id, name').eq('id', locationId).single(),

@@ -79,15 +79,13 @@ export async function POST(req: NextRequest) {
   // Business day: before 6 AM belongs to the previous day's shift
   // e.g. restaurant closes at 3 AM — clock-out at 2:30 AM is still Monday's shift
   const BUSINESS_DAY_CUTOFF = 6
+  const TIMEZONE = 'Europe/Warsaw'
   const now = new Date()
-  const businessDate = (() => {
-    if (now.getHours() < BUSINESS_DAY_CUTOFF) {
-      const prev = new Date(now)
-      prev.setDate(prev.getDate() - 1)
-      return prev.toLocaleDateString('sv-SE')
-    }
-    return now.toLocaleDateString('sv-SE')
-  })()
+  const nowInWarsaw = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const warsawHour = nowInWarsaw.getHours()
+  const todayWarsaw = new Intl.DateTimeFormat('sv-SE', { timeZone: TIMEZONE }).format(now)
+  const yesterdayWarsaw = new Intl.DateTimeFormat('sv-SE', { timeZone: TIMEZONE }).format(new Date(now.getTime() - 86_400_000))
+  const businessDate = warsawHour < BUSINESS_DAY_CUTOFF ? yesterdayWarsaw : todayWarsaw
 
   // Look for an open shift on today's business date.
   // Also fall back to an unclosed shift from yesterday to handle cross-day edge cases.
