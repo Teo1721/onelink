@@ -231,7 +231,7 @@ export async function GET(req: NextRequest) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: process.env.EMAIL_FROM ?? 'noreply@onelink.pl',
+              from: process.env.RESEND_FROM_EMAIL ?? 'OneLink <noreply@onelink.pl>',
               to: [email],
               subject: `Tygodniowy briefing CFO · ${company.name}`,
               html,

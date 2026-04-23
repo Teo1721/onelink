@@ -46,6 +46,7 @@ export function Sidebar({
         { key: 'hr_ai_director',   label: 'Dyrektor HR AI',        icon: Users },
         { key: 'investor_director',label: 'Dyrektor Inwestorski',  icon: BarChart3 },
         { key: 'what_if',          label: 'Co jeśli…',             icon: Sparkles },
+        { key: 'revenue_forecast', label: 'Prognoza przychodów',   icon: TrendingUp },
         { key: 'notifications',    label: 'Powiadomienia',          icon: Bell, badge: unreadNotifications },
       ],
     },
@@ -54,8 +55,9 @@ export function Sidebar({
       items: [
         { key: 'ingredients',     label: 'Składniki',       icon: FileText },
         { key: 'dishes',          label: 'Receptury',       icon: ClipboardList },
-        { key: 'menu_calculator', label: 'Kalkulator ceny', icon: DollarSign },
-        { key: 'menu_pricing',    label: 'Wycena menu',     icon: BarChart3 },
+        { key: 'menu_calculator',  label: 'Kalkulator ceny',  icon: DollarSign },
+        { key: 'menu_pricing',     label: 'Wycena menu',      icon: BarChart3 },
+        { key: 'menu_engineering', label: 'Inżynieria menu',  icon: BarChart3 },
       ],
     },
     {
@@ -85,9 +87,10 @@ export function Sidebar({
     {
       label: 'Raporty',
       items: [
-        { key: 'reports',  label: 'Raporty',      icon: BarChart3 },
-        { key: 'history',  label: 'Historia',     icon: History },
-        { key: 'imported', label: 'Import Excel', icon: FileSpreadsheet },
+        { key: 'reports',    label: 'Raporty',      icon: BarChart3 },
+        { key: 'history',    label: 'Historia',     icon: History },
+        { key: 'imported',   label: 'Import Excel', icon: FileSpreadsheet },
+        { key: 'csv_import', label: 'Import CSV',   icon: FileSpreadsheet },
       ],
     },
     {
@@ -219,19 +222,19 @@ export function Sidebar({
           </>
         )}
         <button
-          onClick={() => onNavigate('account')}
+          onClick={() => onNavigate('settings')}
           className={[
             'relative w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium transition-colors duration-100 cursor-pointer',
-            activeView === 'account'
+            activeView === 'settings' || activeView === 'account'
               ? 'bg-[#EFF6FF] text-[#2563EB]'
               : 'text-[#374151] hover:bg-[#F9FAFB] hover:text-[#111827]',
           ].join(' ')}
         >
-          {activeView === 'account' && (
+          {(activeView === 'settings' || activeView === 'account') && (
             <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[#2563EB]" />
           )}
           <Settings className="w-[15px] h-[15px] shrink-0" />
-          <span>Konto</span>
+          <span>Ustawienia</span>
         </button>
         <button
           onClick={onLogout}

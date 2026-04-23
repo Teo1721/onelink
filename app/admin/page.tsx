@@ -40,6 +40,10 @@ import { HrDirector } from '@/components/hr-director'
 import { InvestorDirector } from '@/components/investor-director'
 import { PushNotificationsToggle } from '@/components/push-notifications-toggle'
 import { WhatIfRoom } from '@/components/what-if-room'
+import { SettingsView } from '@/components/settings-view'
+import { RevenueForecast } from '@/components/revenue-forecast'
+import { CsvImport } from '@/components/csv-import'
+import { MenuEngineering } from '@/components/menu-engineering'
 
 
 // ================= Ingredients DB =================
@@ -463,6 +467,10 @@ type ActiveView =
   | 'investor_director'
   | 'what_if'
   | 'account'
+  | 'settings'
+  | 'revenue_forecast'
+  | 'csv_import'
+  | 'menu_engineering'
 
 /* ================================================================== */
 /*  HELPERS                                                            */
@@ -2120,7 +2128,17 @@ export default function AdminDashboard() {
           <AdminAccountView supabase={supabase} router={router} />
         )}
 
-        {activeView !== 'account' && <>
+        {/* ── SETTINGS VIEW ── */}
+        {activeView === 'settings' && companyId && adminId && (
+          <SettingsView
+            supabase={supabase}
+            companyId={companyId}
+            userId={adminId}
+            subscriptionPlan={subscriptionPlan}
+          />
+        )}
+
+        {activeView !== 'account' && activeView !== 'settings' && <>
         {/* ── TOP BAR ── */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-white border border-[#E5E7EB] rounded-lg px-3 h-9">
@@ -2538,6 +2556,12 @@ export default function AdminDashboard() {
                   {selectedDailyReport.status === 'approved' ? '✓ Zatwierdzony' :
                    selectedDailyReport.status === 'rejected' ? '✗ Odrzucony' : 'Do zatwierdzenia'}
                 </span>
+                <Button size="sm" variant="outline" onClick={() => {
+                  const url = `/report/daily?date=${selectedDailyReport.date}&locationId=${selectedDailyReport.location_id}`
+                  window.open(url, '_blank')
+                }}>
+                  <FileText className="w-3.5 h-3.5 mr-1.5" />PDF
+                </Button>
                 {!editingReport && (
                   <Button size="sm" variant="outline" onClick={() => {
                     setEditingReport(true)
@@ -2789,7 +2813,19 @@ export default function AdminDashboard() {
         {/* ═══════════════════════════════════════════════════════ */}
         {activeView === 'pnl' && (
           <div className="max-w-2xl space-y-5">
-            <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Raport P&L</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Raport P&L</h1>
+              <button
+                onClick={() => {
+                  const url = `/report/daily?date=${selectedDate}${filterLocationId !== 'all' ? `&locationId=${filterLocationId}` : ''}`
+                  window.open(url, '_blank')
+                }}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[#E5E7EB] bg-white text-[12px] font-semibold text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Export PDF
+              </button>
+            </div>
 
             {/* ── Main P&L card ── */}
             <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
@@ -2951,7 +2987,7 @@ export default function AdminDashboard() {
                           {inv.invoice_type}
                         </span>
                         <span className="text-[14px] font-semibold text-[#111827] font-mono w-24 text-right">
-                          {fmt0(Number(inv.total_net || inv.total_amount || 0))}
+                          {fmt2(Number(inv.total_net || inv.total_amount || 0))}
                         </span>
                       </div>
                     </div>
@@ -2997,7 +3033,7 @@ export default function AdminDashboard() {
                     >
                       <div>
                         <p className="text-[13px] font-semibold text-[#111827]">{inv.supplier_name}</p>
-                        <p className="text-[12px] text-[#6B7280] mt-0.5">{inv.locations?.name} · {inv.service_date} · {fmt0(inv.total_amount || inv.total_net || 0)}</p>
+                        <p className="text-[12px] text-[#6B7280] mt-0.5">{inv.locations?.name} · {inv.service_date} · {fmt2(inv.total_amount || inv.total_net || 0)}</p>
                         {inv.invoice_number && <p className="text-[11px] text-[#9CA3AF] mt-0.5">Nr: {inv.invoice_number} | {inv.invoice_type || '—'}</p>}
                       </div>
                       <div className="flex gap-2 shrink-0">
@@ -3039,8 +3075,8 @@ export default function AdminDashboard() {
                       { label: 'Data usługi', value: selectedInvoice.service_date ?? '—' },
                       { label: 'Nr faktury', value: selectedInvoice.invoice_number || '—' },
                       { label: 'Typ', value: selectedInvoice.invoice_type || '—' },
-                      { label: 'Kwota brutto', value: fmt0(selectedInvoice.total_amount || 0) },
-                      { label: 'Kwota netto', value: fmt0(selectedInvoice.total_net || 0) },
+                      { label: 'Kwota brutto', value: fmt2(selectedInvoice.total_amount || 0) },
+                      { label: 'Kwota netto', value: fmt2(selectedInvoice.total_net || 0) },
                     ].map(({ label, value }) => (
                       <div key={label}>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF]">{label}</p>
@@ -3059,8 +3095,8 @@ export default function AdminDashboard() {
                     ) : selectedInvoiceItems.length === 0 ? (
                       <p className="text-[12px] text-[#9CA3AF] py-2">Brak pozycji</p>
                     ) : (
-                      <div className="border border-[#E5E7EB] rounded-lg overflow-hidden">
-                        <table className="w-full text-[11px]">
+                      <div className="border border-[#E5E7EB] rounded-lg overflow-x-auto">
+                        <table className="min-w-full text-[11px]">
                           <thead>
                             <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
                               <th className="text-left px-3 py-2 font-semibold text-[#6B7280]">Produkt</th>
@@ -3080,9 +3116,9 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="px-3 py-2 text-right text-[#374151]">{item.quantity}</td>
                                 <td className="px-3 py-2 text-[#6B7280]">{item.unit}</td>
-                                <td className="px-3 py-2 text-right text-[#374151]">{fmt0(item.net_price)}</td>
-                                <td className="px-3 py-2 text-right text-[#374151]">{fmt0(item.net_value)}</td>
-                                <td className="px-3 py-2 text-right font-medium text-[#111827]">{fmt0(item.gross_value)}</td>
+                                <td className="px-3 py-2 text-right text-[#374151]">{fmt2(item.net_price)}</td>
+                                <td className="px-3 py-2 text-right text-[#374151]">{fmt2(item.net_value)}</td>
+                                <td className="px-3 py-2 text-right font-medium text-[#111827]">{fmt2(item.gross_value)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -3090,10 +3126,10 @@ export default function AdminDashboard() {
                             <tr className="bg-[#F9FAFB] border-t border-[#E5E7EB]">
                               <td colSpan={4} className="px-3 py-2 font-semibold text-[#374151]">Suma</td>
                               <td className="px-3 py-2 text-right font-semibold text-[#374151]">
-                                {fmt0(selectedInvoiceItems.reduce((s, i) => s + (i.net_value || 0), 0))}
+                                {fmt2(selectedInvoiceItems.reduce((s, i) => s + (i.net_value || 0), 0))}
                               </td>
                               <td className="px-3 py-2 text-right font-bold text-[#111827]">
-                                {fmt0(selectedInvoiceItems.reduce((s, i) => s + (i.gross_value || 0), 0))}
+                                {fmt2(selectedInvoiceItems.reduce((s, i) => s + (i.gross_value || 0), 0))}
                               </td>
                             </tr>
                           </tfoot>
@@ -4022,6 +4058,30 @@ export default function AdminDashboard() {
             </div>
             <WhatIfRoom />
           </div>
+        )}
+
+        {activeView === 'revenue_forecast' && companyId && (
+          <RevenueForecast
+            supabase={supabase}
+            companyId={companyId}
+            locationId={filterLocationId !== 'all' ? filterLocationId : undefined}
+          />
+        )}
+
+        {activeView === 'csv_import' && companyId && (
+          <CsvImport
+            supabase={supabase}
+            companyId={companyId}
+            locationId={filterLocationId !== 'all' ? filterLocationId : (locations[0]?.id ?? '')}
+          />
+        )}
+
+        {activeView === 'menu_engineering' && companyId && (
+          <MenuEngineering
+            supabase={supabase}
+            companyId={companyId}
+            locationId={filterLocationId !== 'all' ? filterLocationId : undefined}
+          />
         )}
 
         {(['hr_dashboard', 'hr_attendance', 'hr_leave', 'hr_swaps', 'hr_certs', 'hr_documents', 'hr_tips', 'hr_onboarding'] as ActiveView[]).includes(activeView) && (

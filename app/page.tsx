@@ -69,51 +69,89 @@ const FAQ_ITEMS = [
 /* ─────────────────────────── Lead Capture ─────────────────────── */
 function LeadCapture() {
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [locationCount, setLocationCount] = useState('');
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const res = await fetch('/api/lead-capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email, name, businessType, locationCount, newsletterConsent,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+          utmSource: params?.get('utm_source') ?? null,
+          utmMedium: params?.get('utm_medium') ?? null,
+          utmCampaign: params?.get('utm_campaign') ?? null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Błąd — spróbuj ponownie.'); setLoading(false); return; }
-      setDownloadUrl(data.downloadUrl);
+      setDone(true);
     } catch { setError('Błąd połączenia — spróbuj ponownie.'); }
     setLoading(false);
   };
 
   return (
-    <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50 p-8 text-center shadow-sm">
-      {downloadUrl ? (
-        <>
+    <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50 p-8 shadow-sm">
+      {done ? (
+        <div className="text-center py-4">
+          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-6 h-6 text-green-600" />
+          </div>
           <p className="text-[22px] font-bold text-[#111827] mb-2">Gotowe!</p>
-          <p className="text-[14px] text-[#6B7280] mb-5">Link wysłany na <strong>{email}</strong>.</p>
-          <a href={downloadUrl} download className="inline-block h-11 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all shadow-sm leading-[44px]">
-            Pobierz kalkulator food cost
-          </a>
-        </>
+          <p className="text-[14px] text-[#6B7280]">Arkusz wysłany na <strong>{email}</strong>. Sprawdź skrzynkę.</p>
+        </div>
       ) : (
         <>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-3">Nie gotowy na trial?</p>
-          <h2 className="text-[22px] font-black text-[#111827] mb-2 leading-tight">Pobierz bezpłatny kalkulator food cost</h2>
-          <p className="text-[14px] text-[#6B7280] mb-6 leading-relaxed">Arkusz Excel gotowy do użycia. Bez rejestracji.</p>
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Twój adres e-mail"
-              className="flex-1 h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-blue-400 shadow-sm transition-all" disabled={loading} />
+          <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-2 text-center">Nie gotowy na trial?</p>
+          <h2 className="text-[20px] font-black text-[#111827] mb-1 leading-tight text-center">Pobierz bezpłatny kalkulator food cost</h2>
+          <p className="text-[13px] text-[#6B7280] mb-5 leading-relaxed text-center">Arkusz Excel gotowy do użycia. Bez rejestracji.</p>
+          <form onSubmit={handleSubmit} className="space-y-3 max-w-sm mx-auto">
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Adres e-mail"
+              className="w-full h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-blue-400 shadow-sm transition-all" disabled={loading} />
+            <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Imię i nazwisko"
+              className="w-full h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-blue-400 shadow-sm transition-all" disabled={loading} />
+            <select required value={businessType} onChange={e => setBusinessType(e.target.value)}
+              className="w-full h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:border-blue-400 shadow-sm transition-all" disabled={loading}>
+              <option value="" disabled>Typ działalności</option>
+              <option value="restauracja">Restauracja</option>
+              <option value="kawiarnia">Kawiarnia / bistro</option>
+              <option value="fast-food">Fast food / bar</option>
+              <option value="catering">Catering</option>
+              <option value="hotel">Restauracja hotelowa</option>
+              <option value="inne">Inne</option>
+            </select>
+            <select required value={locationCount} onChange={e => setLocationCount(e.target.value)}
+              className="w-full h-11 px-4 rounded-xl bg-white border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:border-blue-400 shadow-sm transition-all" disabled={loading}>
+              <option value="" disabled>Liczba lokalizacji</option>
+              <option value="1">1 lokal</option>
+              <option value="2-5">2–5 lokali</option>
+              <option value="6-20">6–20 lokali</option>
+              <option value="20+">Ponad 20 lokali</option>
+            </select>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={newsletterConsent} onChange={e => setNewsletterConsent(e.target.checked)} disabled={loading}
+                className="mt-0.5 w-4 h-4 rounded border-[#D1D5DB] text-blue-600 focus:ring-blue-500 shrink-0" />
+              <span className="text-[11px] text-[#6B7280] leading-relaxed">
+                Wyrażam zgodę na otrzymywanie wiadomości e-mail z materiałami i ofertami OneLink. Możesz wypisać się w dowolnym momencie.
+              </span>
+            </label>
             <button type="submit" disabled={loading}
-              className="h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all whitespace-nowrap shadow-sm disabled:opacity-60">
-              {loading ? 'Wysyłam…' : 'Wyślij mi arkusz'}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-[13px] font-bold text-white hover:from-blue-500 hover:to-blue-400 transition-all shadow-sm disabled:opacity-60">
+              {loading ? 'Wysyłam…' : 'Pobierz kalkulator →'}
             </button>
           </form>
-          {error && <p className="text-[12px] text-red-500 mt-2">{error}</p>}
-          <p className="text-[11px] text-[#6B7280] mt-3">Bez spamu. Jeden e-mail z arkuszem.</p>
+          {error && <p className="text-[12px] text-red-500 mt-2 text-center">{error}</p>}
+          <p className="text-[11px] text-[#9CA3AF] mt-3 text-center">Plik wysyłamy zawsze. Do listy mailingowej — tylko za zgodą.</p>
         </>
       )}
     </div>
@@ -515,7 +553,7 @@ export default function HomePage() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
                 className="flex flex-wrap items-center gap-4 text-[12px] text-[#9CA3AF]"
               >
-                {['Bez karty na 7 dni', 'Konfiguracja w 3 minuty', 'Dane w UE — RODO compliant'].map(t => (
+                {['Konfiguracja w 3 minuty', 'Dane w UE — RODO compliant', 'Anuluj kiedy chcesz'].map(t => (
                   <div key={t} className="flex items-center gap-1.5">
                     <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
                     {t}
@@ -532,6 +570,26 @@ export default function HomePage() {
             >
               <ConsoleMockup />
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════ TRUSTED BY ════ */}
+      <section className="py-10 px-5 border-y border-[#F3F4F6] bg-white">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-7">Zaufali nam</p>
+          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
+            {[
+              { src: '/logos/baked.jpg', alt: 'Baked' },
+              { src: '/logos/olinek.jpg', alt: 'Olinek' },
+              { src: '/logos/swojska-spizarnia.jpg', alt: 'Swojska Spiżarnia' },
+              { src: '/logos/neuro.jpg', alt: 'Neuro' },
+              { src: '/logos/akab-group.jpg', alt: 'AKAB Group' },
+              { src: '/logos/feniks.jpg', alt: 'Feniks' },
+            ].map(({ src, alt }) => (
+              <img key={alt} src={src} alt={alt}
+                className="h-12 md:h-14 object-contain opacity-90 hover:opacity-100 transition-all duration-300" />
+            ))}
           </div>
         </div>
       </section>
@@ -829,7 +887,7 @@ export default function HomePage() {
               { name: 'Stripe', desc: 'Płatności', color: '#6772e5' },
               { name: 'Supabase', desc: 'Dane w UE', color: '#3ECF8E' },
               { name: 'Excel / CSV', desc: 'Import danych', color: '#217346' },
-              { name: 'GPT-4o', desc: 'AI Directors', color: '#10a37f' },
+              { name: 'Modele LLM', desc: 'AI Directors', color: '#10a37f' },
               { name: 'Resend', desc: 'Powiadomienia e-mail', color: '#000' },
               { name: 'QR / PIN Kiosk', desc: 'Rejestracja czasu', color: '#3B82F6' },
             ].map(({ name, desc, color }) => (
@@ -865,7 +923,7 @@ export default function HomePage() {
                 className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-[16px] font-bold text-white hover:opacity-90 transition-all shadow-2xl shadow-blue-500/40">
                 Zacznij za darmo — 7 dni <ArrowRight className="w-5 h-5" />
               </Link>
-              <p className="text-[12px] text-white/35 mt-4">Bez karty przez 7 dni. Anuluj kiedy chcesz.</p>
+              <p className="text-[12px] text-white/35 mt-4">Anuluj kiedy chcesz.</p>
             </div>
           </Reveal>
         </div>
@@ -914,11 +972,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ════ INDUSTRIES ════ */}
+      <section className="py-16 px-5 bg-[#F9FAFB]">
+        <div className="max-w-5xl mx-auto">
+          <Reveal className="text-center mb-10">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-2">Nie tylko gastronomia</p>
+            <h2 className="text-[28px] font-black text-[#111827]">OneLink działa w każdej branży</h2>
+            <p className="text-[14px] text-[#6B7280] mt-2">Zarządzaj personelem, kosztami i P&L — niezależnie od sektora.</p>
+          </Reveal>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Siłownie i fitness', href: '/dla-silowni', emoji: '🏋️' },
+              { label: 'Sklepy detaliczne', href: '/dla-sklepow', emoji: '🛒' },
+              { label: 'Hotele', href: '/dla-hoteli', emoji: '🏨' },
+              { label: 'Salony beauty', href: '/dla-salonow-beauty', emoji: '💅' },
+              { label: 'Apteki', href: '/dla-aptek', emoji: '💊' },
+              { label: 'Warsztaty', href: '/dla-warsztatow', emoji: '🔧' },
+              { label: 'Stacje paliw', href: '/dla-stacji-benzynowych', emoji: '⛽' },
+            ].map((item) => (
+              <Link key={item.href} href={item.href}
+                className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#E5E7EB] hover:border-[#D1D5DB] hover:shadow-sm transition-all group">
+                <span className="text-[20px]">{item.emoji}</span>
+                <span className="text-[13px] font-semibold text-[#374151] group-hover:text-[#111827] transition-colors">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ════ FOOTER ════ */}
       <footer className="border-t border-[#E5E7EB] bg-white pt-14 pb-8 px-5">
         <div className="max-w-6xl mx-auto">
           {/* Top: logo + columns */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-10 mb-12">
             {/* Brand */}
             <div className="col-span-2">
               <OneLinkLogo iconSize={28} textSize="text-[16px]" />
@@ -961,6 +1047,20 @@ export default function HomePage() {
                 <li><Link href="/terms" className="hover:text-[#111827] transition-colors">Regulamin</Link></li>
                 <li><Link href="/privacy" className="hover:text-[#111827] transition-colors">Polityka prywatności</Link></li>
                 <li><Link href="/security" className="hover:text-[#111827] transition-colors">Bezpieczeństwo</Link></li>
+              </ul>
+            </div>
+
+            {/* Industries */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#111827] mb-4">Branże</p>
+              <ul className="space-y-2.5 text-[13px] text-[#6B7280]">
+                <li><Link href="/dla-silowni" className="hover:text-[#111827] transition-colors">Siłownie</Link></li>
+                <li><Link href="/dla-sklepow" className="hover:text-[#111827] transition-colors">Sklepy</Link></li>
+                <li><Link href="/dla-hoteli" className="hover:text-[#111827] transition-colors">Hotele</Link></li>
+                <li><Link href="/dla-salonow-beauty" className="hover:text-[#111827] transition-colors">Salony beauty</Link></li>
+                <li><Link href="/dla-aptek" className="hover:text-[#111827] transition-colors">Apteki</Link></li>
+                <li><Link href="/dla-warsztatow" className="hover:text-[#111827] transition-colors">Warsztaty</Link></li>
+                <li><Link href="/dla-stacji-benzynowych" className="hover:text-[#111827] transition-colors">Stacje paliw</Link></li>
               </ul>
             </div>
           </div>

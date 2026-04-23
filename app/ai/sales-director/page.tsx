@@ -257,13 +257,13 @@ export default function SalesDirectorLandingPage() {
         <Reveal className="text-center">
           <div className="rounded-3xl p-10 text-center" style={{ background: 'linear-gradient(135deg, #0D1628 0%, #2D1B69 100%)' }}>
             <p className="text-[28px] font-black text-white mb-3">Gotowy żeby Zofia pilnowała sprzedaży?</p>
-            <p className="text-[14px] text-slate-400 mb-8 max-w-md mx-auto">7 dni bezpłatnie. Bez karty. Konfiguracja w 3 minuty.</p>
+            <p className="text-[14px] text-slate-400 mb-8 max-w-md mx-auto">7 dni bezpłatnie. Konfiguracja w 3 minuty.</p>
             <Link href="/auth/sign-up"
               className="inline-flex items-center gap-2 h-13 px-8 rounded-2xl bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] text-[15px] font-bold text-white hover:opacity-90 transition-all shadow-xl shadow-violet-500/40">
               Zacznij teraz — za darmo <ArrowRight className="w-5 h-5" />
             </Link>
             <div className="flex items-center justify-center gap-6 mt-6">
-              {['Bez karty', 'Anuluj kiedy chcesz', 'Dane w Polsce (EU)'].map(t => (
+              {['Anuluj kiedy chcesz', 'Dane w Polsce (EU)'].map(t => (
                 <div key={t} className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
                   <span className="text-[12px] text-slate-400">{t}</span>

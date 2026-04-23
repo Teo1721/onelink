@@ -59,6 +59,8 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/security") &&
     !request.nextUrl.pathname.startsWith("/privacy") &&
     !request.nextUrl.pathname.startsWith("/terms") &&
+    !request.nextUrl.pathname.startsWith("/roi-calculator") &&
+    !request.nextUrl.pathname.startsWith("/dla-") &&
     !request.nextUrl.pathname.startsWith("/api")
   ) {
     // no user, potentially respond by redirecting the user to the login page

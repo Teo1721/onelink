@@ -294,7 +294,7 @@ export default function CfoDirectorPage() {
               className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-[16px] font-bold text-white hover:opacity-90 transition-all shadow-2xl shadow-blue-500/40">
               Zacznij za darmo — 7 dni <ArrowRight className="w-5 h-5" />
             </Link>
-            <p className="text-[12px] text-white/35 mt-4">Bez karty przez 7 dni. CFO aktywny od pierwszego dnia.</p>
+            <p className="text-[12px] text-white/35 mt-4">CFO aktywny od pierwszego dnia.</p>
           </Reveal>
         </div>
       </section>

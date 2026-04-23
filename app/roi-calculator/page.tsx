@@ -224,7 +224,7 @@ export default function RoiCalculatorPage() {
               className="flex items-center justify-center gap-2 w-full h-14 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[15px] font-bold text-white hover:opacity-90 transition-all shadow-xl shadow-blue-500/30">
               Zacznij oszczędzać — 7 dni gratis <ArrowRight className="w-5 h-5" />
             </Link>
-            <p className="text-[11px] text-[#9CA3AF] text-center">Bez karty przez 7 dni. Anuluj kiedy chcesz.</p>
+            <p className="text-[11px] text-[#9CA3AF] text-center">Anuluj kiedy chcesz.</p>
           </div>
         </div>
       </div>

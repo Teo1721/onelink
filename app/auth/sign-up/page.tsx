@@ -84,7 +84,7 @@ export default function SignUpPage() {
       }
 
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      router.push(signInError ? "/auth/login" : "/admin");
+      router.push(signInError ? "/auth/login" : "/admin/setup");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Błąd rejestracji. Spróbuj ponownie.");
     } finally {
