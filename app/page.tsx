@@ -11,6 +11,8 @@ import {
   Brain, AlertTriangle, Bell, MessageSquare, Sparkles, Eye, Target,
   DollarSign, Building2, Cpu, LineChart, Activity, MailCheck, MapPin,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -57,6 +59,20 @@ function RevealList({ children, className = "" }: { children: React.ReactNode[];
 }
 
 /* ─────────────────────────── FAQ data ─────────────────────────── */
+const FAQ_ITEMS_EN = [
+  { q: "How much does OneLink cost after the free trial?", a: "Plans start from 49.99 PLN/month net (+VAT). You can cancel at any time — no lock-in period." },
+  { q: "Do I need to provide a credit card to register?", a: "Yes, we ask for card details via Stripe at registration. No charge is made during the 7-day trial. Cancel before 7 days — no payment will be taken." },
+  { q: "How long does setup and configuration take?", a: "Your first account is ready in about 3 minutes. Full setup with inviting managers takes up to 20 minutes. No IT required." },
+  { q: "Can I manage multiple locations?", a: "Yes. OneLink is designed to manage multiple locations from one owner panel. Compare results, transfer stock and approve invoices across all locations." },
+  { q: "How do the AI Directors work?", a: "Each AI Director is a dedicated agent monitoring your data 24/7. The CFO analyses P&L and detects anomalies. The COO tracks attendance and schedules. You get a notification before a problem becomes a loss." },
+  { q: "Is my data secure?", a: "Yes. Data is encrypted and stored on EU servers (Supabase). Payments handled by Stripe (PCI DSS Level 1). We do not share data with third parties." },
+  { q: "Does OneLink integrate with my POS system?", a: "OneLink works alongside your POS — no direct integration required. Sales data can be entered manually by managers or imported via CSV/Excel. Direct API for popular POS systems is on the roadmap." },
+  { q: "Can I migrate data from Excel or another system?", a: "Yes. OneLink supports CSV and Excel import for sales, products and employees. Most clients are set up within one working day." },
+  { q: "Does the PIN kiosk work offline?", a: "The PIN kiosk requires an internet connection — time entries are synced in real time. Employees can see their status even during brief connectivity issues, and data syncs when reconnected." },
+  { q: "What happens to my data after I cancel?", a: "After cancellation you have 30 days to export all data (reports, invoices, time records) in CSV/Excel format. After that, the account and data are permanently deleted per GDPR." },
+  { q: "How many users can use the system simultaneously?", a: "Unlimited — you can add any number of managers and employees. Employees use the PIN kiosk or a QR link, not separate accounts. Active sessions are not restricted." },
+];
+
 const FAQ_ITEMS = [
   { q: "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", a: "Plany zaczynają się od 19,99 zł miesięcznie netto (+ VAT). Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." },
   { q: "Czy muszę podawać kartę kredytową przy rejestracji?", a: "Tak, przy rejestracji prosimy o dane karty przez Stripe. Nie pobieramy żadnej opłaty przez 7 dni trialu. Możesz anulować przed upływem 7 dni — żadna opłata nie zostanie pobrana." },
@@ -471,6 +487,9 @@ function ConsoleMockup() {
 export default function HomePage() {
   const [activeDirector, setActiveDirector] = useState('cfo');
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const faqItems = pl ? FAQ_ITEMS : FAQ_ITEMS_EN;
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] text-[#111827]">
@@ -481,19 +500,20 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
           <OneLinkLogo iconSize={28} textSize="text-[16px]" />
           <div className="hidden md:flex items-center gap-6 text-[13px] text-[#6B7280]">
-            <a href="#directors" className="hover:text-[#111827] transition-colors">Dyrektorzy AI</a>
-            <a href="#how" className="hover:text-[#111827] transition-colors">Jak to działa</a>
-            <a href="#results" className="hover:text-[#111827] transition-colors">Wyniki</a>
-            <Link href="/pricing" className="hover:text-[#111827] transition-colors">Cennik</Link>
+            <a href="#directors" className="hover:text-[#111827] transition-colors">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
+            <a href="#how" className="hover:text-[#111827] transition-colors">{pl ? 'Jak to działa' : 'How it works'}</a>
+            <a href="#results" className="hover:text-[#111827] transition-colors">{pl ? 'Wyniki' : 'Results'}</a>
+            <Link href="/pricing" className="hover:text-[#111827] transition-colors">{pl ? 'Cennik' : 'Pricing'}</Link>
             <a href="#faq" className="hover:text-[#111827] transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Zaloguj</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">{pl ? 'Zaloguj' : 'Log in'}</Link>
             <Link href="/contact" className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
-              Umów demo
+              {pl ? 'Umów demo' : 'Book a demo'}
             </Link>
             <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1">
-              Zacznij za darmo
+              {pl ? 'Zacznij za darmo' : 'Start for free'}
             </Link>
           </div>
         </div>
@@ -522,16 +542,16 @@ export default function HomePage() {
               <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
                 className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-6">
                 <Sparkles className="w-3 h-3" />
-                System operacyjny dla Twojego biznesu
+                {pl ? 'System operacyjny dla Twojego biznesu' : 'The operating system for your business'}
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1, ease: EASE }}
                 className="text-[44px] md:text-[58px] font-black leading-[1.07] tracking-tight mb-6"
               >
-                Zarządzaj firmą<br />
+                {pl ? <>Zarządzaj firmą<br /></> : <>Run your business<br /></>}
                 <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
-                  jak właściciel —<br />nie jak księgowy.
+                  {pl ? <>jak właściciel —<br />nie jak księgowy.</> : <>like an owner —<br />not an accountant.</>}
                 </span>
               </motion.h1>
 
@@ -539,8 +559,9 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
                 className="text-[17px] text-[#6B7280] leading-relaxed mb-8 max-w-lg"
               >
-                OneLink łączy P&L, ewidencję czasu pracy, HR, magazyn i faktury w jednym panelu —
-                a Dyrektorzy AI analizują dane za Ciebie i budzą Cię tylko wtedy, kiedy dzieje się coś ważnego.
+                {pl
+                  ? 'OneLink łączy P&L, ewidencję czasu pracy, HR, magazyn i faktury w jednym panelu — a Dyrektorzy AI analizują dane za Ciebie i budzą Cię tylko wtedy, kiedy dzieje się coś ważnego.'
+                  : 'OneLink combines P&L, time tracking, HR, inventory and invoices in one panel — and AI Directors analyse your data so you only get alerted when something important happens.'}
               </motion.p>
 
               <motion.div
@@ -549,11 +570,11 @@ export default function HomePage() {
               >
                 <Link href="/auth/sign-up"
                   className="inline-flex items-center justify-center gap-2 h-13 px-7 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[15px] font-bold text-white hover:opacity-90 transition-all shadow-xl shadow-blue-500/30">
-                  Zacznij za darmo — 7 dni <ArrowRight className="w-4 h-4" />
+                  {pl ? 'Zacznij za darmo — 7 dni' : 'Start for free — 7 days'} <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a href="#directors"
                   className="inline-flex items-center justify-center gap-2 h-13 px-7 rounded-2xl bg-white border border-[#E5E7EB] text-[15px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
-                  Poznaj Dyrektorów AI
+                  {pl ? 'Poznaj Dyrektorów AI' : 'Meet the AI Directors'}
                 </a>
               </motion.div>
 
@@ -561,7 +582,10 @@ export default function HomePage() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
                 className="flex flex-wrap items-center gap-4 text-[12px] text-[#9CA3AF] mb-6"
               >
-                {['Konfiguracja w 3 minuty', 'Dane w UE — RODO compliant', 'Anuluj kiedy chcesz'].map(t => (
+                {(pl
+                  ? ['Konfiguracja w 3 minuty', 'Dane w UE — RODO compliant', 'Anuluj kiedy chcesz']
+                  : ['Setup in 3 minutes', 'EU data — GDPR compliant', 'Cancel any time']
+                ).map(t => (
                   <div key={t} className="flex items-center gap-1.5">
                     <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
                     {t}
@@ -1070,7 +1094,7 @@ export default function HomePage() {
             <p className="text-[16px] text-[#6B7280]">Wszystko co chcesz wiedzieć przed startem trialu</p>
           </Reveal>
           <div className="space-y-2">
-            {FAQ_ITEMS.map((item, i) => (
+            {faqItems.map((item, i) => (
               <div key={i} className={`border rounded-2xl overflow-hidden transition-all ${faqOpen === i ? 'border-[#D1D5DB] bg-white shadow-sm' : 'border-[#E5E7EB] bg-white hover:shadow-sm'}`}>
                 <button className="w-full flex items-center justify-between px-6 py-4 text-left gap-4"
                   onClick={() => setFaqOpen(faqOpen === i ? null : i)} aria-expanded={faqOpen === i}>

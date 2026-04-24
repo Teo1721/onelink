@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, ChevronDown, BarChart3, DollarSign,
   TrendingUp, Users, ShieldCheck, Package, Zap, FileText,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: Package, title: "Części zamienne znikają bez ewidencji", desc: "Mechanik bierze część z magazynu, ale nikt nie odnotowuje. Koniec miesiąca — stany się nie zgadzają, a marża na zleceniu jest iluzją." },
   { icon: DollarSign, title: "Nie wiesz ile zarabia każde stanowisko", desc: "Podnośnik A i podnośnik B — oba zajęte, ale który generuje więcej? Bez systemu rozliczania zleceń nie ma odpowiedzi." },
   { icon: FileText, title: "Faktury za części i dostawców — sterta papierów", desc: "Dziesiątki faktur za części od różnych dostawców. Ręczne przepisywanie do Excelu zajmuje godziny, a i tak są błędy." },
 ];
+const PROBLEMS_EN = [
+  { icon: Package, title: "Spare parts disappear without tracking", desc: "A mechanic takes a part from stock, but nobody records it. End of month — levels don't match and the job margin is an illusion." },
+  { icon: DollarSign, title: "You don't know how much each bay earns", desc: "Lift A and lift B — both busy, but which earns more? Without a job costing system, there's no answer." },
+  { icon: FileText, title: "Parts and supplier invoices — a pile of paperwork", desc: "Dozens of invoices from different parts suppliers. Manual entry into Excel takes hours, and there are still errors." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: Package, color: "#F59E0B", title: "Magazyn części — stany i zamówienia", desc: "Bieżące stany, alerty niskiego poziomu, historia dostaw. Mechanicy widzą dostępność części zanim zaczną zlecenie." },
   { icon: BarChart3, color: "#6366F1", title: "P&L per warsztat i per stanowisko", desc: "Przychody ze zleceń, koszty części, koszty pracy — marża per stanowisko i per warsztat bez ręcznych zestawień." },
   { icon: TrendingUp, color: "#10B981", title: "AI CFO — wyniki warsztatu pod kontrolą", desc: "Dyrektor Finansowy AI monitoruje przychody tygodniowe i koszty. Alert gdy marża zleceniowa spada poniżej progu." },
@@ -49,24 +56,45 @@ const FEATURES = [
   { icon: FileText, color: "#3B82F6", title: "Faktury dostawców części", desc: "Skanuj i importuj faktury. System kategoryzuje koszty części do P&L automatycznie — koniec z papierowymi stosami." },
   { icon: ShieldCheck, color: "#8B5CF6", title: "Sieć warsztatów w jednym panelu", desc: "Kilka lokalizacji? Porównuj wyniki, rankingi stanowisk i koszty między warsztatami. Skaluj to co działa." },
 ];
+const FEATURES_EN = [
+  { icon: Package, color: "#F59E0B", title: "Parts inventory — stock and orders", desc: "Current stock, low-level alerts, delivery history. Mechanics see part availability before starting a job." },
+  { icon: BarChart3, color: "#6366F1", title: "P&L per workshop and per bay", desc: "Job revenues, parts costs, labour costs — margin per bay and per workshop without manual reports." },
+  { icon: TrendingUp, color: "#10B981", title: "AI CFO — workshop results under control", desc: "The AI Finance Director monitors weekly revenues and costs. Alert when job margin drops below threshold." },
+  { icon: Users, color: "#EF4444", title: "Mechanic and staff schedule", desc: "Online shift schedule. Employees see their schedule in the app, manager approves leave with one click." },
+  { icon: FileText, color: "#3B82F6", title: "Parts supplier invoices", desc: "Scan and import invoices. System categorises parts costs to P&L automatically — end of paper piles." },
+  { icon: ShieldCheck, color: "#8B5CF6", title: "Workshop chain in one panel", desc: "Multiple locations? Compare results, bay rankings and costs between workshops. Scale what works." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink zastępuje program do zarządzania zleceniami serwisowymi?", a: "Nie — OneLink zarządza finansami operacyjnymi i personelem. Możesz importować dane zleceń z CSV i łączyć je z kosztami części i pracy." },
   { q: "Jak śledzić zużycie części w zleceniach?", a: "Przez moduł transakcji magazynowych — każde pobranie części z magazynu jest rejestrowane i przypisywane do centrum kosztów (stanowisko/warsztat)." },
   { q: "Czy mogę liczyć marżę per zlecenie?", a: "Tak — przypisując przychody i koszty do konkretnych centrów kosztów (np. per stanowisko lub typ usługi) możesz wyliczyć marżę operacyjną." },
   { q: "Ile kosztuje OneLink dla warsztatu?", a: "Od 19,99 zł / miesiąc netto. Dla sieci warsztatów — skontaktuj się po indywidualną wycenę z rabatem." },
   { q: "Jak szybko można wdrożyć OneLink?", a: "Pierwsze konto gotowe w 3 minuty. Dodanie pracowników, produktów i lokalizacji — maksymalnie 20 minut." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Does OneLink replace a job management system?", a: "No — OneLink manages operational finances and staff. You can import job data from CSV and link it with parts and labour costs." },
+  { q: "How do I track parts consumption per job?", a: "Through the warehouse transaction module — every part taken from stock is recorded and assigned to a cost centre (bay/workshop)." },
+  { q: "Can I calculate margin per job?", a: "Yes — by assigning revenues and costs to specific cost centres (e.g. per bay or service type) you can calculate operating margin." },
+  { q: "How much does OneLink cost for a workshop?", a: "From 49.99 PLN / month net. For workshop chains — contact us for individual pricing with a discount." },
+  { q: "How quickly can OneLink be deployed?", a: "First account ready in 3 minutes. Adding employees, products and locations — maximum 20 minutes." },
+];
 
 export default function DlaWarsztatowPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
-            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">Zacznij za darmo</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">{pl ? 'Zacznij za darmo' : 'Start for free'}</Link>
           </div>
         </div>
       </nav>

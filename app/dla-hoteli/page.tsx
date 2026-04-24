@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, ChevronDown, BarChart3, DollarSign,
   TrendingUp, Users, ShieldCheck, FileText, Zap, Package,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: BarChart3, title: "F&B i hotel w osobnych systemach", desc: "Restauracja hotelowa ma własne raporty, recepcja inne — a Ty musisz to sklejać ręcznie, żeby zobaczyć wynik całości." },
   { icon: Users, title: "Wielozmianowy personel — brak przejrzystości", desc: "Kuchnia, obsługa, recepcja — różne grafiki, różne stawki. Koszt pracy to czarna skrzynka do końca miesiąca." },
   { icon: FileText, title: "Faktury od dziesiątek dostawców", desc: "Żywność, napoje, środki czystości, wyposażenie — każda faktura w innym formacie. Kategoryzacja zajmuje godziny." },
 ];
+const PROBLEMS_EN = [
+  { icon: BarChart3, title: "F&B and hotel in separate systems", desc: "The hotel restaurant has its own reports, reception has different ones — and you have to stitch them together manually to see the full picture." },
+  { icon: Users, title: "Multi-shift staff — no visibility", desc: "Kitchen, service, reception — different schedules, different rates. Labour cost is a black box until end of month." },
+  { icon: FileText, title: "Invoices from dozens of suppliers", desc: "Food, beverages, cleaning supplies, equipment — every invoice in a different format. Categorisation takes hours." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: BarChart3, color: "#6366F1", title: "P&L restauracji i hotelu oddzielnie", desc: "Centrum kosztów restauracja hotelowa vs. wynajem pokoi. Marże per dział bez ręcznych zestawień." },
   { icon: TrendingUp, color: "#10B981", title: "AI CFO dla obiektów hotelowych", desc: "Dyrektor Finansowy AI analizuje przychody, food cost i marżę F&B. Alert gdy coś odbiega od normy o ponad 15%." },
   { icon: Users, color: "#F59E0B", title: "Grafik wielozmianowy — kuchnia i recepcja", desc: "Jeden panel dla wszystkich działów. Pracownicy widzą zmiany w aplikacji, manager widzi pełne zestawienie kosztów pracy." },
@@ -49,24 +56,45 @@ const FEATURES = [
   { icon: Package, color: "#3B82F6", title: "Stany F&B i food cost", desc: "Śledzenie stanów kuchennych, procentowy food cost per tydzień — kluczowy wskaźnik dla rentowności restauracji hotelowej." },
   { icon: ShieldCheck, color: "#8B5CF6", title: "Wiele obiektów — jeden widok", desc: "Sieć hoteli? Porównuj wyniki F&B, koszty pracy i marże między obiektami z jednego panelu właściciela." },
 ];
+const FEATURES_EN = [
+  { icon: BarChart3, color: "#6366F1", title: "Restaurant and hotel P&L separately", desc: "Cost centre: hotel restaurant vs. room rentals. Department margins without manual reports." },
+  { icon: TrendingUp, color: "#10B981", title: "AI CFO for hotel properties", desc: "The AI Finance Director analyses revenue, food cost and F&B margin. Alert when something deviates from norm by more than 15%." },
+  { icon: Users, color: "#F59E0B", title: "Multi-shift schedule — kitchen and reception", desc: "One panel for all departments. Employees see their shifts in the app, manager sees the full labour cost breakdown." },
+  { icon: FileText, color: "#EF4444", title: "Supplier invoices and categorisation", desc: "Import PDF or CSV invoices. The system categorises them to F&B, housekeeping, technical — automatically." },
+  { icon: Package, color: "#3B82F6", title: "F&B stock and food cost", desc: "Track kitchen stock, weekly food cost percentage — the key metric for hotel restaurant profitability." },
+  { icon: ShieldCheck, color: "#8B5CF6", title: "Multiple properties — one view", desc: "Hotel chain? Compare F&B results, labour costs and margins between properties from the owner panel." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink jest dedykowany hotelom?", a: "OneLink zarządza operacjami wielolokalizacyjnymi — restauracje hotelowe, koszty pracy i faktury dostawców to jego core. Nie zastępuje PMS, ale uzupełnia go o widok finansowy." },
   { q: "Czy mogę podzielić P&L na restaurację i hotel?", a: "Tak. Możesz tworzyć centra kosztów i przypisywać do nich sprzedaż, faktury i koszty pracy. P&L każdego działu osobno." },
   { q: "Jak działa AI CFO dla hotelu?", a: "AI CFO analizuje dane z Twoich raportów dziennych i faktur. Porównuje wyniki z poprzednimi tygodniami i alarmuje o anomaliach — np. wzrost food cost powyżej 35%." },
   { q: "Czy mogę importować dane z systemu PMS?", a: "Jeśli Twój PMS eksportuje CSV/Excel, możesz zaimportować dane sprzedażowe do OneLink. Integracje API są na roadmapie." },
   { q: "Ile kosztuje OneLink dla hoteli?", a: "Od 19,99 zł / miesiąc netto. Dla hoteli z kilkoma działami — skontaktuj się po indywidualną wycenę." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Is OneLink dedicated to hotels?", a: "OneLink manages multi-location operations — hotel restaurants, labour costs and supplier invoices are its core. It doesn't replace a PMS, but complements it with a financial view." },
+  { q: "Can I split P&L between the restaurant and hotel?", a: "Yes. You can create cost centres and assign sales, invoices and labour costs to them. Each department gets its own P&L." },
+  { q: "How does AI CFO work for a hotel?", a: "AI CFO analyses data from your daily reports and invoices. It compares results to previous weeks and alerts on anomalies — e.g. food cost rising above 35%." },
+  { q: "Can I import data from a PMS system?", a: "If your PMS exports CSV/Excel, you can import sales data into OneLink. API integrations are on the roadmap." },
+  { q: "How much does OneLink cost for hotels?", a: "From 49.99 PLN / month net. For hotels with several departments — contact us for individual pricing." },
+];
 
 export default function DlaHoteliPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
-            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">Zacznij za darmo</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">{pl ? 'Zacznij za darmo' : 'Start for free'}</Link>
           </div>
         </div>
       </nav>

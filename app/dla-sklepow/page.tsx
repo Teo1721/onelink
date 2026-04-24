@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, ChevronDown, Package, BarChart3, DollarSign,
   TrendingUp, Users, ShieldCheck, Clock, Zap,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: Package, title: "Stany magazynowe w głowie lub Excelu", desc: "Brakuje towaru? Dowiadujesz się, gdy klient pyta o produkt. Zamawiasz za dużo albo za mało — bo nie ma jednego miejsca z prawdziwymi stanami." },
   { icon: DollarSign, title: "Koszty operacyjne rosną bez kontroli", desc: "Faktury od dostawców, pracownicy, media — trudno zebrać wszystko i wyliczyć marżę per kategoria produktu czy sklep." },
   { icon: Users, title: "Grafik na kartce, absencje przez SMS", desc: "Zarządzanie zmianami kilku pracowników w różnych godzinach generuje chaos, gdy ktoś odwołuje w ostatniej chwili." },
 ];
+const PROBLEMS_EN = [
+  { icon: Package, title: "Stock levels in your head or Excel", desc: "Running out of stock? You find out when a customer asks. You over- or under-order — because there's no single source of truth for stock levels." },
+  { icon: DollarSign, title: "Operating costs growing out of control", desc: "Supplier invoices, staff, utilities — it's hard to pull everything together and calculate margin per product category or store." },
+  { icon: Users, title: "Schedule on paper, absences by SMS", desc: "Managing shifts for several employees at different hours creates chaos whenever someone cancels at the last minute." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: Package, color: "#10B981", title: "Stany i zamówienia w jednym miejscu", desc: "Bieżące stany magazynowe, alerty o niskim poziomie, historia dostaw — bez arkuszy kalkulacyjnych." },
   { icon: BarChart3, color: "#6366F1", title: "P&L na sklep i kategorię", desc: "Sprzedaż, koszty, marża — widok per lokal i per kategoria produktowa. Wiesz, co zarabia, a co obciąża wynik." },
   { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — alert gdy marża spada", desc: "Dyrektor Finansowy AI analizuje wyniki każdego sklepu i alarmuje, gdy trend jest niepokojący." },
@@ -49,25 +56,46 @@ const FEATURES = [
   { icon: DollarSign, color: "#3B82F6", title: "Faktury i koszty dostawców", desc: "Skanuj i kategoryzuj faktury. System łączy je z P&L automatycznie — zero ręcznego przepisywania." },
   { icon: ShieldCheck, color: "#8B5CF6", title: "Sieć sklepów w jednym panelu", desc: "Porównuj wyniki między sklepami, buduj rankingi i wychwytuj lokal wymagający interwencji." },
 ];
+const FEATURES_EN = [
+  { icon: Package, color: "#10B981", title: "Stock and orders in one place", desc: "Current stock levels, low-level alerts, delivery history — without spreadsheets." },
+  { icon: BarChart3, color: "#6366F1", title: "P&L per store and category", desc: "Sales, costs, margin — view per location and per product category. You know what earns and what drags the result." },
+  { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — alert when margin drops", desc: "The AI Finance Director analyses each store's results and alerts you when the trend is worrying." },
+  { icon: Users, color: "#EF4444", title: "Schedule and time tracking", desc: "Online shift schedule, leave requests in the app, automatic time records for HR." },
+  { icon: DollarSign, color: "#3B82F6", title: "Invoices and supplier costs", desc: "Scan and categorise invoices. The system links them to P&L automatically — zero manual re-entry." },
+  { icon: ShieldCheck, color: "#8B5CF6", title: "Store network in one panel", desc: "Compare results between stores, build rankings and identify the location that needs attention." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink działa dla sklepów detalicznych?", a: "Tak. OneLink obsługuje każdy biznes z personelem, magazynem i kosztami operacyjnymi — w tym sklepy detaliczne, spożywcze i specjalistyczne." },
   { q: "Czy mogę śledzić stany magazynowe?", a: "Tak. Możesz prowadzić stany przez system transakcji magazynowych, importować dane CSV i powiązywać produkty z dostawcami i fakturami." },
   { q: "Czy aplikacja mobilna działa bez internetu?", a: "Aplikacja pracownika jest PWA — działa na każdym smartfonie przez przeglądarkę. Podstawowe widoki są dostępne offline." },
   { q: "Ile kosztuje OneLink dla sieci sklepów?", a: "Od 19,99 zł / miesiąc netto za lokalizację. Dla sieci powyżej 5 lokali — skontaktuj się po indywidualną wycenę." },
   { q: "Jak zintegrować OneLink z moją kasą fiskalną?", a: "OneLink importuje raporty sprzedaży (CSV/Excel) i łączy je z danymi kosztowymi. Nie zastępuje kasy, ale agreguje wszystkie dane w jednym miejscu." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Does OneLink work for retail stores?", a: "Yes. OneLink supports any business with staff, inventory and operating costs — including retail, grocery and specialist stores." },
+  { q: "Can I track stock levels?", a: "Yes. You can manage stock via the warehouse transaction system, import CSV data and link products to suppliers and invoices." },
+  { q: "Does the mobile app work offline?", a: "The employee app is a PWA — it runs on any smartphone through the browser. Key views are available offline." },
+  { q: "How much does OneLink cost for a store chain?", a: "From 49.99 PLN / month net per location. For chains over 5 locations — contact us for individual pricing." },
+  { q: "How do I integrate OneLink with my POS?", a: "OneLink imports sales reports (CSV/Excel) and combines them with cost data. It doesn't replace your POS, but aggregates all data in one place." },
+];
 
 export default function DlaSklepowPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
             <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">
-              Zacznij za darmo
+              {pl ? 'Zacznij za darmo' : 'Start for free'}
             </Link>
           </div>
         </div>

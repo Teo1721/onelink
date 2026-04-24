@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, ChevronDown, BarChart3, DollarSign,
   TrendingUp, Users, ShieldCheck, Package, Zap, FileText,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: Package, title: "Stany paliwa i towaru — dwa oddzielne światy", desc: "Paliwo ewidencjonujesz w jednym systemie, sklep stacji w innym. Żeby zobaczyć całościowy wynik musisz to ręcznie sklejać co miesiąc." },
   { icon: DollarSign, title: "Marża na paliwie i sklepie niewidoczna oddzielnie", desc: "Stacja jako całość może być rentowna, ale sklep samoobsługowy lub myjnia może generować straty — bez systemu tego nie widać." },
   { icon: Users, title: "Wielozmianowy personel bez systemu", desc: "Kasjerzy, pracownicy myjni, obsługa sklepu — różne zmiany, różne stawki. Ewidencja czasu pracy to wieczny problem." },
 ];
+const PROBLEMS_EN = [
+  { icon: Package, title: "Fuel and goods stock — two separate worlds", desc: "You record fuel in one system, the station shop in another. To see the overall result you have to stitch it together manually every month." },
+  { icon: DollarSign, title: "Fuel and shop margin invisible separately", desc: "The station as a whole may be profitable, but the self-service shop or car wash may be generating losses — without a system you can't see it." },
+  { icon: Users, title: "Multi-shift staff without a system", desc: "Cashiers, car wash staff, shop assistants — different shifts, different rates. Time tracking is a permanent headache." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: Package, color: "#F59E0B", title: "Ewidencja stanów — paliwo, sklep, myjnia", desc: "Traktuj każdą strefę stacji jako oddzielne centrum kosztów. Stany, zamówienia i faktury per sekcja." },
   { icon: BarChart3, color: "#6366F1", title: "P&L per stacja i per dział", desc: "Paliwo, sklep convenience, myjnia, serwis — każdy generuje własny P&L bez ręcznych zestawień w Excelu." },
   { icon: TrendingUp, color: "#10B981", title: "AI CFO — analiza wyników stacji", desc: "Dyrektor Finansowy AI monitoruje przychody i koszty operacyjne. Alert gdy marża odbiega od normy o ponad 10%." },
@@ -49,24 +56,45 @@ const FEATURES = [
   { icon: FileText, color: "#3B82F6", title: "Faktury dostawców i kategoryzacja kosztów", desc: "Importuj faktury za paliwo, towar do sklepu i środki myjni. System kategoryzuje je automatycznie do P&L." },
   { icon: ShieldCheck, color: "#8B5CF6", title: "Sieć stacji w jednym panelu", desc: "Kilka stacji? Porównuj wyniki, marże i koszty pracy między lokalizacjami z jednego widoku właściciela." },
 ];
+const FEATURES_EN = [
+  { icon: Package, color: "#F59E0B", title: "Stock tracking — fuel, shop, car wash", desc: "Treat each station zone as a separate cost centre. Stock, orders and invoices per section." },
+  { icon: BarChart3, color: "#6366F1", title: "P&L per station and per department", desc: "Fuel, convenience shop, car wash, service — each generates its own P&L without manual Excel reports." },
+  { icon: TrendingUp, color: "#10B981", title: "AI CFO — station results analysis", desc: "The AI Finance Director monitors revenues and operating costs. Alert when margin deviates from norm by more than 10%." },
+  { icon: Users, color: "#EF4444", title: "Multi-shift schedule for station staff", desc: "Shift schedule for cashiers, car wash and shop staff. Employees see their schedule in the mobile app." },
+  { icon: FileText, color: "#3B82F6", title: "Supplier invoices and cost categorisation", desc: "Import invoices for fuel, shop goods and car wash chemicals. System categorises them automatically to P&L." },
+  { icon: ShieldCheck, color: "#8B5CF6", title: "Station network in one panel", desc: "Multiple stations? Compare results, margins and labour costs between locations from the owner view." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink zastępuje system POS stacji paliw?", a: "Nie — OneLink działa obok systemu POS. Importuje dane sprzedażowe (CSV/Excel) i łączy je z kosztami, żeby wyliczyć P&L każdej sekcji stacji." },
   { q: "Jak ewidencjonować paliwo oddzielnie od sklepu?", a: "Tworzysz centra kosztów: np. 'Paliwo', 'Sklep', 'Myjnia'. Każde centrum ma własne przychody, koszty i marżę operacyjną." },
   { q: "Czy mogę zarządzać pracownikami różnych zmian?", a: "Tak — moduł grafiku obsługuje wielozmianowość, różne stawki godzinowe i wnioski urlopowe. Ewidencja czasu pracy dostępna w panelu." },
   { q: "Ile kosztuje OneLink dla stacji paliw?", a: "Od 19,99 zł / miesiąc netto per lokalizacja. Dla sieci stacji — skontaktuj się po indywidualną wycenę." },
   { q: "Czy mogę śledzić marżę myjni oddzielnie?", a: "Tak — myjnię możesz traktować jako oddzielne centrum kosztów z własnymi przychodami, kosztami chemii i personelu." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Does OneLink replace a fuel station POS system?", a: "No — OneLink works alongside the POS. It imports sales data (CSV/Excel) and combines it with costs to calculate P&L for each station section." },
+  { q: "How do I track fuel separately from the shop?", a: "You create cost centres: e.g. 'Fuel', 'Shop', 'Car Wash'. Each centre has its own revenues, costs and operating margin." },
+  { q: "Can I manage employees across different shifts?", a: "Yes — the schedule module supports multi-shift operation, different hourly rates and leave requests. Time tracking available in the panel." },
+  { q: "How much does OneLink cost for a fuel station?", a: "From 49.99 PLN / month net per location. For station chains — contact us for individual pricing." },
+  { q: "Can I track the car wash margin separately?", a: "Yes — you can treat the car wash as a separate cost centre with its own revenues, chemical costs and staff costs." },
+];
 
 export default function DlaStacjiBenzynowychPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
-            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">Zacznij za darmo</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">{pl ? 'Zacznij za darmo' : 'Start for free'}</Link>
           </div>
         </div>
       </nav>

@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, CheckCircle, ChevronDown, Users, Calendar,
   BarChart3, DollarSign, TrendingUp, Clock, Zap, ShieldCheck,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: Users, title: "Grafik trenerów nie trafia do wszystkich", desc: "Zmiany w grafiku lądują w grupie na WhatsApp. Trenerzy potwierdzają za późno, a Ty nie wiesz kto faktycznie przyszedł do pracy." },
   { icon: DollarSign, title: "Nie wiesz, które godziny generują zysk", desc: "Strefa siłowni, zajęcia grupowe, bar odżywczy — wszystko w jednym worku. Niemożliwe bez systemu żeby sprawdzić, co się faktycznie opłaca." },
   { icon: BarChart3, title: "Raporty robisz ręcznie w Excelu", desc: "Co miesiąc kilka godzin na zbieranie danych z kas, kart wejść i faktur. Wynik i tak jest przybliżony — bo coś zawsze umknie." },
 ];
+const PROBLEMS_EN = [
+  { icon: Users, title: "Trainer schedules don't reach everyone", desc: "Schedule changes land in a WhatsApp group. Trainers confirm too late, and you don't know who actually showed up for work." },
+  { icon: DollarSign, title: "You don't know which hours generate profit", desc: "Gym floor, group classes, nutrition bar — all in one bucket. Without a system it's impossible to check what's actually profitable." },
+  { icon: BarChart3, title: "Reports are done manually in Excel", desc: "Every month: hours spent collecting data from POS, entry cards and invoices. The result is still approximate — because something always slips through." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: Calendar, color: "#6366F1", title: "Grafik trenerów i recepcji", desc: "Publikuj grafik online. Pracownicy widzą swoje zmiany w aplikacji mobilnej i potwierdzają jednym kliknięciem." },
   { icon: BarChart3, color: "#10B981", title: "P&L na żywo — strefa po strefie", desc: "Podziel siłownię na centra kosztów: wejścia, PT, bar, sklep. Każdy generuje własny P&L bez Excela." },
   { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — analiza finansowa", desc: "Dyrektor Finansowy AI wykrywa anomalie przychodów i alarmuje Cię zanim stracisz 20% miesiąca bez reakcji." },
@@ -49,16 +56,36 @@ const FEATURES = [
   { icon: DollarSign, color: "#3B82F6", title: "Faktury i koszty pod kontrolą", desc: "Skanuj faktury za wyposażenie, suplementy, media. System kategoryzuje je automatycznie do P&L." },
   { icon: ShieldCheck, color: "#8B5CF6", title: "Wiele lokalizacji — jeden panel", desc: "Sieć siłowni w kilku miastach? Porównujesz wyniki, grafiki i faktury z jednego miejsca." },
 ];
+const FEATURES_EN = [
+  { icon: Calendar, color: "#6366F1", title: "Trainer & reception schedule", desc: "Publish schedules online. Employees see their shifts in the mobile app and confirm with one click." },
+  { icon: BarChart3, color: "#10B981", title: "Live P&L — zone by zone", desc: "Split the gym into cost centres: entries, PT, bar, shop. Each generates its own P&L without Excel." },
+  { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — financial analysis", desc: "The AI Finance Director detects revenue anomalies and alerts you before you lose 20% of the month without reacting." },
+  { icon: Users, color: "#EF4444", title: "Leave & absences in one panel", desc: "Leave requests, sick leave, overtime — one view for the manager. No surprises in the schedule." },
+  { icon: DollarSign, color: "#3B82F6", title: "Invoices & costs under control", desc: "Scan invoices for equipment, supplements, utilities. The system categorises them automatically to P&L." },
+  { icon: ShieldCheck, color: "#8B5CF6", title: "Multiple locations — one panel", desc: "Chain of gyms in multiple cities? Compare results, schedules and invoices from one place." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink działa dla siłowni i klubów fitness?", a: "Tak. OneLink obsługuje każdy biznes wielolokalizacyjny z personelem, sprzedażą i kosztami operacyjnymi. Trenerzy personalni, zajęcia grupowe, bar — wszystko można obsłużyć jako oddzielne centra kosztów." },
   { q: "Czy trenerzy mogą używać aplikacji mobilnej?", a: "Tak. Pracownicy mają dostęp do portalu pracownika przez przeglądarkę lub jako PWA na telefonie — widzą grafik, składają wnioski urlopowe i rejestrują godziny." },
   { q: "Jak działa integracja z kasą fiskalną?", a: "OneLink nie zastępuje kasy fiskalnej, ale importuje raporty sprzedaży (CSV lub ręcznie) i łączy je z kosztami, żeby wyliczyć marżę operacyjną." },
   { q: "Ile kosztuje OneLink dla siłowni?", a: "Od 19,99 zł / miesiąc netto. Cena zależy od liczby lokalizacji. 7-dniowy trial — bez zobowiązań." },
   { q: "Jak szybko mogę zacząć?", a: "Pierwsze konto jest gotowe w 3 minuty. Dodanie trenerów i lokalizacji zajmuje kolejne 15–20 minut." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Does OneLink work for gyms and fitness clubs?", a: "Yes. OneLink supports any multi-location business with staff, sales and operating costs. Personal trainers, group classes, bar — all can be managed as separate cost centres." },
+  { q: "Can trainers use the mobile app?", a: "Yes. Employees access the employee portal via browser or as a PWA on their phone — they see their schedule, submit leave requests and log hours." },
+  { q: "How does integration with the cash register work?", a: "OneLink doesn't replace your POS, but it imports sales reports (CSV or manually) and combines them with costs to calculate the operating margin." },
+  { q: "How much does OneLink cost for a gym?", a: "From 49.99 PLN / month net. Price depends on the number of locations. 7-day trial — no commitment." },
+  { q: "How quickly can I start?", a: "First account is ready in 3 minutes. Adding trainers and locations takes another 15–20 minutes." },
+];
 
 export default function DlaSilowniPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* NAV */}
@@ -66,9 +93,10 @@ export default function DlaSilowniPage() {
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
             <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">
-              Zacznij za darmo
+              {pl ? 'Zacznij za darmo' : 'Start for free'}
             </Link>
           </div>
         </div>

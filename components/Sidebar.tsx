@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/lib/i18n";
 import {
   LayoutDashboard, FileText, Receipt, ClipboardList, Package,
   Calendar, RefreshCw, Lock, BarChart3, History, FileSpreadsheet,
@@ -34,90 +36,94 @@ export function Sidebar({
   userRole = '',
 }: SidebarProps) {
   const router = useRouter()
+  const { lang } = useLanguage()
+  const pl = lang === 'pl'
+
   const canSwitchToOps = ['superadmin', 'owner'].includes(userRole)
+
   const navGroups = [
     {
-      label: 'Overview',
+      label: pl ? 'Przegląd' : 'Overview',
       items: [
-        { key: 'dashboard',      label: 'Dashboard',       icon: LayoutDashboard },
-        { key: 'pnl',            label: 'P&L',             icon: BarChart3 },
-        { key: 'cfo_director',     label: 'CFO Dyrektor AI',      icon: Brain },
-        { key: 'sales_director',   label: 'Dyrektor Sprzedaży',   icon: TrendingUp },
-        { key: 'hr_ai_director',   label: 'Dyrektor HR AI',        icon: Users },
-        { key: 'investor_director',label: 'Dyrektor Inwestorski',  icon: BarChart3 },
-        { key: 'what_if',          label: 'Co jeśli…',             icon: Sparkles },
-        { key: 'revenue_forecast', label: 'Prognoza przychodów',   icon: TrendingUp },
-        { key: 'notifications',    label: 'Powiadomienia',          icon: Bell, badge: unreadNotifications },
+        { key: 'dashboard',       label: 'Dashboard',                       icon: LayoutDashboard },
+        { key: 'pnl',             label: 'P&L',                             icon: BarChart3 },
+        { key: 'cfo_director',    label: pl ? 'CFO Dyrektor AI'    : 'AI CFO Director',      icon: Brain },
+        { key: 'sales_director',  label: pl ? 'Dyrektor Sprzedaży' : 'Sales Director',       icon: TrendingUp },
+        { key: 'hr_ai_director',  label: pl ? 'Dyrektor HR AI'     : 'AI HR Director',       icon: Users },
+        { key: 'investor_director',label: pl ? 'Dyrektor Inwestorski' : 'Investor Director', icon: BarChart3 },
+        { key: 'what_if',         label: pl ? 'Co jeśli…'          : 'What if…',             icon: Sparkles },
+        { key: 'revenue_forecast',label: pl ? 'Prognoza przychodów': 'Revenue Forecast',     icon: TrendingUp },
+        { key: 'notifications',   label: pl ? 'Powiadomienia'       : 'Notifications',        icon: Bell, badge: unreadNotifications },
       ],
     },
     {
       label: 'Menu',
       items: [
-        { key: 'ingredients',     label: 'Składniki',       icon: FileText },
-        { key: 'dishes',          label: 'Receptury',       icon: ClipboardList },
-        { key: 'menu_calculator',  label: 'Kalkulator ceny',  icon: DollarSign },
-        { key: 'menu_pricing',     label: 'Wycena menu',      icon: BarChart3 },
-        { key: 'menu_engineering', label: 'Inżynieria menu',  icon: BarChart3 },
+        { key: 'ingredients',      label: pl ? 'Składniki'       : 'Ingredients',       icon: FileText },
+        { key: 'dishes',           label: pl ? 'Receptury'       : 'Recipes',           icon: ClipboardList },
+        { key: 'menu_calculator',  label: pl ? 'Kalkulator ceny' : 'Price Calculator',  icon: DollarSign },
+        { key: 'menu_pricing',     label: pl ? 'Wycena menu'     : 'Menu Pricing',      icon: BarChart3 },
+        { key: 'menu_engineering', label: pl ? 'Inżynieria menu' : 'Menu Engineering',  icon: BarChart3 },
       ],
     },
     {
-      label: 'Magazyn',
+      label: pl ? 'Magazyn' : 'Warehouse',
       items: [
-        { key: 'products',             label: 'Produkty',       icon: Package },
-        { key: 'central_warehouse',    label: 'Stan magazynu',  icon: Truck },
-        { key: 'warehouse_deviations', label: 'Odchylenia',     icon: AlertTriangle },
+        { key: 'products',             label: pl ? 'Produkty'     : 'Products',            icon: Package },
+        { key: 'central_warehouse',    label: pl ? 'Stan magazynu': 'Stock Levels',         icon: Truck },
+        { key: 'warehouse_deviations', label: pl ? 'Odchylenia'   : 'Deviations',           icon: AlertTriangle },
       ],
     },
     {
-      label: 'Zatwierdzenia',
+      label: pl ? 'Zatwierdzenia' : 'Approvals',
       items: [
-        { key: 'daily_reports',      label: 'Raporty dzienne',  icon: FileText },
-        { key: 'approvals',          label: 'Faktury',          icon: Receipt,    badge: pendingInvoiceCount },
-        { key: 'inv_approvals',      label: 'Inwentaryzacje',   icon: CheckSquare,badge: pendingInventoryCount },
-        { key: 'semis_verification', label: 'SEMIS',            icon: RefreshCw },
+        { key: 'daily_reports',      label: pl ? 'Raporty dzienne' : 'Daily Reports',   icon: FileText },
+        { key: 'approvals',          label: pl ? 'Faktury'         : 'Invoices',         icon: Receipt,     badge: pendingInvoiceCount },
+        { key: 'inv_approvals',      label: pl ? 'Inwentaryzacje'  : 'Inventories',      icon: CheckSquare, badge: pendingInventoryCount },
+        { key: 'semis_verification', label: 'SEMIS',                                     icon: RefreshCw },
       ],
     },
     {
-      label: 'Inwentaryzacja',
+      label: pl ? 'Inwentaryzacja' : 'Inventory',
       items: [
-        { key: 'monthly', label: 'Miesięczna', icon: Calendar },
-        { key: 'weekly',  label: 'Tygodniowa', icon: ClipboardList },
+        { key: 'monthly', label: pl ? 'Miesięczna' : 'Monthly', icon: Calendar },
+        { key: 'weekly',  label: pl ? 'Tygodniowa' : 'Weekly',  icon: ClipboardList },
       ],
     },
     {
-      label: 'Raporty',
+      label: pl ? 'Raporty' : 'Reports',
       items: [
-        { key: 'reports',    label: 'Raporty',      icon: BarChart3 },
-        { key: 'history',    label: 'Historia',     icon: History },
-        { key: 'imported',   label: 'Import Excel', icon: FileSpreadsheet },
-        { key: 'csv_import', label: 'Import CSV',   icon: FileSpreadsheet },
+        { key: 'reports',    label: pl ? 'Raporty'      : 'Reports',       icon: BarChart3 },
+        { key: 'history',    label: pl ? 'Historia'     : 'History',       icon: History },
+        { key: 'imported',   label: pl ? 'Import Excel' : 'Excel Import',  icon: FileSpreadsheet },
+        { key: 'csv_import', label: 'Import CSV',                          icon: FileSpreadsheet },
       ],
     },
     {
-      label: 'Harmonogram',
+      label: pl ? 'Harmonogram' : 'Schedule',
       items: [
-        { key: 'schedule', label: 'Grafik pracy', icon: Calendar },
+        { key: 'schedule', label: pl ? 'Grafik pracy' : 'Work Schedule', icon: Calendar },
       ],
     },
     {
       label: 'HR',
       items: [
-        { key: 'hr_dashboard',  label: 'Dashboard HR',  icon: LayoutGrid     },
-        { key: 'hr_attendance', label: 'Ewidencja',     icon: Clock          },
-        { key: 'hr_leave',      label: 'Urlopy',        icon: Umbrella       },
-        { key: 'hr_swaps',      label: 'Zamiany zmian', icon: GitCompare     },
-        { key: 'hr_certs',       label: 'Certyfikaty',   icon: GraduationCap  },
-        { key: 'hr_documents',   label: 'Dokumenty',     icon: FolderOpen     },
-        { key: 'hr_tips',        label: 'Napiwki',       icon: Banknote       },
-        { key: 'hr_onboarding',  label: 'Onboarding',    icon: UserCheck      },
+        { key: 'hr_dashboard',   label: pl ? 'Dashboard HR'   : 'HR Dashboard',    icon: LayoutGrid    },
+        { key: 'hr_attendance',  label: pl ? 'Ewidencja'      : 'Attendance',       icon: Clock         },
+        { key: 'hr_leave',       label: pl ? 'Urlopy'         : 'Leave',            icon: Umbrella      },
+        { key: 'hr_swaps',       label: pl ? 'Zamiany zmian'  : 'Shift Swaps',      icon: GitCompare    },
+        { key: 'hr_certs',       label: pl ? 'Certyfikaty'    : 'Certificates',     icon: GraduationCap },
+        { key: 'hr_documents',   label: pl ? 'Dokumenty'      : 'Documents',        icon: FolderOpen    },
+        { key: 'hr_tips',        label: pl ? 'Napiwki'        : 'Tips',             icon: Banknote      },
+        { key: 'hr_onboarding',  label: 'Onboarding',                               icon: UserCheck     },
       ],
     },
     {
       label: 'Admin',
       items: [
-        { key: 'employees',   label: 'Pracownicy',      icon: Users },
-        { key: 'monthclose',  label: 'Zamknięcie m-ca', icon: Lock },
-        { key: 'admin_users', label: 'Użytkownicy',     icon: BarChart3 },
+        { key: 'employees',   label: pl ? 'Pracownicy'      : 'Employees',         icon: Users },
+        { key: 'monthclose',  label: pl ? 'Zamknięcie m-ca' : 'Month Close',        icon: Lock },
+        { key: 'admin_users', label: pl ? 'Użytkownicy'     : 'Users',              icon: BarChart3 },
       ],
     },
   ]
@@ -152,7 +158,7 @@ export function Sidebar({
       {/* User row */}
       <div className="px-5 py-3 border-b border-[#E5E7EB] shrink-0">
         <p className="text-[13px] font-medium text-[#111827] truncate">{adminName}</p>
-        <p className="text-[11px] text-[#6B7280] mt-0.5">Administrator</p>
+        <p className="text-[11px] text-[#6B7280] mt-0.5">{pl ? 'Administrator' : 'Administrator'}</p>
       </div>
 
       {/* Nav */}
@@ -198,6 +204,11 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="px-2 py-2 border-t border-[#E5E7EB] shrink-0 space-y-0.5">
+        {/* Language switcher */}
+        <div className="px-1 pb-1">
+          <LanguageSwitcher variant="light" className="w-full" />
+        </div>
+
         {/* Mode switcher — only for superadmin / owner */}
         {canSwitchToOps && (
           <>
@@ -217,7 +228,7 @@ export function Sidebar({
               className="w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium text-[#6B7280] hover:bg-[#F0FDF4] hover:text-[#16A34A] transition-colors"
             >
               <ArrowLeftRight className="w-[15px] h-[15px] shrink-0" />
-              Przełącz na OPS
+              {pl ? 'Przełącz na OPS' : 'Switch to OPS'}
             </button>
           </>
         )}
@@ -234,14 +245,14 @@ export function Sidebar({
             <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[#2563EB]" />
           )}
           <Settings className="w-[15px] h-[15px] shrink-0" />
-          <span>Ustawienia</span>
+          <span>{pl ? 'Ustawienia' : 'Settings'}</span>
         </button>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] font-medium text-[#6B7280] hover:bg-[#FEF2F2] hover:text-[#DC2626] transition-colors"
         >
           <LogOut className="w-[15px] h-[15px] shrink-0" />
-          Wyloguj
+          {pl ? 'Wyloguj' : 'Log out'}
         </button>
       </div>
     </aside>

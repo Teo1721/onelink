@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, ChevronDown, BarChart3, DollarSign,
   TrendingUp, Users, ShieldCheck, Calendar, Zap, Package,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: Calendar, title: "Grafik stylistów to ciągłe przeplanowania", desc: "Zmiana urlopu jednej osoby przesuwa terminy klientów, a informacja trafia do wszystkich SMS-em lub na grupie. Chaos przy każdej nieobecności." },
   { icon: DollarSign, title: "Nie wiesz ile zarabia każdy pracownik dla salonu", desc: "Usługi, produkty, napiwki — każdy stylista to inne przychody i koszty. Bez systemu niemożliwe jest obiektywne rozliczenie wydajności." },
   { icon: Package, title: "Kosmetyki i produkty znikają bez śladu", desc: "Zuzycie produktów robocze vs sprzedaż klientom — bez ewidencji magazynowej strata jest ukryta w kosztach i trudna do zlokalizowania." },
 ];
+const PROBLEMS_EN = [
+  { icon: Calendar, title: "Stylist schedules are constant rescheduling", desc: "One person's holiday change shifts client appointments, and the info goes out by SMS or group chat. Chaos with every absence." },
+  { icon: DollarSign, title: "You don't know how much each employee earns for the salon", desc: "Services, products, tips — each stylist has different revenues and costs. Without a system, objective performance tracking is impossible." },
+  { icon: Package, title: "Cosmetics and products disappear without a trace", desc: "Working product usage vs. client sales — without inventory records, the loss is hidden in costs and hard to locate." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: Calendar, color: "#EC4899", title: "Grafik stylistów — widoczny dla całego zespołu", desc: "Każdy stylista ma swój grafik online. Zmiany widoczne natychmiast, bez SMS-ów. Manager zatwierdza modyfikacje z telefonu." },
   { icon: BarChart3, color: "#8B5CF6", title: "P&L per stylista i per salon", desc: "Ile każda osoba generuje przychodów i kosztów? OneLink pokazuje marżę operacyjną per stylista i per lokalizację." },
   { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — wyniki salonu pod lupą", desc: "Dyrektor Finansowy AI porównuje wyniki tygodniowe, wykrywa spadki przychodów i sugeruje działania naprawcze." },
@@ -49,24 +56,45 @@ const FEATURES = [
   { icon: Users, color: "#3B82F6", title: "Urlopy i L4 bez niespodzianek", desc: "Wnioski urlopowe online, historia absencji, automatyczne obliczanie kosztów zastępstw — zero papierowej dokumentacji." },
   { icon: ShieldCheck, color: "#6366F1", title: "Sieć salonów w jednym panelu", desc: "Wiele lokalizacji? Porównuj wyniki, rankingi stylistów i koszty między salonami. Skaluj to, co działa." },
 ];
+const FEATURES_EN = [
+  { icon: Calendar, color: "#EC4899", title: "Stylist schedule — visible to the whole team", desc: "Every stylist has their schedule online. Changes visible instantly, no SMS. Manager approves modifications from their phone." },
+  { icon: BarChart3, color: "#8B5CF6", title: "P&L per stylist and per salon", desc: "How much revenue and cost does each person generate? OneLink shows operating margin per stylist and per location." },
+  { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — salon results under the microscope", desc: "The AI Finance Director compares weekly results, detects revenue drops and suggests corrective actions." },
+  { icon: Package, color: "#10B981", title: "Cosmetics and product tracking", desc: "Track working product consumption, separate from client sales. No more mysterious losses in costs." },
+  { icon: Users, color: "#3B82F6", title: "Leave and sick days — no surprises", desc: "Online leave requests, absence history, automatic cover cost calculation — zero paper documentation." },
+  { icon: ShieldCheck, color: "#6366F1", title: "Salon chain in one panel", desc: "Multiple locations? Compare results, stylist rankings and costs between salons. Scale what works." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink zastępuje system rezerwacji?", a: "Nie — OneLink zarządza operacjami: grafik, P&L, faktury, koszty pracy. Możesz korzystać z Booksy lub innego narzędzia do rezerwacji równolegle." },
   { q: "Jak śledzić wydajność każdego stylisty?", a: "Przypisuj przychody i godziny do konkretnych pracowników. OneLink wylicza przychód na godzinę pracy, koszt i marżę per osoba." },
   { q: "Czy mogę rozliczać prowizje pracownicze?", a: "Tak — możesz definiować stawki godzinowe lub prowizyjne. System generuje zestawienie kosztów pracy do wypłat." },
   { q: "Ile kosztuje OneLink dla salonu?", a: "Od 19,99 zł / miesiąc netto. Dla sieci salonów — skontaktuj się po wycenę z rabatem dla wielu lokalizacji." },
   { q: "Jak szybko mogę wdrożyć OneLink w salonie?", a: "Pierwsze konto gotowe w 3 minuty. Dodanie pracowników, produktów i lokalizacji — maksymalnie 20 minut." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Does OneLink replace a booking system?", a: "No — OneLink manages operations: schedule, P&L, invoices, labour costs. You can use Booksy or another booking tool alongside it." },
+  { q: "How do I track each stylist's performance?", a: "Assign revenues and hours to specific employees. OneLink calculates revenue per hour worked, cost and margin per person." },
+  { q: "Can I manage employee commissions?", a: "Yes — you can define hourly or commission-based rates. The system generates a labour cost breakdown for payroll." },
+  { q: "How much does OneLink cost for a salon?", a: "From 49.99 PLN / month net. For salon chains — contact us for a multi-location discount quote." },
+  { q: "How quickly can I deploy OneLink in my salon?", a: "First account ready in 3 minutes. Adding staff, products and locations — maximum 20 minutes." },
+];
 
 export default function DlaSalonowBeautyPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
-            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">Zacznij za darmo</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">{pl ? 'Zacznij za darmo' : 'Start for free'}</Link>
           </div>
         </div>
       </nav>

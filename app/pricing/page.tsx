@@ -9,6 +9,8 @@ import {
   RefreshCw, Users, BarChart3, Receipt, Clock, Package,
   Calendar, TrendingUp, ShieldCheck, Brain,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 /* ─── Types ─── */
 type Plan = {
@@ -209,6 +211,8 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
   const [annual, setAnnual] = useState(true);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
 
   const handleSubscribe = async (plan: Plan) => {
     setLoading(true);
@@ -239,16 +243,17 @@ export default function PricingPage() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" dark={false} /></Link>
           <div className="hidden md:flex items-center gap-5 text-[13px] text-[#6B7280]">
-            <Link href="/" className="hover:text-[#111827] transition-colors">Strona główna</Link>
-            <Link href="/pricing" className="font-semibold text-[#111827]">Cennik</Link>
-            <Link href="/terms" className="hover:text-[#111827] transition-colors">Regulamin</Link>
-            <Link href="/privacy" className="hover:text-[#111827] transition-colors">Prywatność</Link>
-            <Link href="/security" className="hover:text-[#111827] transition-colors">Bezpieczeństwo</Link>
+            <Link href="/" className="hover:text-[#111827] transition-colors">{pl ? 'Strona główna' : 'Home'}</Link>
+            <Link href="/pricing" className="font-semibold text-[#111827]">{pl ? 'Cennik' : 'Pricing'}</Link>
+            <Link href="/terms" className="hover:text-[#111827] transition-colors">{pl ? 'Regulamin' : 'Terms'}</Link>
+            <Link href="/privacy" className="hover:text-[#111827] transition-colors">{pl ? 'Prywatność' : 'Privacy'}</Link>
+            <Link href="/security" className="hover:text-[#111827] transition-colors">{pl ? 'Bezpieczeństwo' : 'Security'}</Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Zaloguj</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">{pl ? 'Zaloguj' : 'Log in'}</Link>
             <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm flex items-center gap-1.5">
-              Zacznij za darmo <ArrowRight className="w-3.5 h-3.5" />
+              {pl ? 'Zacznij za darmo' : 'Start for free'} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -261,16 +266,16 @@ export default function PricingPage() {
           className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-6"
         >
           <Zap className="w-3 h-3" />
-          7 dni za darmo · bez ryzyka · anuluj kiedy chcesz
+          {pl ? '7 dni za darmo · bez ryzyka · anuluj kiedy chcesz' : '7 days free · no risk · cancel any time'}
         </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
-          className="text-[48px] md:text-[64px] font-black tracking-tight leading-[1.05] mb-5 text-[#111827]"
+          className="text-[42px] md:text-[60px] font-black tracking-tight leading-[1.05] mb-5 text-[#111827]"
         >
-          Prosty cennik.{" "}
+          {pl ? 'Prosty cennik.' : 'Simple pricing.'}{" "}
           <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
-            Pełna kontrola.
+            {pl ? 'Pełna kontrola.' : 'Full control.'}
           </span>
         </motion.h1>
 
@@ -278,8 +283,9 @@ export default function PricingPage() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
           className="text-[17px] text-[#6B7280] max-w-xl mx-auto leading-relaxed mb-10"
         >
-          Jeden panel do zarządzania całym biznesem. Wybierz plan odpowiedni do skali Twojej firmy.
-          Żadnych ukrytych opłat — żadnych niespodzianek.
+          {pl
+            ? 'Jeden panel do zarządzania całym biznesem. Wybierz plan odpowiedni do skali Twojej firmy. Żadnych ukrytych opłat — żadnych niespodzianek.'
+            : 'One panel to manage your entire business. Choose the plan that fits your scale. No hidden fees — no surprises.'}
         </motion.p>
 
         {/* ── Billing Toggle ── */}
@@ -293,7 +299,7 @@ export default function PricingPage() {
               !annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
             }`}
           >
-            Miesięcznie
+            {pl ? 'Miesięcznie' : 'Monthly'}
           </button>
           <button
             onClick={() => setAnnual(true)}
@@ -301,13 +307,13 @@ export default function PricingPage() {
               annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
             }`}
           >
-            Rocznie
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${annual ? "bg-green-500 text-white" : "bg-green-100 text-green-700"}`}>Oszczędź 20%</span>
+            {pl ? 'Rocznie' : 'Annually'}
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${annual ? "bg-green-500 text-white" : "bg-green-100 text-green-700"}`}>{pl ? 'Oszczędź 20%' : 'Save 20%'}</span>
           </button>
         </motion.div>
         {annual && (
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[12px] text-green-600 font-medium mt-3">
-            Oszczędzasz 20% — rozliczenie jednorazowo raz w roku
+            {pl ? 'Oszczędzasz 20% — rozliczenie jednorazowo raz w roku' : 'You save 20% — billed once per year'}
           </motion.p>
         )}
       </section>
@@ -373,11 +379,11 @@ export default function PricingPage() {
                   </div>
                   {annual ? (
                     <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
-                      {plan.annualPrice} zł / mies. — płatne rocznie
+                      {plan.annualPrice} {pl ? 'zł / mies. — płatne rocznie' : 'PLN / mo — billed annually'}
                     </p>
                   ) : (
                     <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
-                      po 7-dniowym trialu
+                      {pl ? 'po 7-dniowym trialu' : 'after 7-day trial'}
                     </p>
                   )}
                   </>
@@ -402,7 +408,7 @@ export default function PricingPage() {
                     : "bg-[#111827] text-white hover:bg-[#1F2937]"
                 }`}
               >
-                {loading ? "Przekierowanie..." : plan.cta}
+                {loading ? (pl ? "Przekierowanie..." : "Redirecting...") : (pl ? plan.cta : plan.cta === 'Zacznij 7-dniowy trial' ? 'Start 7-day trial' : plan.cta)}
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
               )}

@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { OneLinkLogo } from "@/components/onelink-logo";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowRight, ChevronDown, BarChart3, DollarSign,
   TrendingUp, Users, ShieldCheck, Package, Zap, FileText,
@@ -35,13 +37,18 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
-const PROBLEMS = [
+const PROBLEMS_PL = [
   { icon: Package, title: "Stany magazynowe leku — ręcznie lub w osobnym systemie", desc: "Zamówienia do hurtowni, stany leków refundowanych i OTC — każde źródło danych osobno. Niemożliwe żeby szybko zobaczyć całość bez specjalisty." },
   { icon: Users, title: "Grafik farmaceutów trudny do planowania", desc: "Normy obsady, dyżury nocne, nieobecności — zarządzanie grafikiem w aptece wymaga precyzji. WhatsApp i Excel to za mało." },
   { icon: DollarSign, title: "Marże per kategoria produktów — niewidoczne", desc: "Leki refundowane vs OTC vs suplementy vs dermokosmetyki — każda ma inną marżę, ale bez systemu nie widać które kategorie naprawdę zarabiają." },
 ];
+const PROBLEMS_EN = [
+  { icon: Package, title: "Medicine stock — manual or in a separate system", desc: "Wholesale orders, reimbursed and OTC medicine levels — each data source separate. Impossible to see the full picture quickly without a specialist." },
+  { icon: Users, title: "Pharmacist scheduling is hard to plan", desc: "Staffing norms, night shifts, absences — managing a pharmacy schedule requires precision. WhatsApp and Excel aren't enough." },
+  { icon: DollarSign, title: "Margins per product category — invisible", desc: "Reimbursed drugs vs OTC vs supplements vs cosmetics — each has a different margin, but without a system you can't see which categories are really profitable." },
+];
 
-const FEATURES = [
+const FEATURES_PL = [
   { icon: Package, color: "#10B981", title: "Stany magazynowe i zamówienia", desc: "Bieżące stany produktów, alerty o niskim poziomie, historia dostaw od hurtowni. Koniec ze zgadywaniem kiedy zamówić." },
   { icon: BarChart3, color: "#6366F1", title: "P&L per apteka i kategoria", desc: "Sprzedaż, koszty, marża operacyjna — widok per lokalizacja i per kategoria produktu (Rx, OTC, suplementy, kosmetyki)." },
   { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — finanse apteki pod kontrolą", desc: "Dyrektor Finansowy AI analizuje wyniki tygodniowe i alarmuje gdy marża spada lub koszty operacyjne rosną ponad normę." },
@@ -49,24 +56,45 @@ const FEATURES = [
   { icon: FileText, color: "#3B82F6", title: "Faktury i koszty hurtowni", desc: "Importuj faktury od hurtowni farmaceutycznych. System kategoryzuje koszty automatycznie i łączy je z P&L." },
   { icon: ShieldCheck, color: "#8B5CF6", title: "Sieć aptek — jeden widok zarządzający", desc: "Porównuj wyniki, marże i koszty między wszystkimi aptekami z jednego panelu. Wychwytuj odchylenia natychmiast." },
 ];
+const FEATURES_EN = [
+  { icon: Package, color: "#10B981", title: "Stock levels and orders", desc: "Current product levels, low-stock alerts, wholesale delivery history. No more guessing when to order." },
+  { icon: BarChart3, color: "#6366F1", title: "P&L per pharmacy and category", desc: "Sales, costs, operating margin — view per location and per product category (Rx, OTC, supplements, cosmetics)." },
+  { icon: TrendingUp, color: "#F59E0B", title: "AI CFO — pharmacy finances under control", desc: "The AI Finance Director analyses weekly results and alerts when margin drops or operating costs rise above norm." },
+  { icon: Users, color: "#EF4444", title: "Pharmacist and technician schedule", desc: "Shift schedule respecting staffing norms. Employees see their schedule online — no paper or WhatsApp groups." },
+  { icon: FileText, color: "#3B82F6", title: "Wholesale invoices and costs", desc: "Import invoices from pharmaceutical wholesalers. System categorises costs automatically and links them to P&L." },
+  { icon: ShieldCheck, color: "#8B5CF6", title: "Pharmacy chain — one management view", desc: "Compare results, margins and costs across all pharmacies from one panel. Catch deviations instantly." },
+];
 
-const FAQ_ITEMS = [
+const FAQ_ITEMS_PL = [
   { q: "Czy OneLink zastępuje system apteczny (np. KS-Apteka)?", a: "Nie — OneLink działa obok systemu aptecznego. Importuje dane sprzedażowe (CSV) i agreguje je z kosztami pracy i fakturami w jeden widok P&L." },
   { q: "Czy mogę kontrolować marżę per kategoria leków?", a: "Tak. Możesz tworzyć kategorie (Rx, OTC, suplementy, dermokosmetyki) i śledzić marżę oraz koszty per kategoria w czasie rzeczywistym." },
   { q: "Jak działa grafik dla farmaceutów?", a: "Manager tworzy grafik w panelu, pracownicy widzą swoje zmiany w aplikacji mobilnej (PWA). Wnioski urlopowe i absencje obsługiwane online." },
   { q: "Czy dane apteki są bezpieczne?", a: "Tak — dane szyfrowane, serwery w UE. OneLink nie przetwarza danych pacjentów ani historii recept — tylko dane operacyjne i finansowe apteki." },
   { q: "Ile kosztuje OneLink dla apteki?", a: "Od 19,99 zł / miesiąc netto per lokalizacja. Dla sieci aptek — skontaktuj się po indywidualną wycenę." },
 ];
+const FAQ_ITEMS_EN = [
+  { q: "Does OneLink replace a pharmacy system (e.g. KS-Apteka)?", a: "No — OneLink works alongside your pharmacy system. It imports sales data (CSV) and aggregates it with labour costs and invoices into one P&L view." },
+  { q: "Can I control margin per medicine category?", a: "Yes. You can create categories (Rx, OTC, supplements, cosmetics) and track margin and costs per category in real time." },
+  { q: "How does the pharmacist schedule work?", a: "Manager creates the schedule in the panel, employees see their shifts in the mobile app (PWA). Leave requests and absences handled online." },
+  { q: "Is the pharmacy data secure?", a: "Yes — data encrypted, EU servers. OneLink does not process patient data or prescription history — only pharmacy operational and financial data." },
+  { q: "How much does OneLink cost for a pharmacy?", a: "From 49.99 PLN / month net per location. For pharmacy chains — contact us for individual pricing." },
+];
 
 export default function DlaApteкPage() {
+  const { lang } = useLanguage();
+  const pl = lang === 'pl';
+  const PROBLEMS = pl ? PROBLEMS_PL : PROBLEMS_EN;
+  const FEATURES = pl ? FEATURES_PL : FEATURES_EN;
+  const FAQ_ITEMS = pl ? FAQ_ITEMS_PL : FAQ_ITEMS_EN;
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">Zaloguj</Link>
-            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">Zacznij za darmo</Link>
+            <LanguageSwitcher variant="light" />
+            <Link href="/auth/sign-in" className="h-8 px-4 text-[13px] font-medium text-[#374151] hover:text-[#111827] flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/sign-up" className="h-8 px-4 rounded-lg bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#1F2937] transition-colors flex items-center">{pl ? 'Zacznij za darmo' : 'Start for free'}</Link>
           </div>
         </div>
       </nav>

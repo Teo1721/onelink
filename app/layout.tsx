@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ChatWidget } from "@/components/chat-widget";
+import { LanguageProvider } from "@/lib/i18n";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -82,8 +83,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} font-sans antialiased bg-[#F7F8FA] text-[#111827]`}>
-        {children}
-        <ChatWidget />
+        <LanguageProvider>
+          {children}
+          <ChatWidget />
+        </LanguageProvider>
       </body>
     </html>
   );
