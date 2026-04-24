@@ -149,8 +149,8 @@ export default function DlaHoteliPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Nareszcie widzę food cost restauracji hotelowej oddzielnie od kosztów pokoi. AI CFO alarmował nas gdy food cost przekroczył 38% — zanim to zauważył szef kuchni."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Anna S.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Dyrektor hotelu, Kraków</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Klaudia D.</p>
+            <p className="text-[12px] text-[#9CA3AF]">Właścicielka, Olinek</p>
           </Reveal>
         </div>
       </section>

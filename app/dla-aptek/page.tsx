@@ -149,8 +149,8 @@ export default function DlaApteкPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Nareszcie widzę marżę aptek per kategoria. Wiedziałem, że suplementy są rentowniejsze niż Rx, ale teraz mam na to twarde liczby. AI CFO dwa razy już ostrzegł mnie przed problematycznym miesiącem."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Robert P.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Właściciel sieci 4 aptek, Małopolska</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Radosław K.</p>
+            <p className="text-[12px] text-[#9CA3AF]">Właściciel sieci aptek, NeuroSnax</p>
           </Reveal>
         </div>
       </section>

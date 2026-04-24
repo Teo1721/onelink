@@ -149,8 +149,8 @@ export default function DlaWarsztatowPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Prowadzę 2 warsztaty i zanim wdrożyłem OneLink, nigdy nie wiedziałem który jest rentowniejszy. Teraz widzę marżę per stanowisko i per lokal. Jeden warsztat dotował drugi — teraz to widzę jasno."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Piotr N.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Właściciel 2 warsztatów, Śląsk</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Ewelina K.</p>
+            <p className="text-[12px] text-[#9CA3AF]">CEO, AKAB Group</p>
           </Reveal>
         </div>
       </section>

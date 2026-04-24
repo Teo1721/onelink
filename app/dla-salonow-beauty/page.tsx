@@ -149,8 +149,8 @@ export default function DlaSalonowBeautyPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Prowadzę 3 salony i pierwszy raz w życiu wiem, który stylistka generuje największy przychód na godzinę. OneLink zmienił sposób w jaki zarządzam zespołem."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Karolina M.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Właścicielka sieci 3 salonów, Wrocław</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Estera N.</p>
+            <p className="text-[12px] text-[#9CA3AF]">Właścicielka sieci salonów, Baked</p>
           </Reveal>
         </div>
       </section>

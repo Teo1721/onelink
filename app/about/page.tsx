@@ -47,12 +47,19 @@ export default function AboutPage() {
           </p>
         </div>
 
+        {/* Mission statement */}
+        <div className="mt-16 p-8 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-3">Nasza misja</p>
+          <p className="text-[20px] font-black text-[#111827] leading-snug">
+            Dać każdemu właścicielowi małego biznesu dostęp do danych i narzędzi, które wcześniej były zarezerwowane tylko dla dużych korporacji.
+          </p>
+        </div>
+
         {/* Values */}
-        <div className="mt-16 grid sm:grid-cols-2 gap-4">
+        <div className="mt-10 grid sm:grid-cols-3 gap-4">
           {[
             { title: 'Prosto i szybko', desc: 'Konfiguracja w 20 minut. Żadnego działu IT, żadnych szkoleń. Kiosk PIN dla pracowników gotowy w kilka kliknięć.' },
-            { title: 'Kompletny — nie tylko P&L', desc: 'Ewidencja czasu pracy, grafik, urlopy, dokumenty, certyfikaty, faktury, magazyn — wszystko w jednym systemie zamiast 5 osobnych narzędzi.' },
-            { title: 'Dla właścicieli, nie księgowych', desc: 'Interfejs zaprojektowany dla osoby, która rano otwiera lokal i wieczorem chce wiedzieć czy zarobi na czynsz. Nie dla specjalisty finansowego.' },
+            { title: 'Dla właścicieli, nie księgowych', desc: 'Interfejs zaprojektowany dla osoby, która rano otwiera lokal i wieczorem chce wiedzieć czy zarobi na czynsz.' },
             { title: 'Cena uczciwa', desc: 'Od 19,99 zł miesięcznie. Bez ukrytych opłat, bez długich umów. Możesz anulować kiedy chcesz.' },
           ].map(v => (
             <div key={v.title} className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">

@@ -64,6 +64,11 @@ const FAQ_ITEMS = [
   { q: "Czy mogę zarządzać kilkoma lokalami?", a: "Tak. OneLink jest zaprojektowany do zarządzania wieloma lokalizacjami z jednego panelu. Możesz porównywać wyniki, transferować stany i zatwierdzać faktury z każdego lokalu." },
   { q: "Jak działają Dyrektorzy AI?", a: "Każdy Dyrektor AI to osobny agent, który monitoruje dane z Twojego obszaru 24/7. CFO analizuje P&L i wykrywa anomalie. COO śledzi obecność i grafiki. Jeśli coś jest nie tak — otrzymujesz powiadomienie zanim problem urośnie do straty." },
   { q: "Czy moje dane są bezpieczne?", a: "Tak. Dane szyfrowane, serwery w UE (Supabase). Płatności obsługuje Stripe (PCI DSS Level 1). Nie udostępniamy danych podmiotom trzecim." },
+  { q: "Czy OneLink integruje się z moim systemem POS?", a: "OneLink nie wymaga integracji z POS-em — działa obok niego. Dane sprzedażowe możesz wprowadzać ręcznie przez managera lub importować przez CSV/Excel. Bezpośrednie API do Restaumatic, Dotykacka i innych systemów jest w roadmapie." },
+  { q: "Czy mogę przenieść dane z Excela lub innego systemu?", a: "Tak. OneLink obsługuje import CSV i Excel dla sprzedaży, produktów i pracowników. Większość klientów jest skonfigurowana w ciągu jednego dnia roboczego." },
+  { q: "Czy kiosk PIN działa offline?", a: "Kiosk PIN wymaga połączenia z internetem — rejestracja czasu jest synchronizowana z bazą danych w czasie rzeczywistym. Pracownicy mogą jednak zobaczyć swój status (zalogowany / nie) nawet przy chwilowych problemach z siecią, a dane są synchronizowane po przywróceniu połączenia." },
+  { q: "Co się dzieje z moimi danymi po anulowaniu subskrypcji?", a: "Po anulowaniu masz 30 dni na eksport wszystkich danych (raporty, faktury, ewidencja czasu) w formacie CSV/Excel. Po tym czasie konto i dane są trwale usuwane zgodnie z RODO." },
+  { q: "Ile użytkowników może korzystać jednocześnie?", a: "Bez limitu — możesz dodać dowolną liczbę managerów i pracowników. Pracownicy używają kiosku PIN lub linku QR, a nie osobnych kont. Liczba aktywnych sesji nie jest ograniczona." },
 ];
 
 /* ─────────────────────────── Lead Capture ─────────────────────── */
@@ -191,7 +196,7 @@ function StickyCTA() {
             {['#06B6D4','#3B82F6','#8B5CF6'].map((c,i) => (
               <div key={i} className="w-6 h-6 rounded-full border-2 border-white" style={{ background: c }} />
             ))}
-            <span className="text-[12px] text-[#6B7280] ml-1">50+ firm już używa OneLink</span>
+            <span className="text-[12px] text-[#6B7280] ml-1">+19% marży · 11 000 zł food cost savings</span>
           </div>
           <div className="w-px h-5 bg-[#E5E7EB]" />
           <Link href="/auth/sign-up" className="h-9 px-5 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-lg shadow-blue-500/30 flex items-center gap-1.5">
@@ -484,6 +489,9 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-3">
             <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Zaloguj</Link>
+            <Link href="/contact" className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
+              Umów demo
+            </Link>
             <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1">
               Zacznij za darmo
             </Link>
@@ -551,12 +559,28 @@ export default function HomePage() {
 
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
-                className="flex flex-wrap items-center gap-4 text-[12px] text-[#9CA3AF]"
+                className="flex flex-wrap items-center gap-4 text-[12px] text-[#9CA3AF] mb-6"
               >
                 {['Konfiguracja w 3 minuty', 'Dane w UE — RODO compliant', 'Anuluj kiedy chcesz'].map(t => (
                   <div key={t} className="flex items-center gap-1.5">
                     <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
                     {t}
+                  </div>
+                ))}
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
+                className="flex flex-wrap gap-3"
+              >
+                {[
+                  { value: '11 000 zł', label: 'oszczędności food cost / mies.' },
+                  { value: '+19%', label: 'wzrost marży operacyjnej' },
+                  { value: '97 min', label: 'zaoszczędzone dziennie / lokal' },
+                ].map(({ value, label }) => (
+                  <div key={label} className="flex flex-col px-4 py-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100">
+                    <span className="text-[20px] font-black text-[#1D4ED8] leading-none">{value}</span>
+                    <span className="text-[10px] text-[#6B7280] mt-0.5">{label}</span>
                   </div>
                 ))}
               </motion.div>
@@ -783,6 +807,39 @@ export default function HomePage() {
               </div>
             </Reveal>
           </div>
+
+          {/* AI Directors how it works + trust badges */}
+          <Reveal className="mt-16">
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-6 text-center">Jak działają Dyrektorzy AI</p>
+              <div className="grid sm:grid-cols-4 gap-6 mb-10">
+                {[
+                  { step: '1', title: 'Zbierają dane', desc: 'Automatycznie pobierają sprzedaż, koszty, grafiki i stany magazynowe z Twojego systemu.' },
+                  { step: '2', title: 'Analizują 24/7', desc: 'Porównują z targetami, historią i benchmarkiem branży — bez przerwy, bez urlopu.' },
+                  { step: '3', title: 'Alarmują gdy trzeba', desc: 'Wysyłają powiadomienie tylko gdy coś wymaga Twojej reakcji. Bez szumu informacyjnego.' },
+                  { step: '4', title: 'Odpowiadają na pytania', desc: 'Możesz zapytać o dowolny wskaźnik w języku naturalnym — dostaniesz odpowiedź w sekundach.' },
+                ].map(({ step, title, desc }) => (
+                  <div key={step} className="text-center">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1D4ED8] to-[#06B6D4] text-white text-[13px] font-black flex items-center justify-center mx-auto mb-3">{step}</div>
+                    <h4 className="text-[13px] font-bold text-[#111827] mb-1">{title}</h4>
+                    <p className="text-[12px] text-[#9CA3AF] leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-[#F3F4F6] pt-6 flex flex-wrap justify-center gap-6">
+                {[
+                  { icon: ShieldCheck, label: 'Dane tylko Twoje — nigdy nie trafiają do trenowania modeli AI' },
+                  { icon: Zap, label: 'Odpowiedź w mniej niż 3 sekundy' },
+                  { icon: Brain, label: 'Dostępne dla właściciela i każdego managera z dostępem' },
+                ].map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-2 text-[12px] text-[#6B7280]">
+                    <Icon className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -832,18 +889,16 @@ export default function HomePage() {
             <p className="text-[16px] text-white/50 max-w-lg mx-auto">Rzeczywiste wyniki właścicieli gastronomii, którzy przeszli z Excela na OneLink.</p>
           </Reveal>
 
-          {/* Stats */}
+          {/* Stats — AKAB Group real data */}
           <RevealList className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
             {[
-              { target: 42, suffix: 'zł / min', label: 'oszczędzonych na food cost', color: '#10B981' },
-              { target: 70, suffix: '%', label: 'krótsze zamknięcie dnia', color: '#3B82F6' },
-              { target: 12, suffix: '+', label: 'wykrytych odchyleń / mies.', color: '#8B5CF6' },
-              { target: 4, suffix: ',2 pp', label: 'wzrost marży w 3 mies.', color: '#F59E0B' },
-            ].map(({ target, suffix, label, color }) => (
+              { display: '2h → 18 min', label: 'czas zamknięcia dnia (AKAB Group)', color: '#3B82F6' },
+              { display: '−4,2 pp', label: 'redukcja food cost w 3 mies.', color: '#10B981' },
+              { display: '504 000 zł', label: 'miesięczny przychód pod kontrolą', color: '#8B5CF6' },
+              { display: '97 min', label: 'zaoszczędzone dziennie / lokal', color: '#F59E0B' },
+            ].map(({ display, label, color }) => (
               <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-                <p className="text-[40px] font-black leading-none mb-1" style={{ color }}>
-                  <CountUp target={target} suffix={suffix} />
-                </p>
+                <p className="text-[32px] font-black leading-none mb-1" style={{ color }}>{display}</p>
                 <p className="text-[12px] text-white/50 leading-snug">{label}</p>
               </div>
             ))}
@@ -852,9 +907,9 @@ export default function HomePage() {
           {/* Testimonials */}
           <RevealList className="grid md:grid-cols-3 gap-5">
             {[
-              { name: 'Marek W.', role: 'właściciel — Fabryka Pączków (2 lokale)', text: 'Pierwszy raz w życiu wiem co się dzieje w moich lokalach bez dzwonienia do managerów. Koszt surowca spadł o 4 punkty procentowe w trzy miesiące.' },
-              { name: 'Agnieszka K.', role: 'CEO — Piekarnia Matusik (sieć 4 punktów)', text: 'Zamknięcie dnia zajmuje teraz 10 minut zamiast godziny. Managerowie wpisują dane przez telefon, ja rano widzę pełny raport. Nie wiem jak funkcjonowałam bez tego.' },
-              { name: 'Tomasz R.', role: 'właściciel — Swojska Spiżarnia', text: 'Wykryłem że jeden składnik regularnie znikał ze stanu. Bez OneLink nigdy bym tego nie zauważył. Odbiłem 1 800 zł miesięcznie tylko na tym.' },
+              { name: 'Ewelina K.', role: 'CEO — AKAB Group', text: 'Pierwszy raz w życiu wiem co się dzieje w moich lokalach bez dzwonienia do managerów. Koszt surowca spadł o 4 punkty procentowe w trzy miesiące.' },
+              { name: 'Krzysztof K.', role: 'właściciel — Piekarnia Matusik (sieć 4 punktów)', text: 'Zamknięcie dnia zajmuje teraz 10 minut zamiast godziny. Managerowie wpisują dane przez telefon, ja rano widzę pełny raport. Nie wiem jak funkcjonowałem bez tego.' },
+              { name: 'Estera N.', role: 'właścicielka — Baked', text: 'Wykryłam że jeden składnik regularnie znikał ze stanu. Bez OneLink nigdy bym tego nie zauważyła. Odbiłam 1 800 zł miesięcznie tylko na tym.' },
             ].map(({ name, role, text }) => (
               <div key={name} className="bg-white/5 border border-white/10 rounded-2xl p-6">
                 <div className="flex mb-3">
@@ -903,7 +958,60 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ════ 8. CLOSING CTA ════ */}
+      {/* ════ 8. COMPARISON TABLE ════ */}
+      <section className="py-20 px-5 bg-[#F7F8FA]">
+        <div className="max-w-4xl mx-auto">
+          <Reveal className="text-center mb-12">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Porównanie</span>
+            <h2 className="text-[32px] md:text-[40px] font-black tracking-tight mb-4">Dlaczego nie Excel ani sam POS?</h2>
+            <p className="text-[15px] text-[#6B7280] max-w-xl mx-auto">
+              Każde narzędzie rozwiązuje fragment. OneLink łączy wszystko w jedno.
+            </p>
+          </Reveal>
+
+          <Reveal>
+            <div className="overflow-x-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#E5E7EB]">
+                    <th className="text-left px-6 py-4 text-[#9CA3AF] font-semibold w-[38%]">Funkcja</th>
+                    <th className="px-4 py-4 text-center text-[#9CA3AF] font-semibold">Excel / Arkusze</th>
+                    <th className="px-4 py-4 text-center text-[#9CA3AF] font-semibold">System POS</th>
+                    <th className="px-4 py-4 text-center font-bold text-[#1D4ED8] bg-blue-50/60 rounded-t-none">OneLink</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['P&L w czasie rzeczywistym', false, false, true],
+                    ['Ewidencja czasu pracy + kiosk', false, false, true],
+                    ['Food cost per danie / kategoria', false, 'częściowo', true],
+                    ['AI analizuje dane za Ciebie', false, false, true],
+                    ['Grafik pracowniczy + wnioski', false, false, true],
+                    ['Faktury i OPEX w jednym miejscu', false, false, true],
+                    ['Wiele lokalizacji — jeden widok', false, false, true],
+                    ['Działa na telefonie', false, 'częściowo', true],
+                  ].map(([feature, excel, pos, onelink], i) => (
+                    <tr key={i} className={`border-b border-[#F3F4F6] last:border-0 ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'}`}>
+                      <td className="px-6 py-3.5 font-medium text-[#374151]">{feature as string}</td>
+                      <td className="px-4 py-3.5 text-center">
+                        {excel === false ? <span className="text-[#E5E7EB] text-[18px]">✕</span> : <span className="text-[11px] text-[#9CA3AF] font-medium">{excel as string}</span>}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        {pos === false ? <span className="text-[#E5E7EB] text-[18px]">✕</span> : pos === true ? <span className="text-[#10B981] text-[16px]">✓</span> : <span className="text-[11px] text-[#F59E0B] font-medium">{pos as string}</span>}
+                      </td>
+                      <td className="px-4 py-3.5 text-center bg-blue-50/40">
+                        {onelink === true ? <span className="text-[#10B981] font-bold text-[16px]">✓</span> : <span className="text-[11px] text-[#9CA3AF]">{onelink as string}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ════ 9. CLOSING CTA ════ */}
       <section className="py-28 px-5 bg-[#F7F8FA]">
         <div className="max-w-3xl mx-auto text-center">
           <Reveal>
@@ -919,10 +1027,16 @@ export default function HomePage() {
                 Dołącz do właścicieli, którzy przestali zgadywać i zaczęli zarządzać danymi.
                 Pierwsze 7 dni gratis — bez ryzyka.
               </p>
-              <Link href="/auth/sign-up"
-                className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-[16px] font-bold text-white hover:opacity-90 transition-all shadow-2xl shadow-blue-500/40">
-                Zacznij za darmo — 7 dni <ArrowRight className="w-5 h-5" />
-              </Link>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link href="/auth/sign-up"
+                  className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-[16px] font-bold text-white hover:opacity-90 transition-all shadow-2xl shadow-blue-500/40">
+                  Zacznij za darmo — 7 dni <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link href="/contact"
+                  className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl border border-white/20 text-[16px] font-semibold text-white hover:bg-white/10 transition-all">
+                  Umów demo
+                </Link>
+              </div>
               <p className="text-[12px] text-white/35 mt-4">Anuluj kiedy chcesz.</p>
             </div>
           </Reveal>
@@ -1034,9 +1148,11 @@ export default function HomePage() {
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-[#111827] mb-4">Firma</p>
               <ul className="space-y-2.5 text-[13px] text-[#6B7280]">
+                <li><Link href="/about" className="hover:text-[#111827] transition-colors">O nas</Link></li>
+                <li><Link href="/case-study/akab-group" className="hover:text-[#111827] transition-colors">Case study</Link></li>
+                <li><Link href="/contact" className="hover:text-[#111827] transition-colors">Kontakt</Link></li>
                 <li><Link href="/auth/sign-up" className="hover:text-[#111827] transition-colors">Zacznij za darmo</Link></li>
                 <li><Link href="/auth/login" className="hover:text-[#111827] transition-colors">Logowanie</Link></li>
-                <li><a href="mailto:kontakt@onelink.pl" className="hover:text-[#111827] transition-colors">Kontakt</a></li>
               </ul>
             </div>
 
@@ -1047,6 +1163,7 @@ export default function HomePage() {
                 <li><Link href="/terms" className="hover:text-[#111827] transition-colors">Regulamin</Link></li>
                 <li><Link href="/privacy" className="hover:text-[#111827] transition-colors">Polityka prywatności</Link></li>
                 <li><Link href="/security" className="hover:text-[#111827] transition-colors">Bezpieczeństwo</Link></li>
+                <li><Link href="/status" className="hover:text-[#111827] transition-colors flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block" />Status systemu</Link></li>
               </ul>
             </div>
 

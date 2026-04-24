@@ -149,8 +149,8 @@ export default function DlaStacjiBenzynowychPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Mam 3 stacje i nigdy nie wiedziałem, że sklep na stacji A generuje 40% zysku, a na stacji B — stratę. OneLink to pokazał w pierwszym tygodniu. Decyzja o zmianie asortymentu była oczywista."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Mariusz K.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Właściciel 3 stacji paliw, Dolny Śląsk</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Krzysztof K.</p>
+            <p className="text-[12px] text-[#9CA3AF]">Właściciel sieci stacji, Piekarnia Matusik</p>
           </Reveal>
         </div>
       </section>

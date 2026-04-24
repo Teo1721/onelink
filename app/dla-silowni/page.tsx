@@ -164,8 +164,8 @@ export default function DlaSilowniPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Zamiast 3 Exceli i grupy na WhatsApp mam jeden panel. Trenerzy sami widzą grafik, a ja widzę P&L każdej strefy w czasie rzeczywistym."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Michał K.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Właściciel sieci 4 siłowni, Trójmiasto</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Radosław K.</p>
+            <p className="text-[12px] text-[#9CA3AF]">Właściciel sieci siłowni, NeuroSnax</p>
           </Reveal>
         </div>
       </section>

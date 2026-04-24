@@ -159,8 +159,8 @@ export default function DlaSklepowPage() {
             <p className="text-[18px] font-bold text-[#111827] italic mb-4 leading-relaxed">
               "Zarządzam 6 sklepami z jednego telefonu. Widzę marżę każdego sklepu, kto jest na zmianie i wszystkie faktury. Wcześniej potrzebowałem do tego asystentki i 3 Exceli."
             </p>
-            <p className="text-[13px] font-semibold text-[#374151]">Tomasz W.</p>
-            <p className="text-[12px] text-[#9CA3AF]">Właściciel sieci 6 sklepów, Mazowsze</p>
+            <p className="text-[13px] font-semibold text-[#374151]">Magdalena S.</p>
+            <p className="text-[12px] text-[#9CA3AF]">Właścicielka sieci sklepów, Feniks</p>
           </Reveal>
         </div>
       </section>

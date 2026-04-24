@@ -26,29 +26,51 @@ type Plan = {
   popular?: boolean;
 };
 
-/* ─── Plan data ─── */
+/* ─── Plan data — Enterprise → Network → Growth → Start ─── */
 const PLANS: Plan[] = [
   {
-    id: "plan1",
-    name: "Start",
-    subtitle: "Dla jednego lokalu",
-    description: "Pełna kontrola jednego lokalu — sprzedaż, czas pracy, HR i raporty dzienne.",
-    monthlyPrice: "19,99",
-    annualPrice: "15,99",
-    annualTotalPrice: "191,88",
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1 ?? "",
-    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1_ANNUAL ?? "",
+    id: "plan4",
+    name: "Enterprise",
+    subtitle: "Dla większych operacji",
+    description: "Pełny dostęp, dedykowane wsparcie i integracje na zamówienie dla dużych sieci.",
+    monthlyPrice: "Wycena",
+    annualPrice: "Wycena",
+    annualTotalPrice: "Wycena",
+    priceId: "",
+    annualPriceId: "",
+    cta: "Skontaktuj się",
+    features: [
+      "Nielimitowane lokale i managerowie",
+      "Pełny P&L, EBIT i raporty cross-lokalizacyjne",
+      "Dedykowany opiekun konta",
+      "Onboarding i migracja danych",
+      "SLA i gwarancja dostępności",
+      "Dostęp do API i integracje na zamówienie",
+      "Rozliczenie fakturowe dostępne",
+    ],
+  },
+  {
+    id: "plan3",
+    name: "Sieć",
+    subtitle: "Dla większych operacji",
+    description: "Dla sieci firm — pełen dostęp, HR dla całej sieci, raporty cross-lokalizacyjne.",
+    monthlyPrice: "179,99",
+    annualPrice: "143,99",
+    annualTotalPrice: "1 727,90",
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3 ?? "",
+    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3_ANNUAL ?? "",
     cta: "Zacznij 7-dniowy trial",
     features: [
-      "1 lokal · 1 manager",
-      "Raport dzienny P&L",
-      "Ewidencja czasu pracy (Kiosk PIN + QR)",
-      "Grafik pracowników",
-      "Wnioski urlopowe i zamiany zmian",
-      "Aplikacja dla pracowników",
-      "Alerty i powiadomienia",
-      "Wsparcie e-mail",
-      "CFO Dyrektor AI (alerty P&L)",
+      "Do 5 lokali · 5 managerów",
+      "Pełny dostęp P&L i EBIT",
+      "HR dla całej sieci — raporty zagregowane",
+      "Panel regionalny i finansowy",
+      "Zaawansowane raporty cross-lokalizacyjne",
+      "Eksport danych i integracje",
+      "Onboarding pracowników multi-lokal",
+      "Dedykowany opiekun konta",
+      "Wszystkie 4 Dyrektory AI (CFO, Sprzedaż, HR, Inwestorski)",
+      "Push notyfikacje na telefon dla alertów krytycznych",
     ],
   },
   {
@@ -56,9 +78,9 @@ const PLANS: Plan[] = [
     name: "Rozwój",
     subtitle: "Dla rosnącej sieci",
     description: "Pełna kontrola operacyjna — faktury, magazyn, food cost, HR i zaawansowane raporty.",
-    monthlyPrice: "39,99",
-    annualPrice: "31,99",
-    annualTotalPrice: "383,88",
+    monthlyPrice: "99,99",
+    annualPrice: "79,99",
+    annualTotalPrice: "959,90",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN2 ?? "",
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN2_ANNUAL ?? "",
     cta: "Zacznij 7-dniowy trial",
@@ -78,27 +100,23 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    id: "plan3",
-    name: "Sieć",
-    subtitle: "Dla większych operacji",
-    description: "Dla sieci firm — pełen dostęp, HR dla całej sieci, raporty cross-lokalizacyjne.",
-    monthlyPrice: "59,99",
-    annualPrice: "47,99",
-    annualTotalPrice: "575,88",
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3 ?? "",
-    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN3_ANNUAL ?? "",
+    id: "plan1",
+    name: "Start",
+    subtitle: "Dla jednego lokalu",
+    description: "Wszystko czego potrzebujesz żeby zacząć — P&L, grafik, czas pracy i AI CFO.",
+    monthlyPrice: "49,99",
+    annualPrice: "39,99",
+    annualTotalPrice: "479,90",
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1 ?? "",
+    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAN1_ANNUAL ?? "",
     cta: "Zacznij 7-dniowy trial",
     features: [
-      "Do 5 lokali · 5 managerów",
-      "Pełny dostęp P&L i EBIT",
-      "HR dla całej sieci — raporty zagregowane",
-      "Panel regionalny i finansowy",
-      "Zaawansowane raporty cross-lokalizacyjne",
-      "Eksport danych i integracje",
-      "Onboarding pracowników multi-lokal",
-      "Dedykowany opiekun konta",
-      "Wszystkie 4 Dyrektory AI (CFO, Sprzedaż, HR, Inwestorski)",
-      "Push notyfikacje na telefon dla alertów krytycznych",
+      "1 lokal · 1 manager",
+      "Raport P&L dzienny",
+      "Ewidencja czasu pracy (Kiosk)",
+      "Grafik pracowników",
+      "Wnioski urlopowe online",
+      "CFO Dyrektor AI",
     ],
   },
 ];
@@ -128,21 +146,21 @@ const COMPARISON: FeatureRow[] = [
 /* ─── Testimonials ─── */
 const TESTIMONIALS = [
   {
-    name: "Marek Wiśniewski",
+    name: "Marek W.",
     city: "Kraków",
     biz: "Właściciel kawiarni (2 lokale)",
     text: "Od kiedy przeszedłem na OneLink, mam pełny obraz finansów każdego ranka. Wykryłem wyciek na food cost, który kosztował mnie 2 000 zł miesięcznie — teraz go kontroluję na bieżąco.",
     stars: 5,
   },
   {
-    name: "Agnieszka Kowalczyk",
+    name: "Agnieszka K.",
     city: "Wrocław",
     biz: "CEO — sieć piekarni (4 punkty)",
     text: "Zamknięcie dnia skróciło się z godziny do dziesięciu minut. Managerowie wprowadzają dane przez telefon, a ja rano widzę pełny raport P&L. Nie wyobrażam sobie już pracy bez tego.",
     stars: 5,
   },
   {
-    name: "Tomasz Rychlik",
+    name: "Tomasz R.",
     city: "Poznań",
     biz: "Właściciel restauracji",
     text: "Plan Rozwój spłacił się w pierwszym miesiącu. Dyrektorzy AI wykryli anomalię w magazynie, dzięki czemu odbiłem 1 800 zł. Cena abonamentu to inwestycja, nie koszt.",
@@ -270,21 +288,21 @@ export default function PricingPage() {
           className="inline-flex items-center gap-4 p-1.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm"
         >
           <button
-            onClick={() => setAnnual(true)}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
-              annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
-            }`}
-          >
-            Rocznie
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${annual ? "bg-green-500 text-white" : "bg-green-100 text-green-700"}`}>-20%</span>
-          </button>
-          <button
             onClick={() => setAnnual(false)}
             className={`px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
               !annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
             }`}
           >
             Miesięcznie
+          </button>
+          <button
+            onClick={() => setAnnual(true)}
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
+              annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
+            }`}
+          >
+            Rocznie
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${annual ? "bg-green-500 text-white" : "bg-green-100 text-green-700"}`}>Oszczędź 20%</span>
           </button>
         </motion.div>
         {annual && (
@@ -295,17 +313,17 @@ export default function PricingPage() {
       </section>
 
       {/* ── PRICING CARDS ── */}
-      <section className="max-w-5xl mx-auto px-6 pb-24">
-        <div className="grid md:grid-cols-3 gap-5 items-start">
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
           {PLANS.map((plan, idx) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: idx * 0.1, ease: EASE }}
-              className={`relative flex flex-col rounded-3xl p-7 transition-all ${
+              className={`relative flex flex-col rounded-3xl p-5 transition-all ${
                 plan.popular
-                  ? "bg-[#0F172A] text-white shadow-2xl shadow-black/25 ring-2 ring-[#1D4ED8]/60 scale-[1.02] z-10"
+                  ? "bg-[#0F172A] text-white shadow-2xl shadow-black/25 ring-2 ring-[#1D4ED8]/60 z-10"
                   : "bg-white border border-[#E5E7EB] text-[#111827] shadow-sm hover:shadow-lg"
               }`}
             >
@@ -329,37 +347,52 @@ export default function PricingPage() {
 
               {/* Price */}
               <div className="mb-7">
-                <div className="flex items-baseline gap-1.5">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={annual ? "annual" : "monthly"}
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.25 }}
-                      className={`text-[46px] font-black leading-none ${plan.popular ? "text-white" : "text-[#111827]"}`}
-                    >
-                      {annual ? plan.annualTotalPrice : plan.monthlyPrice}
-                    </motion.span>
-                  </AnimatePresence>
-                  <span className={`text-[13px] font-medium ${plan.popular ? "text-white/50" : "text-[#9CA3AF]"}`}>
-                    {annual ? "zł / rok" : "zł / mies."}
-                  </span>
-                </div>
-                {annual ? (
-                  <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
-                    = {plan.annualPrice} zł / mies.
-                    <span className="ml-2 line-through opacity-50">{plan.monthlyPrice} zł</span>
-                    {" "}· + VAT
-                  </p>
+                {plan.id === "plan4" ? (
+                  <div>
+                    <p className={`text-[36px] font-black leading-none mb-1 ${plan.popular ? "text-white" : "text-[#111827]"}`}>Wycena</p>
+                    <p className={`text-[12px] ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>Indywidualna oferta</p>
+                  </div>
                 ) : (
-                  <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
-                    + VAT · po 7-dniowym trialu
-                  </p>
+                  <>
+                  <div className="flex items-baseline gap-1.5">
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={annual ? "annual" : "monthly"}
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.25 }}
+                        className={`text-[40px] font-black leading-none ${plan.popular ? "text-white" : "text-[#111827]"}`}
+                      >
+                        {annual ? plan.annualTotalPrice : plan.monthlyPrice}
+                      </motion.span>
+                    </AnimatePresence>
+                    <span className={`text-[13px] font-medium ${plan.popular ? "text-white/50" : "text-[#9CA3AF]"}`}>
+                      {annual ? "zł / rok" : "zł / mies."}
+                    </span>
+                  </div>
+                  {annual ? (
+                    <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
+                      {plan.annualPrice} zł / mies. — płatne rocznie
+                    </p>
+                  ) : (
+                    <p className={`text-[12px] mt-1 ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
+                      po 7-dniowym trialu
+                    </p>
+                  )}
+                  </>
                 )}
               </div>
 
               {/* CTA */}
+              {plan.id === "plan4" ? (
+                <a
+                  href="mailto:kontakt@onelink.pl"
+                  className="w-full h-12 rounded-xl font-bold text-[14px] transition-all mb-7 flex items-center justify-center gap-2 bg-[#111827] text-white hover:bg-[#1F2937]"
+                >
+                  {plan.cta} <ArrowRight className="w-4 h-4" />
+                </a>
+              ) : (
               <button
                 onClick={() => handleSubscribe(plan)}
                 disabled={loading}
@@ -372,6 +405,7 @@ export default function PricingPage() {
                 {loading ? "Przekierowanie..." : plan.cta}
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
+              )}
 
               {/* Features */}
               <ul className="space-y-3 flex-1">
@@ -392,7 +426,10 @@ export default function PricingPage() {
           <p className="text-sm text-red-500 text-center mt-8 bg-red-50 border border-red-200 rounded-xl py-3 px-4">{error}</p>
         )}
 
-        <p className="text-center text-[12px] text-[#9CA3AF] mt-8">
+        <p className="text-center text-[12px] text-[#9CA3AF] mt-6">
+          Ceny podane netto. VAT doliczany przy kasie.
+        </p>
+        <p className="text-center text-[12px] text-[#9CA3AF] mt-2">
           Wszystkie plany: 7-dniowy trial · Anuluj kiedy chcesz · Bezpieczna płatność Stripe
         </p>
       </section>
