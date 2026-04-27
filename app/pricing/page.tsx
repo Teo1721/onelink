@@ -240,7 +240,7 @@ export default function PricingPage() {
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" dark={false} /></Link>
           <div className="hidden md:flex items-center gap-5 text-[13px] text-[#6B7280]">
             <Link href="/" className="hover:text-[#111827] transition-colors">{pl ? 'Strona główna' : 'Home'}</Link>
@@ -251,7 +251,7 @@ export default function PricingPage() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
-            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/login" className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
             <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm flex items-center gap-1.5">
               {pl ? 'Zacznij za darmo' : 'Start for free'} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -260,7 +260,7 @@ export default function PricingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
+      <section className="max-w-[1100px] mx-auto px-6 pt-20 pb-16 text-center">
         <motion.div
           initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-6"
@@ -319,7 +319,7 @@ export default function PricingPage() {
       </section>
 
       {/* ── PRICING CARDS ── */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
+      <section className="max-w-[1400px] mx-auto px-6 pb-24">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
           {PLANS.map((plan, idx) => (
             <motion.div
@@ -441,7 +441,7 @@ export default function PricingPage() {
       </section>
 
       {/* ── FEATURE COMPARISON TABLE ── */}
-      <section className="max-w-5xl mx-auto px-6 pb-28">
+      <section className="max-w-[1200px] mx-auto px-6 pb-28">
         <div className="text-center mb-12">
           <h2 className="text-[32px] md:text-[40px] font-black tracking-tight mb-3 text-[#111827]">
             Porównanie planów
@@ -480,7 +480,7 @@ export default function PricingPage() {
 
       {/* ── TESTIMONIALS ── */}
       <section className="py-24 px-6" style={{ background: "linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%)" }}>
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-14">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-blue-400 mb-4">Opinie klientów</span>
             <h2 className="text-[36px] md:text-[44px] font-black tracking-tight text-white mb-3">
@@ -599,7 +599,7 @@ export default function PricingPage() {
 
       {/* ── FOOTER ── */}
       <footer className="border-t border-[#E5E7EB] py-10 px-6 bg-white">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-[1200px] mx-auto">
           <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 mb-8">
             <div>
               <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" dark={false} /></Link>

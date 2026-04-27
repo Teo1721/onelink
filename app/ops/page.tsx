@@ -480,7 +480,7 @@ function AttendanceView({ locationId, locationName, supabase }: { locationId: st
   }
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-[1200px]">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
@@ -957,7 +957,7 @@ function DashboardView({ locations, supabase }: { locations: LocationData[]; sup
   }), { clockedIn: 0, shiftsToday: 0, pendingLeaves: 0, totalEmployees: 0 })
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-2">
+    <div className="max-w-[1100px] mx-auto py-6 px-2">
       <h2 className="text-[22px] font-bold text-[#111827] mb-1">Dashboard</h2>
       <p className="text-[13px] text-[#9CA3AF] mb-6">Przegląd wszystkich lokalizacji — {new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
 
@@ -3701,7 +3701,7 @@ export default function OpsDashboard() {
         {/* ║  2. INVOICES & COSTS                                     ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'invoices' && (
-          <div className="max-w-5xl">
+          <div className="max-w-[1200px]">
             <header className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900">Faktury i koszty</h1>
               <div className="flex gap-2 mt-4">
@@ -4086,7 +4086,7 @@ export default function OpsDashboard() {
         {/* ║  3. INVENTORY                                            ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'inventory' && (
-          <div className="max-w-5xl">
+          <div className="max-w-[1200px]">
             <header className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <ClipboardList className="w-8 h-8" />Inwentaryzacja

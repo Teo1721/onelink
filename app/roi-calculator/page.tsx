@@ -90,7 +90,7 @@ export default function RoiCalculatorPage() {
     <div className="min-h-screen bg-[#F7F8FA]">
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" /></Link>
           <Link href="/auth/sign-up"
             className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm flex items-center gap-1">
@@ -99,7 +99,7 @@ export default function RoiCalculatorPage() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-5 pt-28 pb-24">
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-10 pt-28 pb-24">
         {/* Header */}
         <div className="text-center mb-12">
           <span className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-5">
@@ -231,7 +231,7 @@ export default function RoiCalculatorPage() {
 
       {/* Footer */}
       <footer className="border-t border-[#E5E7EB] bg-white py-8 px-5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={24} textSize="text-[14px]" /></Link>
           <p className="text-[11px] text-[#D1D5DB]">© {new Date().getFullYear()} OneLink</p>
         </div>

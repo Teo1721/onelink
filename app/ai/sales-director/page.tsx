@@ -86,7 +86,7 @@ export default function SalesDirectorLandingPage() {
     <div className="min-h-screen bg-[#F7F8FA]">
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" /></Link>
           <div className="flex items-center gap-3">
             <Link href="/ai/cfo-director" className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors hidden sm:block">CFO Director</Link>
@@ -98,7 +98,7 @@ export default function SalesDirectorLandingPage() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-5 pt-28 pb-24">
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-10 pt-28 pb-24">
 
         {/* Hero */}
         <Reveal className="text-center mb-16">
@@ -276,7 +276,7 @@ export default function SalesDirectorLandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-[#E5E7EB] bg-white py-8 px-5">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <Link href="/"><OneLinkLogo iconSize={24} textSize="text-[14px]" /></Link>
           <div className="flex items-center gap-5 text-[12px] text-[#9CA3AF]">
             <Link href="/ai/cfo-director" className="hover:text-[#374151] transition-colors">CFO Director</Link>

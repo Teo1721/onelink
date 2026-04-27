@@ -69,7 +69,7 @@ const FAQ_ITEMS_PL = [
   { q: "Czy OneLink działa dla sklepów detalicznych?", a: "Tak. OneLink obsługuje każdy biznes z personelem, magazynem i kosztami operacyjnymi — w tym sklepy detaliczne, spożywcze i specjalistyczne." },
   { q: "Czy mogę śledzić stany magazynowe?", a: "Tak. Możesz prowadzić stany przez system transakcji magazynowych, importować dane CSV i powiązywać produkty z dostawcami i fakturami." },
   { q: "Czy aplikacja mobilna działa bez internetu?", a: "Aplikacja pracownika jest PWA — działa na każdym smartfonie przez przeglądarkę. Podstawowe widoki są dostępne offline." },
-  { q: "Ile kosztuje OneLink dla sieci sklepów?", a: "Od 19,99 zł / miesiąc netto za lokalizację. Dla sieci powyżej 5 lokali — skontaktuj się po indywidualną wycenę." },
+  { q: "Ile kosztuje OneLink dla sieci sklepów?", a: "Od 49,99 zł / miesiąc netto za lokalizację. Dla sieci powyżej 5 lokali — skontaktuj się po indywidualną wycenę." },
   { q: "Jak zintegrować OneLink z moją kasą fiskalną?", a: "OneLink importuje raporty sprzedaży (CSV/Excel) i łączy je z danymi kosztowymi. Nie zastępuje kasy, ale agreguje wszystkie dane w jednym miejscu." },
 ];
 const FAQ_ITEMS_EN = [
@@ -89,7 +89,7 @@ export default function DlaSklepowPage() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -133,7 +133,7 @@ export default function DlaSklepowPage() {
       </section>
 
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Problemy które rozwiązujemy</p>
             <h2 className="text-[28px] font-black text-[#111827]">Każdy sklep walczy z tym samym</h2>
@@ -155,7 +155,7 @@ export default function DlaSklepowPage() {
       </section>
 
       <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Funkcje systemu</p>
             <h2 className="text-[28px] font-black text-[#111827]">Wszystko co potrzebuje sklep</h2>

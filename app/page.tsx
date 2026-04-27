@@ -74,7 +74,7 @@ const FAQ_ITEMS_EN = [
 ];
 
 const FAQ_ITEMS = [
-  { q: "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", a: "Plany zaczynają się od 19,99 zł miesięcznie netto (+ VAT). Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." },
+  { q: "Ile kosztuje OneLink po zakończeniu bezpłatnego trialu?", a: "Plany zaczynają się od 49,99 zł miesięcznie netto (+ VAT). Możesz anulować w dowolnym momencie — bez okresu wypowiedzenia." },
   { q: "Czy muszę podawać kartę kredytową przy rejestracji?", a: "Tak, przy rejestracji prosimy o dane karty przez Stripe. Nie pobieramy żadnej opłaty przez 7 dni trialu. Możesz anulować przed upływem 7 dni — żadna opłata nie zostanie pobrana." },
   { q: "Jak długo trwa wdrożenie i konfiguracja?", a: "Pierwsze konto jest gotowe w około 3 minuty. Pełna konfiguracja z zaproszeniem managerów zajmuje do 20 minut. Nie potrzebujesz IT." },
   { q: "Czy mogę zarządzać kilkoma lokalami?", a: "Tak. OneLink jest zaprojektowany do zarządzania wieloma lokalizacjami z jednego panelu. Możesz porównywać wyniki, transferować stany i zatwierdzać faktury z każdego lokalu." },
@@ -497,7 +497,7 @@ export default function HomePage() {
 
       {/* ── NAV ── */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
-        <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <OneLinkLogo iconSize={28} textSize="text-[16px]" />
           <div className="hidden md:flex items-center gap-6 text-[13px] text-[#6B7280]">
             <a href="#directors" className="hover:text-[#111827] transition-colors">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
@@ -508,7 +508,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
-            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">{pl ? 'Zaloguj' : 'Log in'}</Link>
+            <Link href="/auth/login" className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
             <Link href="/contact" className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
               {pl ? 'Umów demo' : 'Book a demo'}
             </Link>
@@ -535,7 +535,7 @@ export default function HomePage() {
           </svg>
         </div>
 
-        <div className="relative max-w-6xl mx-auto">
+        <div className="relative max-w-[1400px] mx-auto">
           <div className="grid lg:grid-cols-2 gap-14 items-center">
             {/* Left */}
             <div>
@@ -624,7 +624,7 @@ export default function HomePage() {
 
       {/* ════ TRUSTED BY ════ */}
       <section className="py-10 px-5 border-y border-[#F3F4F6] bg-white">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-[1200px] mx-auto">
           <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-7">Zaufali nam</p>
           <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
             {[
@@ -644,7 +644,7 @@ export default function HomePage() {
 
       {/* ════ 2. PROBLEM STORY ════ */}
       <section className="relative py-24 px-5 overflow-hidden">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-16">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Znasz to uczucie?</span>
             <h2 className="text-[38px] md:text-[52px] font-black leading-[1.1] tracking-tight">
@@ -702,7 +702,7 @@ export default function HomePage() {
 
       {/* ════ 3. DATA FOUNDATION ════ */}
       <section className="py-24 px-5 bg-white">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[1400px] mx-auto">
           <Reveal className="text-center mb-14">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Fundament danych</span>
             <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4">
@@ -743,7 +743,7 @@ export default function HomePage() {
 
       {/* ════ 4. MEET THE DIRECTORS ════ */}
       <section id="directors" className="py-24 px-5" style={{ background: 'linear-gradient(180deg, #F7F8FA 0%, #EFF6FF 100%)' }}>
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[1400px] mx-auto">
           <Reveal className="text-center mb-14">
             <span className="flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-4">
               <Brain className="w-3.5 h-3.5" /> Dyrektorzy AI
@@ -869,7 +869,7 @@ export default function HomePage() {
 
       {/* ════ 5. HOW IT WORKS ════ */}
       <section id="how" className="py-24 px-5 bg-white">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-16">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Jak to działa</span>
             <h2 className="text-[36px] md:text-[46px] font-black tracking-tight">Od rejestracji do pierwszego briefingu</h2>
@@ -904,7 +904,7 @@ export default function HomePage() {
 
       {/* ════ 6. RESULTS / ROI ════ */}
       <section id="results" className="py-24 px-5" style={{ background: 'linear-gradient(135deg, #0D1628 0%, #0F2856 100%)' }}>
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[1400px] mx-auto">
           <Reveal className="text-center mb-14">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-blue-400 mb-4">Wyniki</span>
             <h2 className="text-[36px] md:text-[46px] font-black tracking-tight text-white mb-3">
@@ -952,7 +952,7 @@ export default function HomePage() {
 
       {/* ════ 7. INTEGRATIONS ════ */}
       <section className="py-20 px-5 bg-white">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-[1100px] mx-auto text-center">
           <Reveal>
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Ekosystem</span>
             <h2 className="text-[32px] md:text-[40px] font-black tracking-tight mb-4">Działa z narzędziami, które już znasz</h2>
@@ -984,7 +984,7 @@ export default function HomePage() {
 
       {/* ════ 8. COMPARISON TABLE ════ */}
       <section className="py-20 px-5 bg-[#F7F8FA]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-12">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Porównanie</span>
             <h2 className="text-[32px] md:text-[40px] font-black tracking-tight mb-4">Dlaczego nie Excel ani sam POS?</h2>
@@ -1069,7 +1069,7 @@ export default function HomePage() {
 
       {/* ════ SOCIAL PROOF STRIP ════ */}
       <section className="py-5 px-5 border-y border-[#E5E7EB] bg-white/70">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF]">Właściciele gastronomii, którzy nam zaufali</p>
           <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2">
             {['Fabryka Pączków', 'Piekarnia Matusik', 'Swojska Spiżarnia', 'Kawiarnia Centrum', 'Bistro Rynek'].map(name => (
@@ -1112,7 +1112,7 @@ export default function HomePage() {
 
       {/* ════ INDUSTRIES ════ */}
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-[1200px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-2">Nie tylko gastronomia</p>
             <h2 className="text-[28px] font-black text-[#111827]">OneLink działa w każdej branży</h2>
@@ -1140,7 +1140,7 @@ export default function HomePage() {
 
       {/* ════ FOOTER ════ */}
       <footer className="border-t border-[#E5E7EB] bg-white pt-14 pb-8 px-5">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[1400px] mx-auto">
           {/* Top: logo + columns */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-10 mb-12">
             {/* Brand */}

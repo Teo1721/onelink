@@ -101,7 +101,7 @@ export default function SecurityPage() {
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" dark={false} /></Link>
           <div className="hidden md:flex items-center gap-5 text-[13px] text-[#6B7280]">
             <Link href="/" className="hover:text-[#111827] transition-colors">Strona główna</Link>
@@ -111,7 +111,7 @@ export default function SecurityPage() {
             <Link href="/security" className="font-semibold text-[#111827]">Bezpieczeństwo</Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Zaloguj</Link>
+            <Link href="/auth/login" className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all flex items-center">Zaloguj</Link>
             <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm flex items-center gap-1.5">
               Zacznij za darmo <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -126,7 +126,7 @@ export default function SecurityPage() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #1D4ED8 0%, transparent 70%)" }} />
         </div>
 
-        <div className="relative max-w-4xl mx-auto px-6 py-24 text-center">
+        <div className="relative max-w-[1100px] mx-auto px-6 py-24 text-center">
           {/* Shield icon */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: -10 }}
@@ -197,7 +197,7 @@ export default function SecurityPage() {
 
       {/* ── SECURITY PILLARS ── */}
       <section className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[1400px] mx-auto">
           <Reveal className="text-center mb-14">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Filary bezpieczeństwa</span>
             <h2 className="text-[32px] md:text-[42px] font-black tracking-tight mb-4 text-[#111827]">
@@ -239,7 +239,7 @@ export default function SecurityPage() {
 
       {/* ── STRIPE PAYMENTS ── */}
       <section className="py-16 px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal>
             <div className="rounded-2xl border border-[#E5E7EB] overflow-hidden shadow-sm">
               <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start">
@@ -272,7 +272,7 @@ export default function SecurityPage() {
 
       {/* ── GDPR ── */}
       <section className="py-16 px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal>
             <div className="rounded-2xl overflow-hidden border border-[#E5E7EB] shadow-sm">
               <div className="px-6 py-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%)" }}>
@@ -304,7 +304,7 @@ export default function SecurityPage() {
 
       {/* ── SECURITY PRACTICES ── */}
       <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-12">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-4">Nasze praktyki</span>
             <h2 className="text-[28px] md:text-[36px] font-black tracking-tight mb-3 text-[#111827]">
@@ -332,7 +332,7 @@ export default function SecurityPage() {
 
       {/* ── INCIDENT RESPONSE ── */}
       <section className="py-16 px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal>
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 md:p-8">
               <div className="flex items-start gap-4">

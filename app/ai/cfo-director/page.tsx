@@ -79,7 +79,7 @@ export default function CfoDirectorPage() {
     <div className="min-h-screen bg-[#F7F8FA] text-[#111827]">
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <OneLinkLogo iconSize={26} textSize="text-[15px]" />
             <span className="text-[#D1D5DB] mx-1">/</span>
@@ -99,7 +99,7 @@ export default function CfoDirectorPage() {
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/3 w-[500px] h-[500px] rounded-full bg-blue-100/50 blur-3xl -translate-y-1/2" />
         </div>
-        <div className="relative max-w-4xl mx-auto text-center">
+        <div className="relative max-w-[1100px] mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-6">
             <Brain className="w-3 h-3" />
@@ -167,7 +167,7 @@ export default function CfoDirectorPage() {
 
       {/* ── CAPABILITIES ── */}
       <section id="capabilities" className="py-20 px-5 bg-white">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-[1200px] mx-auto">
           <Reveal className="text-center mb-12">
             <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-3">Możliwości</span>
             <h2 className="text-[32px] md:text-[40px] font-black tracking-tight">Co potrafi CFO Dyrektor AI</h2>
@@ -326,7 +326,7 @@ export default function CfoDirectorPage() {
 
       {/* Footer */}
       <footer className="border-t border-[#E5E7EB] bg-white py-8 px-5">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link href="/">
             <OneLinkLogo iconSize={24} textSize="text-[14px]" />
           </Link>

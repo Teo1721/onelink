@@ -60,7 +60,7 @@ export default function AboutPage() {
           {[
             { title: 'Prosto i szybko', desc: 'Konfiguracja w 20 minut. Żadnego działu IT, żadnych szkoleń. Kiosk PIN dla pracowników gotowy w kilka kliknięć.' },
             { title: 'Dla właścicieli, nie księgowych', desc: 'Interfejs zaprojektowany dla osoby, która rano otwiera lokal i wieczorem chce wiedzieć czy zarobi na czynsz.' },
-            { title: 'Cena uczciwa', desc: 'Od 19,99 zł miesięcznie. Bez ukrytych opłat, bez długich umów. Możesz anulować kiedy chcesz.' },
+            { title: 'Cena uczciwa', desc: 'Od 49,99 zł miesięcznie. Bez ukrytych opłat, bez długich umów. Możesz anulować kiedy chcesz.' },
           ].map(v => (
             <div key={v.title} className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
               <h3 className="text-[15px] font-bold text-[#111827] mb-2">{v.title}</h3>

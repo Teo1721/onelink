@@ -69,7 +69,7 @@ const FAQ_ITEMS_PL = [
   { q: "Czy OneLink zastępuje system rezerwacji?", a: "Nie — OneLink zarządza operacjami: grafik, P&L, faktury, koszty pracy. Możesz korzystać z Booksy lub innego narzędzia do rezerwacji równolegle." },
   { q: "Jak śledzić wydajność każdego stylisty?", a: "Przypisuj przychody i godziny do konkretnych pracowników. OneLink wylicza przychód na godzinę pracy, koszt i marżę per osoba." },
   { q: "Czy mogę rozliczać prowizje pracownicze?", a: "Tak — możesz definiować stawki godzinowe lub prowizyjne. System generuje zestawienie kosztów pracy do wypłat." },
-  { q: "Ile kosztuje OneLink dla salonu?", a: "Od 19,99 zł / miesiąc netto. Dla sieci salonów — skontaktuj się po wycenę z rabatem dla wielu lokalizacji." },
+  { q: "Ile kosztuje OneLink dla salonu?", a: "Od 49,99 zł / miesiąc netto. Dla sieci salonów — skontaktuj się po wycenę z rabatem dla wielu lokalizacji." },
   { q: "Jak szybko mogę wdrożyć OneLink w salonie?", a: "Pierwsze konto gotowe w 3 minuty. Dodanie pracowników, produktów i lokalizacji — maksymalnie 20 minut." },
 ];
 const FAQ_ITEMS_EN = [
@@ -89,7 +89,7 @@ export default function DlaSalonowBeautyPage() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -127,7 +127,7 @@ export default function DlaSalonowBeautyPage() {
       </section>
 
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Problemy salonów beauty</p>
             <h2 className="text-[28px] font-black text-[#111827]">Każdy salon zmaga się z tym samym</h2>
@@ -147,7 +147,7 @@ export default function DlaSalonowBeautyPage() {
       </section>
 
       <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Funkcje systemu</p>
             <h2 className="text-[28px] font-black text-[#111827]">Profesjonalne zarządzanie salonem</h2>

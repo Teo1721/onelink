@@ -69,7 +69,7 @@ const FAQ_ITEMS_PL = [
   { q: "Czy OneLink działa dla siłowni i klubów fitness?", a: "Tak. OneLink obsługuje każdy biznes wielolokalizacyjny z personelem, sprzedażą i kosztami operacyjnymi. Trenerzy personalni, zajęcia grupowe, bar — wszystko można obsłużyć jako oddzielne centra kosztów." },
   { q: "Czy trenerzy mogą używać aplikacji mobilnej?", a: "Tak. Pracownicy mają dostęp do portalu pracownika przez przeglądarkę lub jako PWA na telefonie — widzą grafik, składają wnioski urlopowe i rejestrują godziny." },
   { q: "Jak działa integracja z kasą fiskalną?", a: "OneLink nie zastępuje kasy fiskalnej, ale importuje raporty sprzedaży (CSV lub ręcznie) i łączy je z kosztami, żeby wyliczyć marżę operacyjną." },
-  { q: "Ile kosztuje OneLink dla siłowni?", a: "Od 19,99 zł / miesiąc netto. Cena zależy od liczby lokalizacji. 7-dniowy trial — bez zobowiązań." },
+  { q: "Ile kosztuje OneLink dla siłowni?", a: "Od 49,99 zł / miesiąc netto. Cena zależy od liczby lokalizacji. 7-dniowy trial — bez zobowiązań." },
   { q: "Jak szybko mogę zacząć?", a: "Pierwsze konto jest gotowe w 3 minuty. Dodanie trenerów i lokalizacji zajmuje kolejne 15–20 minut." },
 ];
 const FAQ_ITEMS_EN = [
@@ -90,7 +90,7 @@ export default function DlaSilowniPage() {
     <div className="min-h-screen bg-white font-sans">
       {/* NAV */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -136,7 +136,7 @@ export default function DlaSilowniPage() {
 
       {/* PROBLEMS */}
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Problemy które rozwiązujemy</p>
             <h2 className="text-[28px] font-black text-[#111827]">Każda siłownia to te same bóle</h2>
@@ -159,7 +159,7 @@ export default function DlaSilowniPage() {
 
       {/* FEATURES */}
       <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Co dostaje Twoja siłownia</p>
             <h2 className="text-[28px] font-black text-[#111827]">Wszystko w jednym systemie</h2>

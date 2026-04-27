@@ -12,7 +12,7 @@ export default function AKABCaseStudy() {
     <div className="bg-white text-[#111827] min-h-screen">
       {/* Nav */}
       <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
-        <div className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto w-full">
+        <div className="flex items-center justify-between px-6 py-4 max-w-[1200px] mx-auto w-full">
           <Link href="/">
             <OneLinkLogo iconSize={24} textSize="text-[14px]" dark={false} />
           </Link>
@@ -157,7 +157,7 @@ export default function AKABCaseStudy() {
 
       {/* Footer */}
       <footer className="border-t border-[#E5E7EB] bg-[#F9FAFB] py-8 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-[12px] text-[#9CA3AF]">© 2026 OneLink · InnowacyjneAI sp. z o.o.</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href="/about" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">O nas</Link>

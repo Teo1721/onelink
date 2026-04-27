@@ -70,7 +70,7 @@ const FAQ_ITEMS_PL = [
   { q: "Czy mogę podzielić P&L na restaurację i hotel?", a: "Tak. Możesz tworzyć centra kosztów i przypisywać do nich sprzedaż, faktury i koszty pracy. P&L każdego działu osobno." },
   { q: "Jak działa AI CFO dla hotelu?", a: "AI CFO analizuje dane z Twoich raportów dziennych i faktur. Porównuje wyniki z poprzednimi tygodniami i alarmuje o anomaliach — np. wzrost food cost powyżej 35%." },
   { q: "Czy mogę importować dane z systemu PMS?", a: "Jeśli Twój PMS eksportuje CSV/Excel, możesz zaimportować dane sprzedażowe do OneLink. Integracje API są na roadmapie." },
-  { q: "Ile kosztuje OneLink dla hoteli?", a: "Od 19,99 zł / miesiąc netto. Dla hoteli z kilkoma działami — skontaktuj się po indywidualną wycenę." },
+  { q: "Ile kosztuje OneLink dla hoteli?", a: "Od 49,99 zł / miesiąc netto. Dla hoteli z kilkoma działami — skontaktuj się po indywidualną wycenę." },
 ];
 const FAQ_ITEMS_EN = [
   { q: "Is OneLink dedicated to hotels?", a: "OneLink manages multi-location operations — hotel restaurants, labour costs and supplier invoices are its core. It doesn't replace a PMS, but complements it with a financial view." },
@@ -89,7 +89,7 @@ export default function DlaHoteliPage() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -127,7 +127,7 @@ export default function DlaHoteliPage() {
       </section>
 
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Wyzwania branży hotelarskiej</p>
             <h2 className="text-[28px] font-black text-[#111827]">Problemy znane każdemu hotelarzowi</h2>
@@ -147,7 +147,7 @@ export default function DlaHoteliPage() {
       </section>
 
       <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Funkcje dla hoteli</p>
             <h2 className="text-[28px] font-black text-[#111827]">Wszystko co potrzebuje nowoczesny hotel</h2>

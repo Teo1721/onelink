@@ -70,7 +70,7 @@ const FAQ_ITEMS_PL = [
   { q: "Czy mogę kontrolować marżę per kategoria leków?", a: "Tak. Możesz tworzyć kategorie (Rx, OTC, suplementy, dermokosmetyki) i śledzić marżę oraz koszty per kategoria w czasie rzeczywistym." },
   { q: "Jak działa grafik dla farmaceutów?", a: "Manager tworzy grafik w panelu, pracownicy widzą swoje zmiany w aplikacji mobilnej (PWA). Wnioski urlopowe i absencje obsługiwane online." },
   { q: "Czy dane apteki są bezpieczne?", a: "Tak — dane szyfrowane, serwery w UE. OneLink nie przetwarza danych pacjentów ani historii recept — tylko dane operacyjne i finansowe apteki." },
-  { q: "Ile kosztuje OneLink dla apteki?", a: "Od 19,99 zł / miesiąc netto per lokalizacja. Dla sieci aptek — skontaktuj się po indywidualną wycenę." },
+  { q: "Ile kosztuje OneLink dla apteki?", a: "Od 49,99 zł / miesiąc netto per lokalizacja. Dla sieci aptek — skontaktuj się po indywidualną wycenę." },
 ];
 const FAQ_ITEMS_EN = [
   { q: "Does OneLink replace a pharmacy system (e.g. KS-Apteka)?", a: "No — OneLink works alongside your pharmacy system. It imports sales data (CSV) and aggregates it with labour costs and invoices into one P&L view." },
@@ -89,7 +89,7 @@ export default function DlaApteкPage() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -127,7 +127,7 @@ export default function DlaApteкPage() {
       </section>
 
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Wyzwania zarządzania apteką</p>
             <h2 className="text-[28px] font-black text-[#111827]">Problemy znane każdemu kierownikowi apteki</h2>
@@ -147,7 +147,7 @@ export default function DlaApteкPage() {
       </section>
 
       <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Funkcje dla aptek</p>
             <h2 className="text-[28px] font-black text-[#111827]">System operacyjny dla nowoczesnej apteki</h2>

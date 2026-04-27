@@ -33,7 +33,7 @@ export default function ContactPage() {
         </div>
       </nav>
 
-      <main className="flex-1 max-w-4xl mx-auto px-6 py-16 w-full">
+      <main className="flex-1 max-w-[1100px] mx-auto px-6 py-16 w-full">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 mb-6">
             <MessageSquare className="w-6 h-6 text-blue-600" />
@@ -186,7 +186,7 @@ export default function ContactPage() {
 
       {/* Footer */}
       <footer className="border-t border-[#E5E7EB] bg-white py-8 px-6">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-[1100px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-[12px] text-[#9CA3AF]">© 2026 OneLink · InnowacyjneAI sp. z o.o.</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href="/about" className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors">O nas</Link>

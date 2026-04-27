@@ -69,7 +69,7 @@ const FAQ_ITEMS_PL = [
   { q: "Czy OneLink zastępuje program do zarządzania zleceniami serwisowymi?", a: "Nie — OneLink zarządza finansami operacyjnymi i personelem. Możesz importować dane zleceń z CSV i łączyć je z kosztami części i pracy." },
   { q: "Jak śledzić zużycie części w zleceniach?", a: "Przez moduł transakcji magazynowych — każde pobranie części z magazynu jest rejestrowane i przypisywane do centrum kosztów (stanowisko/warsztat)." },
   { q: "Czy mogę liczyć marżę per zlecenie?", a: "Tak — przypisując przychody i koszty do konkretnych centrów kosztów (np. per stanowisko lub typ usługi) możesz wyliczyć marżę operacyjną." },
-  { q: "Ile kosztuje OneLink dla warsztatu?", a: "Od 19,99 zł / miesiąc netto. Dla sieci warsztatów — skontaktuj się po indywidualną wycenę z rabatem." },
+  { q: "Ile kosztuje OneLink dla warsztatu?", a: "Od 49,99 zł / miesiąc netto. Dla sieci warsztatów — skontaktuj się po indywidualną wycenę z rabatem." },
   { q: "Jak szybko można wdrożyć OneLink?", a: "Pierwsze konto gotowe w 3 minuty. Dodanie pracowników, produktów i lokalizacji — maksymalnie 20 minut." },
 ];
 const FAQ_ITEMS_EN = [
@@ -89,7 +89,7 @@ export default function DlaWarsztatowPage() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -127,7 +127,7 @@ export default function DlaWarsztatowPage() {
       </section>
 
       <section className="py-16 px-5 bg-[#F9FAFB]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Problemy warsztatów</p>
             <h2 className="text-[28px] font-black text-[#111827]">Każdy serwis walczy z tym samym</h2>
@@ -147,7 +147,7 @@ export default function DlaWarsztatowPage() {
       </section>
 
       <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <Reveal className="text-center mb-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Funkcje systemu</p>
             <h2 className="text-[28px] font-black text-[#111827]">Profesjonalne zarządzanie warsztatem</h2>

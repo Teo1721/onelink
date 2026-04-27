@@ -123,7 +123,7 @@ export default function PrivacyPage() {
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo iconSize={26} textSize="text-[15px]" dark={false} /></Link>
           <div className="hidden md:flex items-center gap-5 text-[13px] text-[#6B7280]">
             <Link href="/" className="hover:text-[#111827] transition-colors">Strona główna</Link>
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
             <Link href="/security" className="hover:text-[#111827] transition-colors">Bezpieczeństwo</Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="hidden md:block text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors">Zaloguj</Link>
+            <Link href="/auth/login" className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all flex items-center">Zaloguj</Link>
             <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm flex items-center gap-1.5">
               Zacznij za darmo <ArrowRight className="w-3.5 h-3.5" />
             </Link>
