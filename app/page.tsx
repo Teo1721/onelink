@@ -18,6 +18,35 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
+function useCounter(end: number, duration = 1800, start = false) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let startTime: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * end));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [start, end, duration]);
+  return count;
+}
+
+function AnimatedStat({ value, label, prefix = '', suffix = '' }: { value: number; label: string; prefix?: string; suffix?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const count = useCounter(value, 1600, inView);
+  return (
+    <div ref={ref} className="flex flex-col px-4 py-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100">
+      <span className="text-[20px] font-black text-[#1D4ED8] leading-none">{prefix}{count.toLocaleString('pl-PL')}{suffix}</span>
+      <span className="text-[10px] text-[#6B7280] mt-0.5">{label}</span>
+    </div>
+  );
+}
+
 const fadeUp = {
   hidden:  { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
@@ -332,6 +361,75 @@ function CountUp({ target, suffix = '' }: { target: number; suffix?: string }) {
   return <span ref={ref}>{val}{suffix}</span>;
 }
 
+/* ─────────────────────────── Video Section ─────────────────────────── */
+const YT_ID = "HehF-sxBrJc";
+
+function VideoSection({ pl }: { pl: boolean }) {
+  const [playing, setPlaying] = useState(false);
+
+  return (
+    <section className="py-16 px-5 bg-white">
+      <div className="max-w-[1100px] mx-auto">
+        <Reveal className="text-center mb-8">
+          <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-3">
+            {pl ? 'Zobacz jak to działa' : 'See it in action'}
+          </span>
+          <h2 className="text-[32px] md:text-[40px] font-black text-[#111827]">
+            {pl ? 'OneLink w 60 sekund' : 'OneLink in 60 seconds'}
+          </h2>
+          <p className="text-[16px] text-[#6B7280] mt-3 max-w-lg mx-auto">
+            {pl ? 'Zobacz jak właściciele firm zarządzają P&L, grafikiem i kosztami z jednego panelu.' : 'See how business owners manage P&L, schedules and costs from one panel.'}
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.1}>
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/10 border border-[#E5E7EB] bg-black aspect-video">
+            {!playing ? (
+              /* Thumbnail + play button */
+              <div
+                onClick={() => setPlaying(true)}
+                className="absolute inset-0 cursor-pointer group"
+              >
+                <img
+                  src={`https://img.youtube.com/vi/${YT_ID}/maxresdefault.jpg`}
+                  alt="OneLink demo video"
+                  className="w-full h-full object-cover"
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all" />
+                {/* Play button */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-200">
+                    <svg className="w-8 h-8 text-[#1D4ED8] ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+                {/* Duration badge */}
+                <div className="absolute bottom-4 right-4 bg-black/70 text-white text-[12px] font-semibold px-2.5 py-1 rounded backdrop-blur-sm">
+                  1:00
+                </div>
+                <div className="absolute bottom-4 left-4 bg-black/60 text-white text-[12px] font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                  {pl ? '▶ Obejrzyj demo' : '▶ Watch demo'}
+                </div>
+              </div>
+            ) : (
+              /* YouTube iframe — only loads when user clicks play */
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src={`https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&rel=0&modestbranding=1`}
+                title="OneLink demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 /* ─────────────────────────── Dashboard mockup ─────────────────────── */
 function ConsoleMockup() {
   const [tick, setTick] = useState(0);
@@ -495,16 +593,23 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#F7F8FA] text-[#111827]">
       <StickyCTA />
 
+      {/* ── ANNOUNCEMENT BAR ── */}
+      <div className="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-[12px] font-medium h-9 flex items-center justify-center gap-2 px-4">
+        <Sparkles className="w-3.5 h-3.5 shrink-0" />
+        <span>{pl ? 'Nowe: Dyrektor Sprzedaży AI już dostępny — ' : 'New: AI Sales Director now available — '}</span>
+        <Link href="/ai/sales-director" className="underline underline-offset-2 font-semibold hover:opacity-80 transition-opacity">{pl ? 'Zobacz funkcje →' : 'See features →'}</Link>
+      </div>
+
       {/* ── NAV ── */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
+      <nav className="fixed top-9 inset-x-0 z-40 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <OneLinkLogo iconSize={28} textSize="text-[16px]" />
           <div className="hidden md:flex items-center gap-6 text-[13px] text-[#6B7280]">
+            <Link href="/demo" className="hover:text-[#111827] transition-colors">{pl ? 'Demo' : 'Demo'}</Link>
             <a href="#directors" className="hover:text-[#111827] transition-colors">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
-            <a href="#how" className="hover:text-[#111827] transition-colors">{pl ? 'Jak to działa' : 'How it works'}</a>
-            <a href="#results" className="hover:text-[#111827] transition-colors">{pl ? 'Wyniki' : 'Results'}</a>
             <Link href="/pricing" className="hover:text-[#111827] transition-colors">{pl ? 'Cennik' : 'Pricing'}</Link>
-            <a href="#faq" className="hover:text-[#111827] transition-colors">FAQ</a>
+            <Link href="/opinie" className="hover:text-[#111827] transition-colors">{pl ? 'Opinie' : 'Reviews'}</Link>
+            <Link href="/co-nowego" className="hover:text-[#111827] transition-colors">{pl ? 'Co nowego' : 'Changelog'}</Link>
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -520,7 +625,7 @@ export default function HomePage() {
       </nav>
 
       {/* ════ 1. HERO ════ */}
-      <section className="relative pt-32 pb-20 px-5 overflow-hidden">
+      <section className="relative pt-40 pb-20 px-5 overflow-hidden">
         {/* Background gradients + dot grid */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-3xl -translate-y-1/2" />
@@ -597,16 +702,9 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
                 className="flex flex-wrap gap-3"
               >
-                {[
-                  { value: '11 000 zł', label: 'oszczędności food cost / mies.' },
-                  { value: '+19%', label: 'wzrost marży operacyjnej' },
-                  { value: '97 min', label: 'zaoszczędzone dziennie / lokal' },
-                ].map(({ value, label }) => (
-                  <div key={label} className="flex flex-col px-4 py-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100">
-                    <span className="text-[20px] font-black text-[#1D4ED8] leading-none">{value}</span>
-                    <span className="text-[10px] text-[#6B7280] mt-0.5">{label}</span>
-                  </div>
-                ))}
+                <AnimatedStat value={11000} suffix=" zł" label={pl ? 'oszczędności food cost / mies.' : 'food cost savings / mo.'} />
+                <AnimatedStat value={19} prefix="+" suffix="%" label={pl ? 'wzrost marży operacyjnej' : 'operating margin growth'} />
+                <AnimatedStat value={97} suffix=" min" label={pl ? 'zaoszczędzone dziennie / lokal' : 'saved daily per location'} />
               </motion.div>
             </div>
 
@@ -621,6 +719,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ════ VIDEO SECTION ════ */}
+      <VideoSection pl={pl} />
 
       {/* ════ TRUSTED BY ════ */}
       <section className="py-10 px-5 border-y border-[#F3F4F6] bg-white">
@@ -1120,13 +1221,14 @@ export default function HomePage() {
           </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {[
-              { label: 'Siłownie i fitness', href: '/dla-silowni', emoji: '🏋️' },
-              { label: 'Sklepy detaliczne', href: '/dla-sklepow', emoji: '🛒' },
-              { label: 'Hotele', href: '/dla-hoteli', emoji: '🏨' },
-              { label: 'Salony beauty', href: '/dla-salonow-beauty', emoji: '💅' },
-              { label: 'Apteki', href: '/dla-aptek', emoji: '💊' },
-              { label: 'Warsztaty', href: '/dla-warsztatow', emoji: '🔧' },
-              { label: 'Stacje paliw', href: '/dla-stacji-benzynowych', emoji: '⛽' },
+              { label: pl ? 'Restauracje' : 'Restaurants', href: '/dla-restauracji', emoji: '🍽️' },
+              { label: pl ? 'Siłownie i fitness' : 'Gyms & fitness', href: '/dla-silowni', emoji: '🏋️' },
+              { label: pl ? 'Sklepy detaliczne' : 'Retail stores', href: '/dla-sklepow', emoji: '🛒' },
+              { label: pl ? 'Hotele' : 'Hotels', href: '/dla-hoteli', emoji: '🏨' },
+              { label: pl ? 'Salony beauty' : 'Beauty salons', href: '/dla-salonow-beauty', emoji: '💅' },
+              { label: pl ? 'Apteki' : 'Pharmacies', href: '/dla-aptek', emoji: '💊' },
+              { label: pl ? 'Warsztaty' : 'Workshops', href: '/dla-warsztatow', emoji: '🔧' },
+              { label: pl ? 'Stacje paliw' : 'Fuel stations', href: '/dla-stacji-benzynowych', emoji: '⛽' },
             ].map((item) => (
               <Link key={item.href} href={item.href}
                 className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#E5E7EB] hover:border-[#D1D5DB] hover:shadow-sm transition-all group">
@@ -1195,13 +1297,14 @@ export default function HomePage() {
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-[#111827] mb-4">Branże</p>
               <ul className="space-y-2.5 text-[13px] text-[#6B7280]">
-                <li><Link href="/dla-silowni" className="hover:text-[#111827] transition-colors">Siłownie</Link></li>
-                <li><Link href="/dla-sklepow" className="hover:text-[#111827] transition-colors">Sklepy</Link></li>
-                <li><Link href="/dla-hoteli" className="hover:text-[#111827] transition-colors">Hotele</Link></li>
-                <li><Link href="/dla-salonow-beauty" className="hover:text-[#111827] transition-colors">Salony beauty</Link></li>
-                <li><Link href="/dla-aptek" className="hover:text-[#111827] transition-colors">Apteki</Link></li>
-                <li><Link href="/dla-warsztatow" className="hover:text-[#111827] transition-colors">Warsztaty</Link></li>
-                <li><Link href="/dla-stacji-benzynowych" className="hover:text-[#111827] transition-colors">Stacje paliw</Link></li>
+                <li><Link href="/dla-restauracji" className="hover:text-[#111827] transition-colors">{pl ? 'Restauracje' : 'Restaurants'}</Link></li>
+                <li><Link href="/dla-silowni" className="hover:text-[#111827] transition-colors">{pl ? 'Siłownie' : 'Gyms'}</Link></li>
+                <li><Link href="/dla-sklepow" className="hover:text-[#111827] transition-colors">{pl ? 'Sklepy' : 'Stores'}</Link></li>
+                <li><Link href="/dla-hoteli" className="hover:text-[#111827] transition-colors">{pl ? 'Hotele' : 'Hotels'}</Link></li>
+                <li><Link href="/dla-salonow-beauty" className="hover:text-[#111827] transition-colors">{pl ? 'Salony beauty' : 'Beauty salons'}</Link></li>
+                <li><Link href="/dla-aptek" className="hover:text-[#111827] transition-colors">{pl ? 'Apteki' : 'Pharmacies'}</Link></li>
+                <li><Link href="/dla-warsztatow" className="hover:text-[#111827] transition-colors">{pl ? 'Warsztaty' : 'Workshops'}</Link></li>
+                <li><Link href="/dla-stacji-benzynowych" className="hover:text-[#111827] transition-colors">{pl ? 'Stacje paliw' : 'Fuel stations'}</Link></li>
               </ul>
             </div>
           </div>
