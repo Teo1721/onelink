@@ -617,8 +617,8 @@ export default function HomePage() {
             <Link href="/contact" className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
               {pl ? 'Umów demo' : 'Book a demo'}
             </Link>
-            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1">
-              {pl ? 'Zacznij za darmo' : 'Start for free'}
+            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1 whitespace-nowrap">
+              {pl ? 'Zacznij za darmo' : 'Start free'}
             </Link>
           </div>
         </div>
@@ -1095,14 +1095,15 @@ export default function HomePage() {
           </Reveal>
 
           <Reveal>
-            <div className="overflow-x-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b border-[#E5E7EB]">
                     <th className="text-left px-6 py-4 text-[#9CA3AF] font-semibold w-[38%]">Funkcja</th>
                     <th className="px-4 py-4 text-center text-[#9CA3AF] font-semibold">Excel / Arkusze</th>
                     <th className="px-4 py-4 text-center text-[#9CA3AF] font-semibold">System POS</th>
-                    <th className="px-4 py-4 text-center font-bold text-[#1D4ED8] bg-blue-50/60 rounded-t-none">OneLink</th>
+                    <th className="px-4 py-4 text-center font-bold text-[#1D4ED8] bg-blue-50/60">OneLink</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1119,10 +1120,10 @@ export default function HomePage() {
                     <tr key={i} className={`border-b border-[#F3F4F6] last:border-0 ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'}`}>
                       <td className="px-6 py-3.5 font-medium text-[#374151]">{feature as string}</td>
                       <td className="px-4 py-3.5 text-center">
-                        {excel === false ? <span className="text-[#E5E7EB] text-[18px]">✕</span> : <span className="text-[11px] text-[#9CA3AF] font-medium">{excel as string}</span>}
+                        {excel === false ? <span className="text-[#D1D5DB] text-[18px]">✕</span> : <span className="text-[11px] text-[#9CA3AF] font-medium">{excel as string}</span>}
                       </td>
                       <td className="px-4 py-3.5 text-center">
-                        {pos === false ? <span className="text-[#E5E7EB] text-[18px]">✕</span> : pos === true ? <span className="text-[#10B981] text-[16px]">✓</span> : <span className="text-[11px] text-[#F59E0B] font-medium">{pos as string}</span>}
+                        {pos === false ? <span className="text-[#D1D5DB] text-[18px]">✕</span> : pos === true ? <span className="text-[#10B981] text-[16px]">✓</span> : <span className="text-[11px] text-[#F59E0B] font-medium">{pos as string}</span>}
                       </td>
                       <td className="px-4 py-3.5 text-center bg-blue-50/40">
                         {onelink === true ? <span className="text-[#10B981] font-bold text-[16px]">✓</span> : <span className="text-[11px] text-[#9CA3AF]">{onelink as string}</span>}
@@ -1131,6 +1132,43 @@ export default function HomePage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {[
+                ['P&L w czasie rzeczywistym', false, false, true],
+                ['Ewidencja czasu pracy + kiosk', false, false, true],
+                ['Food cost per danie / kategoria', false, 'częściowo', true],
+                ['AI analizuje dane za Ciebie', false, false, true],
+                ['Grafik pracowniczy + wnioski', false, false, true],
+                ['Faktury i OPEX w jednym miejscu', false, false, true],
+                ['Wiele lokalizacji — jeden widok', false, false, true],
+                ['Działa na telefonie', false, 'częściowo', true],
+              ].map(([feature, excel, pos, onelink], i) => (
+                <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 bg-[#F9FAFB] border-b border-[#F3F4F6]">
+                    <p className="text-[13px] font-semibold text-[#111827]">{feature as string}</p>
+                  </div>
+                  <div className="grid grid-cols-3 divide-x divide-[#F3F4F6]">
+                    {[
+                      { label: 'Excel', val: excel },
+                      { label: 'POS', val: pos },
+                      { label: 'OneLink', val: onelink, highlight: true },
+                    ].map(({ label, val, highlight }) => (
+                      <div key={label} className={`flex flex-col items-center py-3 gap-1 ${highlight ? 'bg-blue-50/50' : ''}`}>
+                        <span className={`text-[10px] font-semibold ${highlight ? 'text-[#1D4ED8]' : 'text-[#9CA3AF]'}`}>{label}</span>
+                        {val === false
+                          ? <span className="text-[#D1D5DB] text-[16px]">✕</span>
+                          : val === true
+                            ? <span className={`text-[16px] font-bold ${highlight ? 'text-[#1D4ED8]' : 'text-[#10B981]'}`}>✓</span>
+                            : <span className="text-[10px] text-[#F59E0B] font-semibold text-center px-1">{val as string}</span>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </Reveal>
         </div>
