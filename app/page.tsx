@@ -585,6 +585,7 @@ function ConsoleMockup() {
 export default function HomePage() {
   const [activeDirector, setActiveDirector] = useState('cfo');
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { lang } = useLanguage();
   const pl = lang === 'pl';
   const faqItems = pl ? FAQ_ITEMS : FAQ_ITEMS_EN;
@@ -601,28 +602,71 @@ export default function HomePage() {
       </div>
 
       {/* ── NAV ── */}
-      <nav className="fixed top-9 inset-x-0 z-40 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]/70">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
+      <nav className="fixed top-9 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-b border-[#E5E7EB]/70">
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-10 h-14 flex items-center justify-between">
           <OneLinkLogo iconSize={28} textSize="text-[16px]" />
+
+          {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6 text-[13px] text-[#6B7280]">
-            <Link href="/demo" className="hover:text-[#111827] transition-colors">{pl ? 'Demo' : 'Demo'}</Link>
+            <Link href="/demo" className="hover:text-[#111827] transition-colors">Demo</Link>
             <a href="#directors" className="hover:text-[#111827] transition-colors">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
             <Link href="/pricing" className="hover:text-[#111827] transition-colors">{pl ? 'Cennik' : 'Pricing'}</Link>
             <Link href="/opinie" className="hover:text-[#111827] transition-colors">{pl ? 'Opinie' : 'Reviews'}</Link>
             <Link href="/co-nowego" className="hover:text-[#111827] transition-colors">{pl ? 'Co nowego' : 'Changelog'}</Link>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Desktop right buttons */}
+          <div className="hidden md:flex items-center gap-3">
             <LanguageSwitcher variant="light" />
             <Link href="/auth/login" className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
-            <Link href="/contact" className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
+            <Link href="/contact" className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
               {pl ? 'Umów demo' : 'Book a demo'}
             </Link>
-            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1 whitespace-nowrap">
+            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center whitespace-nowrap">
               {pl ? 'Zacznij za darmo' : 'Start free'}
             </Link>
           </div>
+
+          {/* Mobile right: CTA + three-dots */}
+          <div className="flex md:hidden items-center gap-2">
+            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white flex items-center whitespace-nowrap">
+              {pl ? 'Zacznij za darmo' : 'Start free'}
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(o => !o)}
+              className="w-9 h-9 rounded-xl border border-[#E5E7EB] flex items-center justify-center text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <circle cx="9" cy="3" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="9" cy="15" r="1.5"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </nav>
+
+      {/* ── MOBILE DROPDOWN MENU ── */}
+      {mobileMenuOpen && (
+        <div className="fixed top-[92px] inset-x-0 z-30 md:hidden bg-white border-b border-[#E5E7EB] shadow-lg">
+          <div className="px-5 py-4 space-y-1">
+            {[
+              { href: '/demo', label: 'Demo' },
+              { href: '#directors', label: pl ? 'Dyrektorzy AI' : 'AI Directors' },
+              { href: '/pricing', label: pl ? 'Cennik' : 'Pricing' },
+              { href: '/opinie', label: pl ? 'Opinie' : 'Reviews' },
+              { href: '/co-nowego', label: pl ? 'Co nowego' : 'Changelog' },
+              { href: '/contact', label: pl ? 'Umów demo' : 'Book a demo' },
+            ].map(({ href, label }) => (
+              href.startsWith('#')
+                ? <a key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="block px-3 py-3 rounded-xl text-[14px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">{label}</a>
+                : <Link key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="block px-3 py-3 rounded-xl text-[14px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">{label}</Link>
+            ))}
+            <div className="pt-2 border-t border-[#F3F4F6] flex items-center justify-between">
+              <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="px-3 py-3 text-[14px] font-semibold text-[#374151]">{pl ? 'Zaloguj' : 'Log in'}</Link>
+              <LanguageSwitcher variant="light" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════ 1. HERO ════ */}
       <section className="relative pt-40 pb-20 px-5 overflow-hidden">
