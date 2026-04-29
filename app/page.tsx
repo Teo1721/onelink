@@ -319,8 +319,11 @@ function DirectorCard({ d, active, onClick }: { d: typeof DIRECTORS[0]; active: 
         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-black text-white shrink-0" style={{ background: d.color }}>
           {d.initial}
         </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: d.color }}>{d.title}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: d.color }}>{d.title}</p>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full shrink-0">Early Access</span>
+          </div>
           <p className="text-[15px] font-semibold text-[#111827] leading-snug">{d.tagline}</p>
         </div>
       </div>
@@ -613,6 +616,7 @@ export default function HomePage() {
             <Link href="/pricing" className="hover:text-[#111827] transition-colors">{pl ? 'Cennik' : 'Pricing'}</Link>
             <Link href="/opinie" className="hover:text-[#111827] transition-colors">{pl ? 'Opinie' : 'Reviews'}</Link>
             <Link href="/co-nowego" className="hover:text-[#111827] transition-colors">{pl ? 'Co nowego' : 'Changelog'}</Link>
+            <Link href="/investors" className="hover:text-[#111827] transition-colors">{pl ? 'Inwestorzy' : 'Investors'}</Link>
           </div>
 
           {/* Desktop right buttons */}
@@ -654,6 +658,7 @@ export default function HomePage() {
               { href: '/pricing', label: pl ? 'Cennik' : 'Pricing' },
               { href: '/opinie', label: pl ? 'Opinie' : 'Reviews' },
               { href: '/co-nowego', label: pl ? 'Co nowego' : 'Changelog' },
+              { href: '/investors', label: pl ? 'Inwestorzy' : 'Investors' },
               { href: '/contact', label: pl ? 'Umów demo' : 'Book a demo' },
             ].map(({ href, label }) => (
               href.startsWith('#')
@@ -698,9 +703,9 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1, ease: EASE }}
                 className="text-[44px] md:text-[58px] font-black leading-[1.07] tracking-tight mb-6"
               >
-                {pl ? <>Zarządzaj firmą<br /></> : <>Run your business<br /></>}
+                {pl ? <>Twoja firma zarabia.<br /></> : <>Your business earns.<br /></>}
                 <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
-                  {pl ? <>jak właściciel —<br />nie jak księgowy.</> : <>like an owner —<br />not an accountant.</>}
+                  {pl ? <>Ale nie wiesz<br />dlaczego traci.</> : <>But you don't know<br />why it loses.</>}
                 </span>
               </motion.h1>
 
@@ -709,8 +714,8 @@ export default function HomePage() {
                 className="text-[17px] text-[#6B7280] leading-relaxed mb-8 max-w-lg"
               >
                 {pl
-                  ? 'OneLink łączy P&L, ewidencję czasu pracy, HR, magazyn i faktury w jednym panelu — a Dyrektorzy AI analizują dane za Ciebie i budzą Cię tylko wtedy, kiedy dzieje się coś ważnego.'
-                  : 'OneLink combines P&L, time tracking, HR, inventory and invoices in one panel — and AI Directors analyse your data so you only get alerted when something important happens.'}
+                  ? 'OneLink zbiera dane z każdego obszaru biznesu i uruchamia Dyrektorów AI — CFO, COO — którzy mówią Ci co jest nie tak, zanim stanie się stratą. Dla właścicieli od 1 lokalu wzwyż.'
+                  : 'OneLink collects data from every area of your business and activates AI Directors — CFO, COO — who tell you what\'s wrong before it becomes a loss. For owners from 1 location up.'}
               </motion.p>
 
               <motion.div
@@ -746,9 +751,11 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
                 className="flex flex-wrap gap-3"
               >
-                <AnimatedStat value={11000} suffix=" zł" label={pl ? 'oszczędności food cost / mies.' : 'food cost savings / mo.'} />
-                <AnimatedStat value={19} prefix="+" suffix="%" label={pl ? 'wzrost marży operacyjnej' : 'operating margin growth'} />
-                <AnimatedStat value={97} suffix=" min" label={pl ? 'zaoszczędzone dziennie / lokal' : 'saved daily per location'} />
+                <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 text-[12px] text-[#374151] font-medium leading-relaxed">
+                  {pl
+                    ? '30+ lokali aktywnie w systemie · 6 firm · −4,2 pp średnia redukcja food cost · 97 min zaoszczędzone dziennie / lokal'
+                    : '30+ locations active · 6 companies · −4.2pp avg food cost reduction · 97 min saved daily / location'}
+                </div>
               </motion.div>
             </div>
 
@@ -770,7 +777,7 @@ export default function HomePage() {
       {/* ════ TRUSTED BY ════ */}
       <section className="py-10 px-5 border-y border-[#F3F4F6] bg-white">
         <div className="max-w-[1200px] mx-auto">
-          <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-7">Zaufali nam</p>
+          <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-7">Używają na co dzień — nie w prezentacji.</p>
           <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
             {[
               { src: '/logos/baked.jpg', alt: 'Baked' },
@@ -784,6 +791,7 @@ export default function HomePage() {
                 className="h-12 md:h-14 object-contain opacity-90 hover:opacity-100 transition-all duration-300" />
             ))}
           </div>
+          <p className="text-center text-[11px] text-[#9CA3AF] mt-6">Wszystkie firmy używają OneLink aktywnie. Żadnych płatnych rekomendacji.</p>
         </div>
       </section>
 
@@ -890,16 +898,15 @@ export default function HomePage() {
       <section id="directors" className="py-24 px-5" style={{ background: 'linear-gradient(180deg, #F7F8FA 0%, #EFF6FF 100%)' }}>
         <div className="max-w-[1400px] mx-auto">
           <Reveal className="text-center mb-14">
-            <span className="flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-4">
-              <Brain className="w-3.5 h-3.5" /> Dyrektorzy AI
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full mb-4">
+              <Sparkles className="w-3 h-3" /> Early Access
             </span>
-            <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4">
-              Twój wirtualny zarząd.<br />
-              <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">Proaktywny. Nieustający.</span>
+            <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4 mt-3">
+              Dyrektorzy AI
             </h2>
-            <p className="text-[16px] text-[#6B7280] max-w-xl mx-auto">
-              Każdy Dyrektor AI zna Twoje dane na wylot i kontaktuje się z Tobą tylko wtedy,
-              kiedy jest powód — nie codziennie rano, żebyś musiał pytać sam.
+            <p className="text-[16px] text-[#6B7280] max-w-2xl mx-auto">
+              Nasze modele są karmione rzeczywistymi danymi z polskich biznesów — nie syntetycznymi zbiorami.
+              Im więcej lokali w systemie, tym lepsze decyzje podejmują. Dołącz teraz i kształtuj produkt razem z nami.
             </p>
           </Reveal>
 

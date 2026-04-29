@@ -10,28 +10,28 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "OneLink — System Zarządzania Restauracją | P&L, Food Cost, Magazyn",
-  description: "OneLink to system zarządzania dla restauracji, piekarni i sieci gastronomicznych — P&L w czasie rzeczywistym, kontrola food cost, magazyn i faktury. Zacznij bezpłatny 7-dniowy trial od 49,99 zł/mies.",
+  title: "OneLink — System Operacyjny dla Biznesu | P&L, Dyrektorzy AI, HR",
+  description: "OneLink to system operacyjny dla właścicieli firm — P&L w czasie rzeczywistym, Dyrektorzy AI, ewidencja czasu pracy, magazyn i faktury w jednym panelu. Dla restauracji, siłowni, hoteli, sklepów i więcej. Zacznij bezpłatny 7-dniowy trial od 49,99 zł/mies.",
   openGraph: {
     type: "website",
     locale: "pl_PL",
     url: defaultUrl,
     siteName: "OneLink",
-    title: "OneLink — Wiedz ile zarabiasz. Każdego dnia.",
-    description: "Jeden panel do P&L, kosztów, magazynu i faktur dla właścicieli restauracji i sieci gastronomicznych. Zacznij 7-dniowy trial za darmo.",
+    title: "OneLink — System Operacyjny dla Biznesu",
+    description: "P&L na żywo, Dyrektorzy AI, HR i magazyn w jednym panelu. Dla właścicieli od 1 lokalu wzwyż. Zacznij 7-dniowy trial za darmo.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "OneLink — Dashboard P&L dla restauracji",
+        alt: "OneLink — System Operacyjny dla Biznesu",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "OneLink — Wiedz ile zarabiasz. Każdego dnia.",
-    description: "Jeden panel do P&L, kosztów, magazynu i faktur. Trial 7 dni za darmo od 49,99 zł/mies.",
+    title: "OneLink — System Operacyjny dla Biznesu",
+    description: "P&L na żywo, Dyrektorzy AI, HR i magazyn w jednym panelu. Trial 7 dni za darmo od 49,99 zł/mies.",
     images: ["/og-image.png"],
   },
 };
