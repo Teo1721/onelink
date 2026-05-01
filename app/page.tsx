@@ -17,6 +17,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 /* ─────────────────────────── helpers ─────────────────────────── */
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
+const SPRING = { type: 'spring' as const, stiffness: 300, damping: 28 };
 
 function useCounter(end: number, duration = 1800, start = false) {
   const [count, setCount] = useState(0);
@@ -33,6 +34,89 @@ function useCounter(end: number, duration = 1800, start = false) {
     requestAnimationFrame(step);
   }, [start, end, duration]);
   return count;
+}
+
+/* ── Scroll progress bar ── */
+function ScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = document.documentElement;
+      const scrolled = el.scrollTop;
+      const total = el.scrollHeight - el.clientHeight;
+      setProgress(total > 0 ? (scrolled / total) * 100 : 0);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[60] h-[3px] bg-transparent pointer-events-none">
+      <motion.div
+        className="h-full origin-left"
+        style={{
+          scaleX: progress / 100,
+          background: 'linear-gradient(90deg, #2563EB 0%, #06B6D4 50%, #2563EB 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer-slide 2s linear infinite',
+        }}
+      />
+    </div>
+  );
+}
+
+/* ── Floating particle ── */
+function FloatingParticle({ x, y, size, delay, color }: { x: string; y: string; size: number; delay: number; color: string }) {
+  return (
+    <motion.div
+      className="absolute rounded-full pointer-events-none"
+      style={{ left: x, top: y, width: size, height: size, background: color, filter: 'blur(1px)' }}
+      animate={{ y: [0, -18, 0], opacity: [0.3, 0.7, 0.3], scale: [1, 1.2, 1] }}
+      transition={{ duration: 4 + delay, repeat: Infinity, delay, ease: 'easeInOut' }}
+    />
+  );
+}
+
+/* ── Hero stat with count-up ── */
+function HeroStat({ n, suffix, label, color = '#60A5FA' }: { n: number; suffix: string; label: string; color?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const count = useCounter(n, 1400, inView);
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={inView ? { opacity: 1, scale: 1 } : {}}
+      transition={{ duration: 0.5, ease: EASE }}
+      whileHover={{ scale: 1.04, y: -2 }}
+      className="flex flex-col px-4 py-3.5 rounded-2xl"
+      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(8px)' }}
+    >
+      <span className="text-[22px] font-black leading-none mb-1" style={{ color }}>
+        {suffix.startsWith(',') || suffix.startsWith('.') ? `−${count}${suffix}` : `${count}${suffix}`}
+      </span>
+      <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</span>
+    </motion.div>
+  );
+}
+
+/* ── Animated word reveal (splits headline into words) ── */
+function WordReveal({ text, className = "", delay = 0 }: { text: string; className?: string; delay?: number }) {
+  const words = text.split(' ');
+  return (
+    <span className={className} style={{ display: 'inline' }}>
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.5, delay: delay + i * 0.07, ease: EASE }}
+          style={{ display: 'inline-block', marginRight: '0.25em' }}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
+  );
 }
 
 function AnimatedStat({ value, label, prefix = '', suffix = '' }: { value: number; label: string; prefix?: string; suffix?: string }) {
@@ -56,17 +140,34 @@ const stagger = (delay = 0.08) => ({
   visible: { transition: { staggerChildren: delay } },
 });
 
-function Reveal({ children, delay = 0, className = "", style }: {
-  children: React.ReactNode; delay?: number; className?: string; style?: React.CSSProperties;
+type RevealDir = 'up' | 'down' | 'left' | 'right' | 'scale' | 'blur';
+function Reveal({ children, delay = 0, className = "", style, dir = 'up' }: {
+  children: React.ReactNode; delay?: number; className?: string; style?: React.CSSProperties; dir?: RevealDir;
 }) {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: true, margin: "-50px" });
+  type MotionTarget = Record<string, number | string>;
+  const hidden: Record<RevealDir, MotionTarget> = {
+    up:    { opacity: 0, y: 32,  filter: 'blur(6px)' },
+    down:  { opacity: 0, y: -32, filter: 'blur(6px)' },
+    left:  { opacity: 0, x: -32, filter: 'blur(6px)' },
+    right: { opacity: 0, x: 32,  filter: 'blur(6px)' },
+    scale: { opacity: 0, scale: 0.88, filter: 'blur(4px)' },
+    blur:  { opacity: 0, filter: 'blur(12px)' },
+  };
+  const visible: Record<RevealDir, MotionTarget> = {
+    up:    { opacity: 1, y: 0,  filter: 'blur(0px)' },
+    down:  { opacity: 1, y: 0,  filter: 'blur(0px)' },
+    left:  { opacity: 1, x: 0,  filter: 'blur(0px)' },
+    right: { opacity: 1, x: 0,  filter: 'blur(0px)' },
+    scale: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+    blur:  { opacity: 1, filter: 'blur(0px)' },
+  };
   return (
     <motion.div
       ref={ref}
-      initial="hidden"
-      animate={inView ? "visible" : "hidden"}
-      variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay, ease: EASE } } }}
+      initial={hidden[dir]}
+      animate={inView ? { ...visible[dir], transition: { duration: 0.65, delay, ease: EASE } } : hidden[dir]}
       className={className}
       style={style}
     >
@@ -77,11 +178,14 @@ function Reveal({ children, delay = 0, className = "", style }: {
 
 function RevealList({ children, className = "" }: { children: React.ReactNode[]; className?: string }) {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: true, margin: "-50px" });
   return (
-    <motion.div ref={ref} initial="hidden" animate={inView ? "visible" : "hidden"} variants={stagger(0.1)} className={className}>
+    <motion.div ref={ref} initial="hidden" animate={inView ? "visible" : "hidden"} variants={stagger(0.09)} className={className}>
       {children.map((child, i) => (
-        <motion.div key={i} variants={fadeUp}>{child}</motion.div>
+        <motion.div key={i} variants={{
+          hidden:  { opacity: 0, y: 28, filter: 'blur(6px)' },
+          visible: { opacity: 1, y: 0,  filter: 'blur(0px)', transition: { duration: 0.55, ease: EASE } },
+        }}>{child}</motion.div>
       ))}
     </motion.div>
   );
@@ -306,38 +410,69 @@ function DirectorCard({ d, active, onClick }: { d: typeof DIRECTORS[0]; active: 
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      className={`relative w-full text-left rounded-2xl border p-6 transition-all duration-200 ${
-        active
-          ? 'border-transparent shadow-lg'
-          : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB] hover:shadow-sm'
-      }`}
-      style={active ? { background: '#fff', boxShadow: `0 0 0 2px ${d.color}40, 0 12px 40px ${d.glow}` } : {}}
+      whileHover={{ y: active ? 0 : -2 }}
+      whileTap={{ scale: 0.99 }}
+      className="relative w-full text-left rounded-2xl transition-all duration-300"
+      style={active
+        ? { background: 'rgba(255,255,255,0.09)', border: `1px solid ${d.color}65`, boxShadow: `0 0 0 1px ${d.color}25, 0 16px 48px ${d.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`, padding: '20px 24px 24px' }
+        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', padding: '20px 24px' }}
     >
+      {/* Header row */}
       <div className="flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-black text-white shrink-0" style={{ background: d.color }}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[12px] font-black text-white shrink-0 shadow-lg" style={{ background: d.color }}>
           {d.initial}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center flex-wrap gap-2 mb-1">
             <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: d.color }}>{d.title}</p>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full shrink-0">Early Access</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0"
+              style={{ background: 'rgba(245,158,11,0.18)', color: '#FCD34D', border: '1px solid rgba(245,158,11,0.3)' }}>Early Access</span>
           </div>
-          <p className="text-[15px] font-semibold text-[#111827] leading-snug">{d.tagline}</p>
+          <p className="text-[15px] font-semibold leading-snug text-white">{d.tagline}</p>
         </div>
+        {/* Expand indicator */}
+        <motion.div
+          animate={{ rotate: active ? 90 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+          style={{ background: active ? `${d.color}25` : 'rgba(255,255,255,0.07)' }}
+        >
+          <ChevronRight className="w-3 h-3 text-white/50" />
+        </motion.div>
       </div>
+
+      {/* Expanded content */}
       {active && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mt-5 space-y-2.5">
-          {d.capabilities.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-2.5">
-              <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: d.color }} />
-              <span className="text-[13px] text-[#374151]">{text}</span>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mt-5"
+        >
+          {/* Divider */}
+          <div className="mb-4" style={{ height: 1, background: `linear-gradient(90deg, ${d.color}40, transparent)` }} />
+
+          {/* Capability rows */}
+          <div className="space-y-2 mb-5">
+            {d.capabilities.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: `${d.color}25` }}>
+                  <Icon className="w-3.5 h-3.5" style={{ color: d.color }} />
+                </div>
+                <span className="text-[13px] text-white/85">{text}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* AI Insight bubble */}
+          <div className="rounded-xl p-4" style={{ background: `${d.color}18`, border: `1px solid ${d.color}40` }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="w-3.5 h-3.5" style={{ color: d.color }} />
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: d.color }}>Przykład odpowiedzi AI</span>
             </div>
-          ))}
-          <div className="mt-4 p-3.5 rounded-xl text-[12px] leading-relaxed italic text-[#374151]" style={{ background: `${d.color}0D` }}>
-            <Sparkles className="w-3 h-3 inline mr-1.5 -mt-0.5" style={{ color: d.color }} />
-            {d.insight}
+            <p className="text-[13px] leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.88)' }}>{d.insight}</p>
           </div>
         </motion.div>
       )}
@@ -594,46 +729,62 @@ export default function HomePage() {
   const faqItems = pl ? FAQ_ITEMS : FAQ_ITEMS_EN;
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] text-[#111827]">
+    <div className="min-h-screen bg-white text-[#111827]">
+      <ScrollProgress />
       <StickyCTA />
 
       {/* ── ANNOUNCEMENT BAR ── */}
-      <div className="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-[12px] font-medium h-9 flex items-center justify-center gap-2 px-4">
-        <Sparkles className="w-3.5 h-3.5 shrink-0" />
-        <span>{pl ? 'Nowe: Dyrektor Sprzedaży AI już dostępny — ' : 'New: AI Sales Director now available — '}</span>
-        <Link href="/ai/sales-director" className="underline underline-offset-2 font-semibold hover:opacity-80 transition-opacity">{pl ? 'Zobacz funkcje →' : 'See features →'}</Link>
+      <div className="fixed top-0 inset-x-0 z-50 h-9 flex items-center justify-center gap-2 px-4 text-[12px] font-medium overflow-hidden"
+        style={{ background: 'linear-gradient(90deg, #0B1226 0%, #0F2040 40%, #0B1226 100%)', borderBottom: '1px solid rgba(37,99,235,0.3)' }}>
+        <div className="absolute inset-0 animate-shimmer opacity-20"
+          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.4) 45%, rgba(6,182,212,0.4) 55%, transparent 100%)', backgroundSize: '300% auto' }} />
+        <Sparkles className="w-3 h-3 shrink-0 relative z-10" style={{ color: '#60A5FA' }} />
+        <span className="relative z-10" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          {pl ? 'Nowe: Dyrektor Sprzedaży AI już dostępny —' : 'New: AI Sales Director now available —'}
+        </span>
+        <Link href="/ai/sales-director"
+          className="relative z-10 font-bold underline underline-offset-2 hover:opacity-90 transition-opacity"
+          style={{ color: '#60A5FA' }}>
+          {pl ? 'Zobacz funkcje →' : 'See features →'}
+        </Link>
       </div>
 
       {/* ── NAV ── */}
-      <nav className="fixed top-9 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-b border-[#E5E7EB]/70">
+      <nav className="fixed top-9 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#E8EAED]"
+        style={{ boxShadow: '0 1px 12px rgba(0,0,0,0.06)' }}>
         <div className="max-w-[1400px] mx-auto px-4 lg:px-10 h-14 flex items-center justify-between">
           <OneLinkLogo iconSize={28} textSize="text-[16px]" />
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6 text-[13px] text-[#6B7280]">
-            <Link href="/demo" className="hover:text-[#111827] transition-colors">Demo</Link>
-            <a href="#directors" className="hover:text-[#111827] transition-colors">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
-            <Link href="/pricing" className="hover:text-[#111827] transition-colors">{pl ? 'Cennik' : 'Pricing'}</Link>
-            <Link href="/opinie" className="hover:text-[#111827] transition-colors">{pl ? 'Opinie' : 'Reviews'}</Link>
-            <Link href="/co-nowego" className="hover:text-[#111827] transition-colors">{pl ? 'Co nowego' : 'Changelog'}</Link>
-            <Link href="/investors" className="hover:text-[#111827] transition-colors">{pl ? 'Inwestorzy' : 'Investors'}</Link>
+            <Link href="/demo" className="hover:text-[#111827] font-medium transition-colors duration-150">Demo</Link>
+            <a href="#directors" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
+            <Link href="/pricing" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Cennik' : 'Pricing'}</Link>
+            <Link href="/opinie" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Opinie' : 'Reviews'}</Link>
+            <Link href="/co-nowego" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Co nowego' : 'Changelog'}</Link>
+            <Link href="/investors" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Inwestorzy' : 'Investors'}</Link>
           </div>
 
           {/* Desktop right buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2.5">
             <LanguageSwitcher variant="light" />
-            <Link href="/auth/login" className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all flex items-center">{pl ? 'Zaloguj' : 'Log in'}</Link>
-            <Link href="/contact" className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
+            <Link href="/auth/login"
+              className="h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:bg-[#F9FAFB] hover:shadow-sm transition-all flex items-center">
+              {pl ? 'Zaloguj' : 'Log in'}
+            </Link>
+            <Link href="/contact"
+              className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:bg-[#F9FAFB] hover:shadow-sm transition-all">
               {pl ? 'Umów demo' : 'Book a demo'}
             </Link>
-            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white hover:opacity-90 transition-all shadow-sm shadow-blue-500/20 flex items-center whitespace-nowrap">
+            <Link href="/auth/sign-up"
+              className="h-9 px-5 rounded-xl btn-shimmer text-[13px] font-bold text-white shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] transition-all flex items-center whitespace-nowrap">
               {pl ? 'Zacznij za darmo' : 'Start free'}
             </Link>
           </div>
 
           {/* Mobile right: CTA + three-dots */}
           <div className="flex md:hidden items-center gap-2">
-            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[13px] font-bold text-white flex items-center whitespace-nowrap">
+            <Link href="/auth/sign-up" className="h-9 px-4 rounded-xl btn-shimmer text-[13px] font-bold text-white flex items-center whitespace-nowrap shadow-sm shadow-blue-500/25">
               {pl ? 'Zacznij za darmo' : 'Start free'}
             </Link>
             <button
@@ -649,121 +800,187 @@ export default function HomePage() {
       </nav>
 
       {/* ── MOBILE DROPDOWN MENU ── */}
-      {mobileMenuOpen && (
-        <div className="fixed top-[92px] inset-x-0 z-30 md:hidden bg-white border-b border-[#E5E7EB] shadow-lg">
-          <div className="px-5 py-4 space-y-1">
-            {[
-              { href: '/demo', label: 'Demo' },
-              { href: '#directors', label: pl ? 'Dyrektorzy AI' : 'AI Directors' },
-              { href: '/pricing', label: pl ? 'Cennik' : 'Pricing' },
-              { href: '/opinie', label: pl ? 'Opinie' : 'Reviews' },
-              { href: '/co-nowego', label: pl ? 'Co nowego' : 'Changelog' },
-              { href: '/investors', label: pl ? 'Inwestorzy' : 'Investors' },
-              { href: '/contact', label: pl ? 'Umów demo' : 'Book a demo' },
-            ].map(({ href, label }) => (
-              href.startsWith('#')
-                ? <a key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="block px-3 py-3 rounded-xl text-[14px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">{label}</a>
-                : <Link key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="block px-3 py-3 rounded-xl text-[14px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">{label}</Link>
-            ))}
-            <div className="pt-2 border-t border-[#F3F4F6] flex items-center justify-between">
-              <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="px-3 py-3 text-[14px] font-semibold text-[#374151]">{pl ? 'Zaloguj' : 'Log in'}</Link>
-              <LanguageSwitcher variant="light" />
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: EASE }}
+            className="fixed top-[92px] inset-x-0 z-30 md:hidden bg-white border-b border-[#E5E7EB] shadow-xl"
+          >
+            <div className="px-5 py-3 space-y-0.5">
+              {[
+                { href: '/demo', label: 'Demo' },
+                { href: '#directors', label: pl ? 'Dyrektorzy AI' : 'AI Directors' },
+                { href: '/pricing', label: pl ? 'Cennik' : 'Pricing' },
+                { href: '/opinie', label: pl ? 'Opinie' : 'Reviews' },
+                { href: '/co-nowego', label: pl ? 'Co nowego' : 'Changelog' },
+                { href: '/investors', label: pl ? 'Inwestorzy' : 'Investors' },
+                { href: '/contact', label: pl ? 'Umów demo' : 'Book a demo' },
+              ].map(({ href, label }, i) => (
+                href.startsWith('#')
+                  ? <a key={label} href={href} onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2.5 rounded-xl text-[14px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">{label}</a>
+                  : <Link key={label} href={href} onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2.5 rounded-xl text-[14px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors">{label}</Link>
+              ))}
+              <div className="pt-2 border-t border-[#F3F4F6] flex items-center justify-between">
+                <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2.5 text-[14px] font-semibold text-[#374151]">
+                  {pl ? 'Zaloguj' : 'Log in'}
+                </Link>
+                <LanguageSwitcher variant="light" />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ════ 1. HERO ════ */}
-      <section className="relative pt-40 pb-20 px-5 overflow-hidden">
-        {/* Background gradients + dot grid */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-3xl -translate-y-1/2" />
-          <div className="absolute top-20 right-1/4 w-[400px] h-[400px] rounded-full bg-cyan-100/40 blur-3xl" />
-          <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
+      <section className="relative pt-28 pb-20 px-5 overflow-hidden grain" style={{ background: '#060D1C' }}>
+        {/* Aurora blobs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[25%] left-[0%] w-[750px] h-[750px] rounded-full blur-[130px] animate-aurora"
+            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.55) 0%, transparent 65%)' }} />
+          <div className="absolute top-[0%] right-[-20%] w-[650px] h-[650px] rounded-full blur-[110px] animate-aurora-alt"
+            style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.4) 0%, transparent 65%)', animationDelay: '2s' }} />
+          <div className="absolute bottom-[-25%] left-[30%] w-[600px] h-[600px] rounded-full blur-[120px] animate-aurora"
+            style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 65%)', animationDelay: '4.5s' }} />
+          {/* Line grid overlay */}
+          <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.055 }} xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-                <circle cx="2" cy="2" r="1.5" fill="#1D4ED8" />
+              <pattern id="hero-grid" x="0" y="0" width="44" height="44" patternUnits="userSpaceOnUse">
+                <path d="M 44 0 L 0 0 0 44" fill="none" stroke="white" strokeWidth="0.6"/>
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#dots)" />
+            <rect width="100%" height="100%" fill="url(#hero-grid)" />
           </svg>
+          {/* Fade bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+            style={{ background: 'linear-gradient(to bottom, transparent, #060D1C)' }} />
+          {/* Floating particles */}
+          {[
+            { x: '8%',  y: '25%', size: 4,  delay: 0,   color: 'rgba(96,165,250,0.6)' },
+            { x: '15%', y: '60%', size: 3,  delay: 1.2, color: 'rgba(6,182,212,0.5)' },
+            { x: '25%', y: '40%', size: 5,  delay: 0.6, color: 'rgba(99,102,241,0.4)' },
+            { x: '70%', y: '20%', size: 4,  delay: 2,   color: 'rgba(96,165,250,0.4)' },
+            { x: '80%', y: '55%', size: 3,  delay: 0.8, color: 'rgba(6,182,212,0.6)' },
+            { x: '88%', y: '35%', size: 6,  delay: 1.8, color: 'rgba(99,102,241,0.3)' },
+            { x: '50%', y: '75%', size: 3,  delay: 1.5, color: 'rgba(96,165,250,0.3)' },
+          ].map((p, i) => <FloatingParticle key={i} {...p} />)}
         </div>
 
         <div className="relative max-w-[1400px] mx-auto">
-          <div className="grid lg:grid-cols-2 gap-14 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left */}
             <div>
-              <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-                className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-6">
-                <Sparkles className="w-3 h-3" />
+              {/* Badge */}
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2.5 h-8 px-4 rounded-full border text-[11px] font-bold mb-7"
+                style={{ background: 'rgba(37,99,235,0.18)', borderColor: 'rgba(96,165,250,0.55)', color: '#93C5FD', boxShadow: '0 0 28px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
                 {pl ? 'System operacyjny dla Twojego biznesu' : 'The operating system for your business'}
               </motion.div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1, ease: EASE }}
-                className="text-[44px] md:text-[58px] font-black leading-[1.07] tracking-tight mb-6"
-              >
-                {pl ? <>Twoja firma zarabia.<br /></> : <>Your business earns.<br /></>}
-                <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
-                  {pl ? <>Ale nie wiesz<br />dlaczego traci.</> : <>But you don't know<br />why it loses.</>}
+              {/* Heading */}
+              <h1 className="text-[48px] md:text-[64px] font-black tracking-[-0.025em] mb-7 text-white" style={{ lineHeight: 1 }}>
+                <span className="block">
+                  <WordReveal text={pl ? 'Twoja firma zarabia.' : 'Your business earns.'} delay={0.08} />
                 </span>
-              </motion.h1>
+                <motion.span
+                  className="block"
+                  initial={{ opacity: 0, y: 22, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.65, delay: 0.3, ease: EASE }}
+                  style={{
+                    background: 'linear-gradient(90deg, #60A5FA 0%, #38BDF8 55%, #06B6D4 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {pl ? 'Ale nie wiesz dlaczego traci.' : "But you don't know why it loses."}
+                </motion.span>
+              </h1>
 
+              {/* Description with left accent */}
               <motion.p
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
-                className="text-[17px] text-[#6B7280] leading-relaxed mb-8 max-w-lg"
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.18 }}
+                className="text-[17px] leading-[1.75] mb-9 max-w-[480px] pl-4 border-l-2"
+                style={{ color: 'rgba(255,255,255,0.65)', borderColor: 'rgba(96,165,250,0.4)' }}
               >
                 {pl
                   ? 'OneLink zbiera dane z każdego obszaru biznesu i uruchamia Dyrektorów AI — CFO, COO — którzy mówią Ci co jest nie tak, zanim stanie się stratą. Dla właścicieli od 1 lokalu wzwyż.'
                   : 'OneLink collects data from every area of your business and activates AI Directors — CFO, COO — who tell you what\'s wrong before it becomes a loss. For owners from 1 location up.'}
               </motion.p>
 
+              {/* CTA Buttons */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.26 }}
                 className="flex flex-col sm:flex-row gap-3 mb-8"
               >
                 <Link href="/auth/sign-up"
-                  className="inline-flex items-center justify-center gap-2 h-13 px-7 rounded-2xl bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[15px] font-bold text-white hover:opacity-90 transition-all shadow-xl shadow-blue-500/30">
+                  className="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-2xl btn-shimmer text-[15px] font-bold text-white shadow-2xl transition-all hover:scale-[1.02]"
+                  style={{ boxShadow: '0 8px 32px rgba(37,99,235,0.45), 0 2px 8px rgba(37,99,235,0.2)' }}>
                   {pl ? 'Zacznij za darmo — 7 dni' : 'Start for free — 7 days'} <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a href="#directors"
-                  className="inline-flex items-center justify-center gap-2 h-13 px-7 rounded-2xl bg-white border border-[#E5E7EB] text-[15px] font-semibold text-[#374151] hover:border-[#D1D5DB] hover:shadow-sm transition-all">
+                  className="inline-flex items-center justify-center gap-2 h-14 px-7 rounded-2xl text-[15px] font-semibold transition-all hover:scale-[1.01]"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}>
                   {pl ? 'Poznaj Dyrektorów AI' : 'Meet the AI Directors'}
                 </a>
               </motion.div>
 
+              {/* Trust indicators */}
               <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
-                className="flex flex-wrap items-center gap-4 text-[12px] text-[#9CA3AF] mb-6"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.44 }}
+                className="flex flex-wrap items-center gap-5 text-[12px] mb-8 pb-8"
+                style={{ color: 'rgba(255,255,255,0.45)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
               >
                 {(pl
-                  ? ['Konfiguracja w 3 minuty', 'Dane w UE — RODO compliant', 'Anuluj kiedy chcesz']
-                  : ['Setup in 3 minutes', 'EU data — GDPR compliant', 'Cancel any time']
+                  ? ['Konfiguracja w 3 minuty', 'Dane w UE — RODO', 'Anuluj kiedy chcesz']
+                  : ['Setup in 3 minutes', 'EU data — GDPR', 'Cancel any time']
                 ).map(t => (
                   <div key={t} className="flex items-center gap-1.5">
-                    <CheckCircle className="w-3.5 h-3.5 text-[#10B981]" />
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0" style={{ color: '#34D399' }} />
                     {t}
                   </div>
                 ))}
               </motion.div>
 
+              {/* Stats */}
               <motion.div
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
-                className="flex flex-wrap gap-3"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.54 }}
+                className="grid grid-cols-2 sm:grid-cols-4 gap-3"
               >
-                <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 text-[12px] text-[#374151] font-medium leading-relaxed">
-                  {pl
-                    ? '30+ lokali aktywnie w systemie · 6 firm · −4,2 pp średnia redukcja food cost · 97 min zaoszczędzone dziennie / lokal'
-                    : '30+ locations active · 6 companies · −4.2pp avg food cost reduction · 97 min saved daily / location'}
-                </div>
+                {(pl ? [
+                  { n: 30, suffix: '+', label: 'aktywnych lokali', color: '#60A5FA' },
+                  { n: 6,  suffix: '',  label: 'firm',             color: '#34D399' },
+                  { n: 4,  suffix: ',2 pp', label: 'redukcja food cost', color: '#F59E0B' },
+                  { n: 97, suffix: ' min', label: 'zaoszczędzone / lokal', color: '#A78BFA' },
+                ] : [
+                  { n: 30, suffix: '+', label: 'active locations', color: '#60A5FA' },
+                  { n: 6,  suffix: '',  label: 'companies',        color: '#34D399' },
+                  { n: 4,  suffix: '.2pp', label: 'food cost reduction', color: '#F59E0B' },
+                  { n: 97, suffix: ' min', label: 'saved / location', color: '#A78BFA' },
+                ]).map(({ n, suffix, label, color }) => (
+                  <HeroStat key={label} n={n} suffix={suffix} label={label} color={color} />
+                ))}
               </motion.div>
             </div>
 
-            {/* Right — dashboard mockup */}
+            {/* Right — dashboard mockup (vertically centered via items-center on parent) */}
             <motion.div
               initial={{ opacity: 0, x: 40, y: 10 }} animate={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.25, ease: EASE }}
-              className="hidden lg:block"
+              transition={{ duration: 0.9, delay: 0.22, ease: EASE }}
+              className="hidden lg:flex items-center justify-center"
             >
               <ConsoleMockup />
             </motion.div>
@@ -774,25 +991,39 @@ export default function HomePage() {
       {/* ════ VIDEO SECTION ════ */}
       <VideoSection pl={pl} />
 
-      {/* ════ TRUSTED BY ════ */}
-      <section className="py-10 px-5 border-y border-[#F3F4F6] bg-white">
-        <div className="max-w-[1200px] mx-auto">
-          <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-7">Używają na co dzień — nie w prezentacji.</p>
-          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
-            {[
+      {/* ════ TRUSTED BY — marquee ════ */}
+      <section className="py-10 overflow-hidden" style={{ background: '#F8F9FB', borderTop: '1px solid #EAECF0', borderBottom: '1px solid #EAECF0' }}>
+        <p className="text-center text-[11px] font-bold uppercase tracking-widest mb-8" style={{ color: '#B0B8C4', letterSpacing: '0.12em' }}>
+          {pl ? 'Używają na co dzień — nie w prezentacji.' : 'Used every day — not just in demos.'}
+        </p>
+        {/* Marquee track */}
+        <div className="relative">
+          {/* Left fade */}
+          <div className="absolute left-0 top-0 bottom-0 w-28 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to right, #F8F9FB, transparent)' }} />
+          {/* Right fade */}
+          <div className="absolute right-0 top-0 bottom-0 w-28 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to left, #F8F9FB, transparent)' }} />
+          <div className="flex animate-marquee" style={{ width: 'max-content' }}>
+            {[...Array(2)].flatMap(() => [
               { src: '/logos/baked.jpg', alt: 'Baked' },
               { src: '/logos/olinek.jpg', alt: 'Olinek' },
               { src: '/logos/swojska-spizarnia.jpg', alt: 'Swojska Spiżarnia' },
               { src: '/logos/neuro.jpg', alt: 'Neuro' },
               { src: '/logos/akab-group.jpg', alt: 'AKAB Group' },
               { src: '/logos/feniks.jpg', alt: 'Feniks' },
-            ].map(({ src, alt }) => (
-              <img key={alt} src={src} alt={alt}
-                className="h-12 md:h-14 object-contain opacity-90 hover:opacity-100 transition-all duration-300" />
+            ]).map(({ src, alt }, i) => (
+              <div key={`${alt}-${i}`} className="flex items-center justify-center mx-10 shrink-0">
+                <img src={src} alt={alt} className="h-11 md:h-12 object-contain" style={{ opacity: 0.65, filter: 'saturate(0.5)', transition: 'all 0.3s' }}
+                  onMouseEnter={e => { (e.target as HTMLImageElement).style.opacity = '1'; (e.target as HTMLImageElement).style.filter = 'saturate(1)'; }}
+                  onMouseLeave={e => { (e.target as HTMLImageElement).style.opacity = '0.65'; (e.target as HTMLImageElement).style.filter = 'saturate(0.5)'; }} />
+              </div>
             ))}
           </div>
-          <p className="text-center text-[11px] text-[#9CA3AF] mt-6">Wszystkie firmy używają OneLink aktywnie. Żadnych płatnych rekomendacji.</p>
         </div>
+        <p className="text-center text-[11px] mt-8" style={{ color: '#B0B8C4' }}>
+          {pl ? 'Wszystkie firmy używają OneLink aktywnie. Żadnych płatnych rekomendacji.' : 'All companies use OneLink actively. No paid endorsements.'}
+        </p>
       </section>
 
       {/* ════ 2. PROBLEM STORY ════ */}
@@ -806,7 +1037,7 @@ export default function HomePage() {
             </h2>
           </Reveal>
 
-          <RevealList className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: Clock,
@@ -814,6 +1045,7 @@ export default function HomePage() {
                 bg: '#FEF3C7',
                 problem: 'Zamknięcie dnia trwa godzinę',
                 detail: 'Manager dzwoni, wysyła Excele, liczy w głowie. Ty dostajesz dane o 22:00 — albo nie dostajesz wcale.',
+                dir: 'left' as RevealDir,
               },
               {
                 icon: AlertTriangle,
@@ -821,6 +1053,7 @@ export default function HomePage() {
                 bg: '#FEE2E2',
                 problem: 'Problemy widzisz tydzień po fakcie',
                 detail: 'Food cost urósł w poniedziałek. Dowiadujesz się w piątek. Do tego czasu straciłeś 3 500 zł.',
+                dir: 'up' as RevealDir,
               },
               {
                 icon: FileText,
@@ -838,7 +1071,7 @@ export default function HomePage() {
                 <p className="text-[13px] text-[#6B7280] leading-relaxed">{detail}</p>
               </div>
             ))}
-          </RevealList>
+          </div>
 
           <Reveal delay={0.2} className="mt-16 rounded-2xl p-8 text-center" style={{ background: 'linear-gradient(135deg, #0D1628 0%, #1E3A8A 100%)' }}>
             <p className="text-[13px] font-bold uppercase tracking-widest text-blue-300 mb-3">Nowe podejście</p>
@@ -866,45 +1099,110 @@ export default function HomePage() {
             </p>
           </Reveal>
 
-          <RevealList className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              { icon: BarChart3, color: '#3B82F6', title: 'P&L na żywo', items: ['Sprzedaż netto i brutto', 'Food cost % per lokal', 'EBIT i marża dzień po dniu'] },
-              { icon: Clock, color: '#F59E0B', title: 'Czas pracy i kiosk', items: ['Rejestracja PIN lub QR z foto', 'Koszty pracy per zmiana', 'Ewidencja godzin i nadgodzin'] },
-              { icon: Users, color: '#EC4899', title: 'HR i pracownicy', items: ['Grafiki i zamiany zmian', 'Urlopy i absencje', 'Dokumenty i certyfikaty'] },
-              { icon: Package, color: '#8B5CF6', title: 'Magazyn', items: ['Stany i dostawy', 'Zużycie teoretyczne vs. rzeczywiste', 'Transfery między lokalami'] },
-              { icon: Receipt, color: '#10B981', title: 'Faktury i zatwierdzenia', items: ['Faktury COS i SEMIS', 'Workflow zatwierdzeń', 'Eksport do księgowości'] },
-              { icon: Brain, color: '#06B6D4', title: 'AI Directors', items: ['Analiza anomalii 24/7', 'Powiadomienia proaktywne', 'Briefingi i raporty na żądanie'] },
-            ].map(({ icon: Icon, color, title, items }) => (
-              <div key={title} className="rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md hover:border-[#D1D5DB] transition-all">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style={{ background: `${color}15` }}>
-                  <Icon className="w-4.5 h-4.5" style={{ color }} />
-                </div>
-                <p className="text-[14px] font-bold text-[#111827] mb-3">{title}</p>
-                <div className="space-y-1.5">
-                  {items.map(item => (
-                    <div key={item} className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
-                      <span className="text-[12px] text-[#6B7280]">{item}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* Bento grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Large card — P&L */}
+            <Reveal delay={0} className="lg:col-span-2 rounded-3xl p-7 relative overflow-hidden group cursor-default"
+              style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #F0FAFB 100%)', border: '1px solid #DBEAFE' }}>
+              <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 opacity-60"
+                style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.2), transparent)' }} />
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-blue-500/15"
+                style={{ background: 'linear-gradient(135deg, #3B82F6, #0EA5E9)' }}>
+                <BarChart3 className="w-5 h-5 text-white" />
               </div>
-            ))}
-          </RevealList>
+              <p className="text-[17px] font-black text-[#111827] mb-2">P&L na żywo</p>
+              <p className="text-[13px] text-[#6B7280] mb-5 leading-relaxed">Sprzedaż, food cost i EBIT każdego dnia — nie raz w miesiącu u księgowej.</p>
+              <div className="flex gap-2 flex-wrap">
+                {['Sprzedaż netto/brutto', 'Food cost %', 'EBIT dzień po dniu'].map(t => (
+                  <span key={t} className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(59,130,246,0.1)', color: '#2563EB' }}>{t}</span>
+                ))}
+              </div>
+            </Reveal>
+
+            {/* Small card — Kiosk */}
+            <Reveal delay={0.04} className="rounded-3xl p-7 relative overflow-hidden group cursor-default"
+              style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-amber-400/20"
+                style={{ background: 'linear-gradient(135deg, #F59E0B, #F97316)' }}>
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[17px] font-black text-[#111827] mb-2">Kiosk PIN</p>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">Rejestracja czasu pracy bez arkuszy. Zdjęcie automatyczne.</p>
+            </Reveal>
+
+            {/* Small — HR */}
+            <Reveal delay={0.08} className="rounded-3xl p-7 relative overflow-hidden group cursor-default"
+              style={{ background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-pink-400/20"
+                style={{ background: 'linear-gradient(135deg, #EC4899, #F43F5E)' }}>
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[17px] font-black text-[#111827] mb-2">HR i grafiki</p>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">Grafiki, urlopy i dokumenty pracownicze w jednym miejscu.</p>
+            </Reveal>
+
+            {/* Small — Magazyn */}
+            <Reveal delay={0.12} className="rounded-3xl p-7 relative overflow-hidden group cursor-default"
+              style={{ background: '#F5F3FF', border: '1px solid #DDD6FE' }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-violet-400/20"
+                style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)' }}>
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[17px] font-black text-[#111827] mb-2">Magazyn</p>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">Stany, dostawy i zużycie teoretyczne vs. rzeczywiste.</p>
+            </Reveal>
+
+            {/* Large card — AI Directors */}
+            <Reveal delay={0.16} className="lg:col-span-2 rounded-3xl p-7 relative overflow-hidden group cursor-default grain"
+              style={{ background: 'linear-gradient(135deg, #060D1C 0%, #0F2040 100%)', border: '1px solid rgba(6,182,212,0.2)' }}>
+              <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 opacity-40"
+                style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.5), transparent)' }} />
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-cyan-400/20"
+                style={{ background: 'linear-gradient(135deg, #06B6D4, #0EA5E9)' }}>
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-[17px] font-black text-white">Dyrektorzy AI</p>
+                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'rgba(245,158,11,0.2)', color: '#FCD34D', border: '1px solid rgba(245,158,11,0.3)' }}>Early Access</span>
+              </div>
+              <p className="text-[13px] mb-4 leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                CFO, COO i Dyrektor Inwestorski AI — monitorują dane 24/7 i alarmują zanim problem urośnie do straty.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {['Anomalie food cost', 'Luki w grafiku', 'Raporty PDF', 'Alerty w nocy'].map(t => (
+                  <span key={t} className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: 'rgba(6,182,212,0.12)', color: '#67E8F9', border: '1px solid rgba(6,182,212,0.2)' }}>{t}</span>
+                ))}
+              </div>
+            </Reveal>
+
+            {/* Small — Faktury */}
+            <Reveal delay={0.20} className="rounded-3xl p-7 relative overflow-hidden group cursor-default"
+              style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-400/20"
+                style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                <Receipt className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[17px] font-black text-[#111827] mb-2">Faktury OCR</p>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">Zatwierdzanie faktur w 30 sekund. Eksport do księgowości.</p>
+            </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ════ 4. MEET THE DIRECTORS ════ */}
-      <section id="directors" className="py-24 px-5" style={{ background: 'linear-gradient(180deg, #F7F8FA 0%, #EFF6FF 100%)' }}>
+      <section id="directors" className="py-24 px-5 grain" style={{ background: 'linear-gradient(180deg, #060D1C 0%, #0B1A3A 100%)' }}>
         <div className="max-w-[1400px] mx-auto">
           <Reveal className="text-center mb-14">
-            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full mb-4">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+              style={{ background: 'rgba(245,158,11,0.12)', color: '#FCD34D', border: '1px solid rgba(245,158,11,0.25)' }}>
               <Sparkles className="w-3 h-3" /> Early Access
             </span>
-            <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4 mt-3">
+            <h2 className="text-[36px] md:text-[46px] font-black tracking-tight mb-4 mt-3 text-white">
               Dyrektorzy AI
             </h2>
-            <p className="text-[16px] text-[#6B7280] max-w-2xl mx-auto">
+            <p className="text-[16px] max-w-2xl mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
               Nasze modele są karmione rzeczywistymi danymi z polskich biznesów — nie syntetycznymi zbiorami.
               Im więcej lokali w systemie, tym lepsze decyzje podejmują. Dołącz teraz i kształtuj produkt razem z nami.
             </p>
@@ -920,19 +1218,21 @@ export default function HomePage() {
 
             {/* Visual */}
             <Reveal delay={0.1} className="lg:sticky lg:top-24">
-              <div className="rounded-2xl overflow-hidden border border-[#E5E7EB] bg-white shadow-lg p-6">
+              <div className="rounded-2xl overflow-hidden p-6 shadow-2xl"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(16px)' }}>
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[12px] font-black text-white" style={{ background: DIRECTORS.find(d=>d.id===activeDirector)?.color }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[12px] font-black text-white shadow-lg" style={{ background: DIRECTORS.find(d=>d.id===activeDirector)?.color }}>
                     {DIRECTORS.find(d=>d.id===activeDirector)?.initial}
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF]">
+                    <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.45)' }}>
                       {DIRECTORS.find(d=>d.id===activeDirector)?.title}
                     </p>
-                    <p className="text-[14px] font-bold text-[#111827]">Centrum dowodzenia</p>
+                    <p className="text-[14px] font-bold text-white">Centrum dowodzenia</p>
                   </div>
                   <div className="ml-auto">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0FDF4] border border-[#BBF7D0]">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
                       <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
                       <span className="text-[10px] font-bold text-[#10B981]">Aktywny</span>
                     </div>
@@ -944,19 +1244,22 @@ export default function HomePage() {
                   <motion.div key={activeDirector} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     transition={{ duration: 0.4 }} className="space-y-3">
                     {/* AI message */}
-                    <div className="rounded-xl p-4 text-[13px] leading-relaxed text-[#374151]" style={{ background: `${DIRECTORS.find(d=>d.id===activeDirector)?.color}0D` }}>
+                    <div className="rounded-xl p-4 text-[13px] leading-relaxed" style={{ background: `${DIRECTORS.find(d=>d.id===activeDirector)?.color}22`, border: `1px solid ${DIRECTORS.find(d=>d.id===activeDirector)?.color}35`, color: 'rgba(255,255,255,0.88)' }}>
                       <Sparkles className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" style={{ color: DIRECTORS.find(d=>d.id===activeDirector)?.color }} />
                       {DIRECTORS.find(d=>d.id===activeDirector)?.insight}
                     </div>
 
                     {/* Quick actions */}
-                    <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-widest">Szybkie pytania</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>Szybkie pytania</p>
                     {activeDirector === 'cfo' && [
                       'Który lokal ma najwyższy food cost?',
                       'Porównaj marzec z lutym',
                       'Kiedy muszę zaalarmować dostawcę?',
                     ].map(q => (
-                      <button key={q} className="w-full text-left text-[12px] px-3 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#374151] hover:border-[#D1D5DB] hover:bg-[#F3F4F6] transition-all">
+                      <button key={q} className="w-full text-left text-[12px] px-3 py-2.5 rounded-lg transition-all"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.82)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}>
                         {q}
                       </button>
                     ))}
@@ -965,7 +1268,10 @@ export default function HomePage() {
                       'Gdzie mam lukę w grafiku?',
                       'Pokaż koszt pracy vs. sprzedaż',
                     ].map(q => (
-                      <button key={q} className="w-full text-left text-[12px] px-3 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#374151] hover:border-[#D1D5DB] hover:bg-[#F3F4F6] transition-all">
+                      <button key={q} className="w-full text-left text-[12px] px-3 py-2.5 rounded-lg transition-all"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.82)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}>
                         {q}
                       </button>
                     ))}
@@ -974,7 +1280,10 @@ export default function HomePage() {
                       'Jaki jest mój break-even?',
                       'Pokaż prognozy na Q3',
                     ].map(q => (
-                      <button key={q} className="w-full text-left text-[12px] px-3 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#374151] hover:border-[#D1D5DB] hover:bg-[#F3F4F6] transition-all">
+                      <button key={q} className="w-full text-left text-[12px] px-3 py-2.5 rounded-lg transition-all"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.82)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}>
                         {q}
                       </button>
                     ))}
@@ -986,8 +1295,8 @@ export default function HomePage() {
 
           {/* AI Directors how it works + trust badges */}
           <Reveal className="mt-16">
-            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-6 text-center">Jak działają Dyrektorzy AI</p>
+            <div className="rounded-2xl p-8" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+              <p className="text-[11px] font-bold uppercase tracking-widest mb-6 text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>Jak działają Dyrektorzy AI</p>
               <div className="grid sm:grid-cols-4 gap-6 mb-10">
                 {[
                   { step: '1', title: 'Zbierają dane', desc: 'Automatycznie pobierają sprzedaż, koszty, grafiki i stany magazynowe z Twojego systemu.' },
@@ -996,20 +1305,21 @@ export default function HomePage() {
                   { step: '4', title: 'Odpowiadają na pytania', desc: 'Możesz zapytać o dowolny wskaźnik w języku naturalnym — dostaniesz odpowiedź w sekundach.' },
                 ].map(({ step, title, desc }) => (
                   <div key={step} className="text-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1D4ED8] to-[#06B6D4] text-white text-[13px] font-black flex items-center justify-center mx-auto mb-3">{step}</div>
-                    <h4 className="text-[13px] font-bold text-[#111827] mb-1">{title}</h4>
-                    <p className="text-[12px] text-[#9CA3AF] leading-relaxed">{desc}</p>
+                    <div className="w-9 h-9 rounded-full text-white text-[13px] font-black flex items-center justify-center mx-auto mb-3"
+                      style={{ background: 'linear-gradient(135deg, #2563EB, #06B6D4)' }}>{step}</div>
+                    <h4 className="text-[13px] font-bold mb-1 text-white">{title}</h4>
+                    <p className="text-[12px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{desc}</p>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-[#F3F4F6] pt-6 flex flex-wrap justify-center gap-6">
+              <div className="pt-6 flex flex-wrap justify-center gap-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 {[
                   { icon: ShieldCheck, label: 'Dane tylko Twoje — nigdy nie trafiają do trenowania modeli AI' },
                   { icon: Zap, label: 'Odpowiedź w mniej niż 3 sekundy' },
                   { icon: Brain, label: 'Dostępne dla właściciela i każdego managera z dostępem' },
                 ].map(({ icon: Icon, label }) => (
-                  <div key={label} className="flex items-center gap-2 text-[12px] text-[#6B7280]">
-                    <Icon className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                  <div key={label} className="flex items-center gap-2 text-[12px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: '#34D399' }} />
                     {label}
                   </div>
                 ))}
@@ -1028,28 +1338,39 @@ export default function HomePage() {
           </Reveal>
 
           <div className="relative">
-            <div className="absolute left-[22px] top-8 bottom-8 w-px bg-gradient-to-b from-[#3B82F6] via-[#06B6D4] to-[#10B981] opacity-30 hidden md:block" />
-            <RevealList className="space-y-8">
+            <div className="absolute left-[22px] top-8 bottom-8 w-px bg-gradient-to-b from-[#3B82F6] via-[#06B6D4] to-[#10B981] opacity-20 hidden md:block" />
+            <div className="space-y-8">
               {[
-                { n: '01', color: '#3B82F6', icon: Zap, title: 'Załóż konto — 3 minuty', desc: 'Rejestrujesz się, dodajesz lokalizację, zapraszasz managera. Kiosk PIN gotowy do użycia w tym samym panelu. Zero IT.' },
-                { n: '02', color: '#06B6D4', icon: Clock, title: 'Pracownicy rejestrują czas przez kiosk', desc: 'Na firmowym telefonie wpisują PIN lub skanują QR. System robi zdjęcie automatycznie. Ewidencja bez arkuszy.' },
-                { n: '03', color: '#8B5CF6', icon: FileText, title: 'Managerowie wpisują dane z telefonu', desc: 'Sprzedaż, faktury, stany magazynu, grafik — prosty formularz na telefonie. Żadnych Exceli wysyłanych e-mailem.' },
-                { n: '04', color: '#10B981', icon: Brain, title: 'Dyrektorzy AI analizują — Ty tylko reagujesz', desc: 'Marże, anomalie, wygasające dokumenty, luki w grafiku — Dyrektorzy AI monitorują 24/7 i alarmują tylko gdy trzeba.' },
-              ].map(({ n, color, icon: Icon, title, desc }) => (
-                <div key={n} className="flex items-start gap-6">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-black text-[13px] shadow-md" style={{ background: color }}>
-                    {n}
-                  </div>
-                  <div className="pt-1.5">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Icon className="w-4 h-4" style={{ color }} />
-                      <p className="text-[16px] font-bold text-[#111827]">{title}</p>
+                { n: '01', color: '#3B82F6', icon: Zap,      title: 'Załóż konto — 3 minuty',                     desc: 'Rejestrujesz się, dodajesz lokalizację, zapraszasz managera. Kiosk PIN gotowy do użycia w tym samym panelu. Zero IT.' },
+                { n: '02', color: '#06B6D4', icon: Clock,     title: 'Pracownicy rejestrują czas przez kiosk',      desc: 'Na firmowym telefonie wpisują PIN lub skanują QR. System robi zdjęcie automatycznie. Ewidencja bez arkuszy.' },
+                { n: '03', color: '#8B5CF6', icon: FileText,  title: 'Managerowie wpisują dane z telefonu',          desc: 'Sprzedaż, faktury, stany magazynu, grafik — prosty formularz na telefonie. Żadnych Exceli wysyłanych e-mailem.' },
+                { n: '04', color: '#10B981', icon: Brain,     title: 'Dyrektorzy AI analizują — Ty tylko reagujesz', desc: 'Marże, anomalie, wygasające dokumenty, luki w grafiku — Dyrektorzy AI monitorują 24/7 i alarmują tylko gdy trzeba.' },
+              ].map(({ n, color, icon: Icon, title, desc }, i) => (
+                <Reveal key={n} delay={i * 0.12} dir="left">
+                  <motion.div
+                    className="flex items-start gap-6 p-5 rounded-2xl border border-transparent hover:border-[#E5E7EB] hover:bg-white transition-all duration-300 group"
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <motion.div
+                      className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-black text-[13px]"
+                      style={{ background: color }}
+                      whileHover={{ scale: 1.15, rotate: 5 }}
+                      transition={SPRING}
+                    >
+                      {n}
+                    </motion.div>
+                    <div className="pt-1.5">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Icon className="w-4 h-4 transition-transform group-hover:scale-110" style={{ color }} />
+                        <p className="text-[16px] font-bold text-[#111827]">{title}</p>
+                      </div>
+                      <p className="text-[14px] text-[#6B7280] leading-relaxed max-w-lg">{desc}</p>
                     </div>
-                    <p className="text-[14px] text-[#6B7280] leading-relaxed max-w-lg">{desc}</p>
-                  </div>
-                </div>
+                  </motion.div>
+                </Reveal>
               ))}
-            </RevealList>
+            </div>
           </div>
         </div>
       </section>
@@ -1066,39 +1387,51 @@ export default function HomePage() {
           </Reveal>
 
           {/* Stats — AKAB Group real data */}
-          <RevealList className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
             {[
               { display: '2h → 18 min', label: 'czas zamknięcia dnia (AKAB Group)', color: '#3B82F6' },
-              { display: '−4,2 pp', label: 'redukcja food cost w 3 mies.', color: '#10B981' },
-              { display: '504 000 zł', label: 'miesięczny przychód pod kontrolą', color: '#8B5CF6' },
-              { display: '97 min', label: 'zaoszczędzone dziennie / lokal', color: '#F59E0B' },
-            ].map(({ display, label, color }) => (
-              <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-                <p className="text-[32px] font-black leading-none mb-1" style={{ color }}>{display}</p>
-                <p className="text-[12px] text-white/50 leading-snug">{label}</p>
-              </div>
+              { display: '−4,2 pp',     label: 'redukcja food cost w 3 mies.',      color: '#10B981' },
+              { display: '504 000 zł',  label: 'miesięczny przychód pod kontrolą',  color: '#8B5CF6' },
+              { display: '97 min',      label: 'zaoszczędzone dziennie / lokal',     color: '#F59E0B' },
+            ].map(({ display, label, color }, i) => (
+              <Reveal key={label} delay={i * 0.1} dir="scale">
+                <motion.div
+                  className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center cursor-default"
+                  whileHover={{ scale: 1.04, borderColor: 'rgba(255,255,255,0.25)' }}
+                  transition={SPRING}
+                >
+                  <p className="text-[32px] font-black leading-none mb-1" style={{ color }}>{display}</p>
+                  <p className="text-[12px] text-white/50 leading-snug">{label}</p>
+                </motion.div>
+              </Reveal>
             ))}
-          </RevealList>
+          </div>
 
           {/* Testimonials */}
-          <RevealList className="grid md:grid-cols-3 gap-5">
+          <div className="grid md:grid-cols-3 gap-5">
             {[
               { name: 'Ewelina K.', role: 'CEO — AKAB Group', text: 'Pierwszy raz w życiu wiem co się dzieje w moich lokalach bez dzwonienia do managerów. Koszt surowca spadł o 4 punkty procentowe w trzy miesiące.' },
               { name: 'Krzysztof K.', role: 'właściciel — Piekarnia Matusik (sieć 4 punktów)', text: 'Zamknięcie dnia zajmuje teraz 10 minut zamiast godziny. Managerowie wpisują dane przez telefon, ja rano widzę pełny raport. Nie wiem jak funkcjonowałem bez tego.' },
               { name: 'Estera N.', role: 'właścicielka — Baked', text: 'Wykryłam że jeden składnik regularnie znikał ze stanu. Bez OneLink nigdy bym tego nie zauważyła. Odbiłam 1 800 zł miesięcznie tylko na tym.' },
-            ].map(({ name, role, text }) => (
-              <div key={name} className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                <div className="flex mb-3">
-                  {Array(5).fill(0).map((_,i) => <Star key={i} className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />)}
-                </div>
-                <p className="text-[14px] text-white/75 leading-relaxed mb-4 italic">"{text}"</p>
-                <div>
-                  <p className="text-[13px] font-semibold text-white">{name}</p>
-                  <p className="text-[11px] text-white/40">{role}</p>
-                </div>
-              </div>
+            ].map(({ name, role, text }, i) => (
+              <Reveal key={name} delay={i * 0.1} dir="up">
+                <motion.div
+                  className="bg-white/5 border border-white/10 rounded-2xl p-6 cursor-default"
+                  whileHover={{ y: -4, backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <div className="flex mb-3">
+                    {Array(5).fill(0).map((_,j) => <Star key={j} className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />)}
+                  </div>
+                  <p className="text-[14px] text-white/75 leading-relaxed mb-4 italic">"{text}"</p>
+                  <div>
+                    <p className="text-[13px] font-semibold text-white">{name}</p>
+                    <p className="text-[11px] text-white/40">{role}</p>
+                  </div>
+                </motion.div>
+              </Reveal>
             ))}
-          </RevealList>
+          </div>
         </div>
       </section>
 
@@ -1113,24 +1446,35 @@ export default function HomePage() {
             </p>
           </Reveal>
 
-          <RevealList className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-3">
             {[
               { name: 'Stripe', desc: 'Płatności', color: '#6772e5' },
               { name: 'Supabase', desc: 'Dane w UE', color: '#3ECF8E' },
               { name: 'Excel / CSV', desc: 'Import danych', color: '#217346' },
               { name: 'Modele LLM', desc: 'AI Directors', color: '#10a37f' },
-              { name: 'Resend', desc: 'Powiadomienia e-mail', color: '#000' },
+              { name: 'Resend', desc: 'Powiadomienia e-mail', color: '#111827' },
               { name: 'QR / PIN Kiosk', desc: 'Rejestracja czasu', color: '#3B82F6' },
-            ].map(({ name, desc, color }) => (
-              <div key={name} className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-[#F9FAFB] border border-[#E5E7EB] hover:shadow-sm hover:border-[#D1D5DB] transition-all">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                <div className="text-left">
-                  <p className="text-[13px] font-semibold text-[#111827]">{name}</p>
-                  <p className="text-[11px] text-[#9CA3AF]">{desc}</p>
-                </div>
-              </div>
+            ].map(({ name, desc, color }, i) => (
+              <Reveal key={name} delay={i * 0.06} dir="scale">
+                <motion.div
+                  className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-[#E5E7EB] cursor-default"
+                  whileHover={{ y: -3, scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.09)', borderColor: '#D1D5DB' }}
+                  transition={SPRING}
+                >
+                  <motion.div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: color }}
+                    whileHover={{ scale: 1.5 }}
+                    transition={SPRING}
+                  />
+                  <div className="text-left">
+                    <p className="text-[13px] font-semibold text-[#111827]">{name}</p>
+                    <p className="text-[11px] text-[#9CA3AF]">{desc}</p>
+                  </div>
+                </motion.div>
+              </Reveal>
             ))}
-          </RevealList>
+          </div>
         </div>
       </section>
 
@@ -1226,33 +1570,47 @@ export default function HomePage() {
       </section>
 
       {/* ════ 9. CLOSING CTA ════ */}
-      <section className="py-28 px-5 bg-[#F7F8FA]">
-        <div className="max-w-3xl mx-auto text-center">
+      <section className="py-28 px-5 overflow-hidden grain relative" style={{ background: '#060D1C' }}>
+        {/* Aurora bg */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[-40%] left-[20%] w-[600px] h-[600px] rounded-full blur-[120px] animate-aurora opacity-50"
+            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.5), transparent 70%)' }} />
+          <div className="absolute bottom-[-30%] right-[15%] w-[500px] h-[500px] rounded-full blur-[100px] animate-aurora-alt opacity-40"
+            style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.45), transparent 70%)', animationDelay: '3s' }} />
+        </div>
+        <div className="relative max-w-3xl mx-auto text-center">
           <Reveal>
-            <div className="rounded-3xl p-12 shadow-2xl" style={{ background: 'linear-gradient(135deg, #0D1628 0%, #1E3A8A 60%, #0E4275 100%)' }}>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#3B82F6] to-[#06B6D4] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
-                <Brain className="w-7 h-7 text-white" />
-              </div>
-              <p className="text-[12px] font-bold uppercase tracking-widest text-blue-300 mb-4">Czas zacząć</p>
-              <h2 className="text-[34px] md:text-[44px] font-black text-white leading-tight mb-4">
-                Twój wirtualny zarząd<br />jest gotowy do pracy.
-              </h2>
-              <p className="text-[15px] text-white/60 max-w-md mx-auto mb-8 leading-relaxed">
-                Dołącz do właścicieli, którzy przestali zgadywać i zaczęli zarządzać danymi.
-                Pierwsze 7 dni gratis — bez ryzyka.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link href="/auth/sign-up"
-                  className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-[16px] font-bold text-white hover:opacity-90 transition-all shadow-2xl shadow-blue-500/40">
-                  Zacznij za darmo — 7 dni <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link href="/contact"
-                  className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl border border-white/20 text-[16px] font-semibold text-white hover:bg-white/10 transition-all">
-                  Umów demo
-                </Link>
-              </div>
-              <p className="text-[12px] text-white/35 mt-4">Anuluj kiedy chcesz.</p>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/30"
+              style={{ background: 'linear-gradient(135deg, #2563EB, #06B6D4)' }}>
+              <Brain className="w-7 h-7 text-white" />
             </div>
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-5" style={{ color: '#60A5FA', letterSpacing: '0.14em' }}>Czas zacząć</p>
+            <h2 className="text-[40px] md:text-[56px] font-black text-white leading-[1.04] tracking-[-0.02em] mb-5">
+              {pl ? <>Twój zarząd AI<br />
+                <span className="bg-gradient-to-r from-[#60A5FA] via-[#38BDF8] to-[#06B6D4] bg-clip-text text-transparent">jest gotowy do pracy.</span>
+              </> : <>Your AI board<br />
+                <span className="bg-gradient-to-r from-[#60A5FA] via-[#38BDF8] to-[#06B6D4] bg-clip-text text-transparent">is ready to go.</span>
+              </>}
+            </h2>
+            <p className="text-[17px] max-w-md mx-auto mb-10 leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              {pl
+                ? 'Dołącz do właścicieli, którzy przestali zgadywać. Pierwsze 7 dni za darmo — bez ryzyka.'
+                : 'Join owners who stopped guessing. First 7 days free — no risk.'}
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link href="/auth/sign-up"
+                className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl btn-shimmer text-[16px] font-bold text-white shadow-2xl shadow-blue-500/40 hover:shadow-blue-500/60 transition-shadow">
+                {pl ? 'Zacznij za darmo — 7 dni' : 'Start for free — 7 days'} <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link href="/contact"
+                className="inline-flex items-center gap-2 h-14 px-9 rounded-2xl text-[16px] font-semibold text-white transition-all"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                {pl ? 'Umów demo' : 'Book a demo'}
+              </Link>
+            </div>
+            <p className="text-[12px] mt-5" style={{ color: 'rgba(255,255,255,0.28)' }}>
+              {pl ? 'Anuluj kiedy chcesz. Bez okresu wypowiedzenia.' : 'Cancel any time. No lock-in.'}
+            </p>
           </Reveal>
         </div>
       </section>

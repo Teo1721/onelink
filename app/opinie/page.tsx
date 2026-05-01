@@ -136,8 +136,8 @@ export default function OpiniePage() {
   const STATS = pl ? STATS_PL : STATS_EN;
 
   return (
-    <div className="min-h-screen bg-white font-sans">
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[#F3F4F6]">
+    <div className="min-h-screen bg-[#F8F9FB] font-sans">
+      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-[#EAECF0] shadow-sm">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           <Link href="/"><OneLinkLogo className="h-7" /></Link>
           <div className="flex items-center gap-3">
@@ -149,20 +149,27 @@ export default function OpiniePage() {
       </nav>
 
       {/* HERO */}
-      <section className="py-20 px-5 bg-gradient-to-b from-[#FFFBEB] to-white text-center">
-        <div className="max-w-2xl mx-auto">
+      <section className="py-24 px-5 text-center grain overflow-hidden relative" style={{ background: '#060D1C' }}>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[30%] left-[15%] w-[600px] h-[600px] rounded-full blur-[120px] opacity-45"
+            style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.4), transparent 70%)' }} />
+          <div className="absolute top-[20%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-30"
+            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.5), transparent 70%)' }} />
+          <div className="absolute bottom-0 left-0 right-0 h-24" style={{ background: 'linear-gradient(to bottom, transparent, #F8F9FB)' }} />
+        </div>
+        <div className="relative max-w-2xl mx-auto pb-10">
           <Reveal>
-            <div className="flex justify-center gap-1 mb-4">
-              {[...Array(5)].map((_, i) => <Star key={i} className="w-6 h-6 fill-amber-400 text-amber-400" />)}
+            <div className="flex justify-center gap-1 mb-5">
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-7 h-7 fill-amber-400 text-amber-400" />)}
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <h1 className="text-[40px] md:text-[52px] font-black text-[#111827] leading-[1.1] mb-5">
+            <h1 className="text-[42px] md:text-[58px] font-black text-white leading-[1.04] tracking-[-0.02em] mb-5">
               {pl ? <>Co mówią nasi<br />klienci</> : <>What our<br />customers say</>}
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
-            <p className="text-[17px] text-[#6B7280] mb-6">
+            <p className="text-[17px] mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
               {pl ? 'Prawdziwe opinie od właścicieli firm, którzy zarządzają swoimi biznesami z OneLink.' : 'Real reviews from business owners who manage their businesses with OneLink.'}
             </p>
           </Reveal>
@@ -170,7 +177,7 @@ export default function OpiniePage() {
       </section>
 
       {/* STATS */}
-      <section className="py-10 px-5 border-y border-[#F3F4F6] bg-white">
+      <section className="py-10 px-5 border-y border-[#EAECF0] bg-white">
         <div className="max-w-[1100px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {STATS.map((s, i) => (
@@ -184,12 +191,16 @@ export default function OpiniePage() {
       </section>
 
       {/* TESTIMONIALS GRID */}
-      <section className="py-16 px-5">
+      <section className="py-16 px-5 bg-[#F8F9FB]">
         <div className="max-w-[1200px] mx-auto">
           <div className="columns-1 md:columns-2 lg:columns-3 gap-5 space-y-5">
             {TESTIMONIALS.map((t, i) => (
               <Reveal key={t.name} delay={i * 0.05} className="break-inside-avoid">
-                <div className="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white rounded-3xl p-6 border border-[#E8EAED] hover:border-[#D0D5DD] transition-all duration-300 hover:-translate-y-1"
+                  style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.10)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.05)')}>
+
                   <div className="flex gap-0.5 mb-3">
                     {[...Array(t.stars)].map((_, i) => <span key={i} className="text-amber-400 text-[13px]">★</span>)}
                   </div>

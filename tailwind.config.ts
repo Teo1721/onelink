@@ -60,6 +60,38 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        aurora: {
+          '0%, 100%': { transform: 'scale(1) translate(0%, 0%) rotate(0deg)', opacity: '0.55' },
+          '33%':       { transform: 'scale(1.12) translate(-4%, 5%) rotate(6deg)', opacity: '0.75' },
+          '66%':       { transform: 'scale(0.9) translate(5%, -4%) rotate(-4deg)', opacity: '0.4' },
+        },
+        'aurora-alt': {
+          '0%, 100%': { transform: 'scale(1) translate(0%, 0%) rotate(0deg)', opacity: '0.45' },
+          '25%':      { transform: 'scale(1.08) translate(5%, -3%) rotate(-5deg)', opacity: '0.65' },
+          '75%':      { transform: 'scale(0.92) translate(-3%, 4%) rotate(3deg)', opacity: '0.3' },
+        },
+        'float-y': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%':      { transform: 'translateY(-10px)' },
+        },
+        'shimmer-slide': {
+          '0%':   { backgroundPosition: '-200% center' },
+          '100%': { backgroundPosition: '200% center' },
+        },
+        marquee: {
+          '0%':   { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+      },
+      animation: {
+        'aurora':       'aurora 9s ease-in-out infinite',
+        'aurora-alt':   'aurora-alt 11s ease-in-out infinite',
+        'float':        'float-y 7s ease-in-out infinite',
+        'shimmer':      'shimmer-slide 2.4s linear infinite',
+        'marquee':      'marquee 28s linear infinite',
+        'marquee-slow': 'marquee 40s linear infinite',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

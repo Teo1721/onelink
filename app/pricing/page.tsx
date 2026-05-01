@@ -236,7 +236,7 @@ export default function PricingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F8FA] text-[#111827] overflow-x-hidden">
+    <main className="min-h-screen bg-[#F8F9FB] text-[#111827] overflow-x-hidden">
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#E5E7EB] bg-white/90">
@@ -260,66 +260,85 @@ export default function PricingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="max-w-[1100px] mx-auto px-6 pt-20 pb-16 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-[11px] font-semibold text-blue-700 mb-6"
-        >
-          <Zap className="w-3 h-3" />
-          {pl ? '7 dni za darmo · bez ryzyka · anuluj kiedy chcesz' : '7 days free · no risk · cancel any time'}
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
-          className="text-[42px] md:text-[60px] font-black tracking-tight leading-[1.05] mb-5 text-[#111827]"
-        >
-          {pl ? 'Prosty cennik.' : 'Simple pricing.'}{" "}
-          <span className="bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] bg-clip-text text-transparent">
-            {pl ? 'Pełna kontrola.' : 'Full control.'}
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-[17px] text-[#6B7280] max-w-xl mx-auto leading-relaxed mb-10"
-        >
-          {pl
-            ? 'Jeden panel do zarządzania całym biznesem. Wybierz plan odpowiedni do skali Twojej firmy. Żadnych ukrytych opłat — żadnych niespodzianek.'
-            : 'One panel to manage your entire business. Choose the plan that fits your scale. No hidden fees — no surprises.'}
-        </motion.p>
-
-        {/* ── Billing Toggle ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
-          className="inline-flex items-center gap-4 p-1.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm"
-        >
-          <button
-            onClick={() => setAnnual(false)}
-            className={`px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
-              !annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
-            }`}
+      <section className="relative overflow-hidden grain" style={{ background: '#060D1C' }}>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[20%] left-[10%] w-[600px] h-[600px] rounded-full blur-[120px] opacity-50"
+            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.5), transparent 70%)', animation: 'aurora 9s ease-in-out infinite' }} />
+          <div className="absolute top-[20%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-35"
+            style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.5), transparent 70%)', animation: 'aurora-alt 11s ease-in-out infinite' }} />
+          <svg className="absolute inset-0 w-full h-full opacity-[0.05]" xmlns="http://www.w3.org/2000/svg">
+            <defs><pattern id="pgrid" x="0" y="0" width="44" height="44" patternUnits="userSpaceOnUse">
+              <path d="M 44 0 L 0 0 0 44" fill="none" stroke="white" strokeWidth="0.6"/>
+            </pattern></defs>
+            <rect width="100%" height="100%" fill="url(#pgrid)" />
+          </svg>
+          <div className="absolute bottom-0 left-0 right-0 h-24" style={{ background: 'linear-gradient(to bottom, transparent, #F8F9FB)' }} />
+        </div>
+        <div className="relative max-w-[1100px] mx-auto px-6 pt-20 pb-24 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 h-7 px-3 rounded-full text-[11px] font-semibold mb-6"
+            style={{ background: 'rgba(37,99,235,0.15)', border: '1px solid rgba(37,99,235,0.4)', color: '#93C5FD' }}
           >
-            {pl ? 'Miesięcznie' : 'Monthly'}
-          </button>
-          <button
-            onClick={() => setAnnual(true)}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
-              annual ? "bg-[#111827] text-white shadow-sm" : "text-[#6B7280] hover:text-[#111827]"
-            }`}
+            <Zap className="w-3 h-3" />
+            {pl ? '7 dni za darmo · bez ryzyka · anuluj kiedy chcesz' : '7 days free · no risk · cancel any time'}
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
+            className="text-[44px] md:text-[64px] font-black tracking-[-0.02em] leading-[1.04] mb-5 text-white"
           >
-            {pl ? 'Rocznie' : 'Annually'}
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${annual ? "bg-green-500 text-white" : "bg-green-100 text-green-700"}`}>{pl ? 'Oszczędź 20%' : 'Save 20%'}</span>
-          </button>
-        </motion.div>
-        {annual && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[12px] text-green-600 font-medium mt-3">
-            {pl ? 'Oszczędzasz 20% — rozliczenie jednorazowo raz w roku' : 'You save 20% — billed once per year'}
+            {pl ? 'Prosty cennik.' : 'Simple pricing.'}{" "}
+            <span className="bg-gradient-to-r from-[#60A5FA] via-[#38BDF8] to-[#06B6D4] bg-clip-text text-transparent">
+              {pl ? 'Pełna kontrola.' : 'Full control.'}
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-[17px] max-w-xl mx-auto leading-relaxed mb-10" style={{ color: 'rgba(255,255,255,0.55)' }}
+          >
+            {pl
+              ? 'Jeden panel do zarządzania całym biznesem. Żadnych ukrytych opłat — żadnych niespodzianek.'
+              : 'One panel to manage your entire business. No hidden fees — no surprises.'}
           </motion.p>
-        )}
+
+          {/* ── Billing Toggle ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
+            className="inline-flex items-center gap-1.5 p-1.5 rounded-2xl"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            <button
+              onClick={() => setAnnual(false)}
+              className="px-5 py-2 rounded-xl text-[13px] font-semibold transition-all"
+              style={!annual
+                ? { background: 'white', color: '#111827' }
+                : { color: 'rgba(255,255,255,0.55)' }}
+            >
+              {pl ? 'Miesięcznie' : 'Monthly'}
+            </button>
+            <button
+              onClick={() => setAnnual(true)}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all"
+              style={annual
+                ? { background: 'white', color: '#111827' }
+                : { color: 'rgba(255,255,255,0.55)' }}
+            >
+              {pl ? 'Rocznie' : 'Annually'}
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500 text-white">{pl ? '−20%' : '−20%'}</span>
+            </button>
+          </motion.div>
+          {annual && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[12px] font-medium mt-3" style={{ color: '#34D399' }}>
+              {pl ? 'Oszczędzasz 20% — rozliczenie jednorazowo raz w roku' : 'You save 20% — billed once per year'}
+            </motion.p>
+          )}
+        </div>
       </section>
 
       {/* ── PRICING CARDS ── */}
-      <section className="max-w-[1400px] mx-auto px-6 pb-24">
+      <section className="max-w-[1400px] mx-auto px-6 pb-24 -mt-8 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
           {PLANS.map((plan, idx) => (
             <motion.div
@@ -327,11 +346,20 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: idx * 0.1, ease: EASE }}
-              className={`relative flex flex-col rounded-3xl p-5 transition-all ${
-                plan.popular
-                  ? "bg-[#0F172A] text-white shadow-2xl shadow-black/25 ring-2 ring-[#1D4ED8]/60 z-10"
-                  : "bg-white border border-[#E5E7EB] text-[#111827] shadow-sm hover:shadow-lg"
-              }`}
+              className="relative flex flex-col rounded-3xl p-5 transition-all duration-300"
+              style={plan.popular ? {
+                background: 'linear-gradient(160deg, #0B1630 0%, #0F2040 100%)',
+                border: '1px solid rgba(37,99,235,0.5)',
+                boxShadow: '0 0 0 1px rgba(37,99,235,0.2), 0 32px 80px rgba(0,0,0,0.35), 0 8px 32px rgba(37,99,235,0.2)',
+                color: 'white',
+                transform: 'translateY(-8px)',
+                zIndex: 10,
+              } : {
+                background: 'white',
+                border: '1px solid #E8EAED',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                color: '#111827',
+              }}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-[11px] font-bold text-white tracking-wide shadow-lg whitespace-nowrap">
@@ -449,32 +477,42 @@ export default function PricingPage() {
           <p className="text-[15px] text-[#6B7280]">Sprawdź dokładnie, co zawiera każdy plan.</p>
         </div>
 
-        <div className="rounded-2xl overflow-hidden border border-[#E5E7EB] shadow-sm bg-white">
-          {/* Header */}
-          <div className="grid grid-cols-[1fr_120px_120px_120px] bg-[#0F172A]">
-            <div className="p-5 text-[11px] font-bold uppercase tracking-widest text-white/40">Funkcja</div>
-            {PLANS.map((plan, i) => (
-              <div key={plan.id} className={`p-5 text-center ${i === 1 ? "bg-[#1D4ED8]/30" : ""}`}>
-                <p className={`text-[12px] font-black ${i === 1 ? "text-[#60A5FA]" : "text-white"}`}>{plan.name}</p>
-                <p className={`text-[10px] font-medium mt-0.5 ${i === 1 ? "text-blue-300/70" : "text-white/40"}`}>{plan.subtitle}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Rows */}
-          {COMPARISON.map((row, i) => (
-            <div
-              key={i}
-              className={`grid grid-cols-[1fr_120px_120px_120px] border-b border-[#F3F4F6] last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"} hover:bg-blue-50/40 transition-colors`}
-            >
-              <div className="px-5 py-3.5 text-[13px] text-[#374151] font-medium flex items-center">{row.label}</div>
-              {row.plans.map((val, j) => (
-                <div key={j} className={`px-5 py-3.5 flex items-center justify-center ${j === 1 ? "bg-blue-50/30" : ""}`}>
-                  <CheckCell val={val} />
+        <div className="rounded-2xl overflow-hidden border border-[#E5E7EB] shadow-lg bg-white">
+          {/* Header — only 3 comparable plans (exclude Enterprise) in data order: Start → Rozwój → Sieć */}
+          {(() => {
+            const comparablePlans = [...PLANS].reverse().filter(p => p.id !== 'plan4');
+            return (
+              <>
+                <div className="grid grid-cols-[1fr_140px_140px_140px] bg-[#0F172A]">
+                  <div className="p-5 text-[11px] font-bold uppercase tracking-widest text-white/40">Funkcja</div>
+                  {comparablePlans.map((plan, i) => (
+                    <div key={plan.id} className={`p-5 text-center ${plan.popular ? "bg-[#1D4ED8]/30" : ""}`}>
+                      <p className={`text-[13px] font-black ${plan.popular ? "text-[#60A5FA]" : "text-white"}`}>{plan.name}</p>
+                      <p className={`text-[10px] font-medium mt-0.5 ${plan.popular ? "text-blue-300/70" : "text-white/40"}`}>{plan.subtitle}</p>
+                      {plan.popular && (
+                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/30 text-blue-300">POPULAR</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ))}
+
+                {/* Rows */}
+                {COMPARISON.map((row, i) => (
+                  <div
+                    key={i}
+                    className={`grid grid-cols-[1fr_140px_140px_140px] border-b border-[#F3F4F6] last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"} hover:bg-blue-50/40 transition-colors`}
+                  >
+                    <div className="px-5 py-4 text-[13px] text-[#374151] font-medium flex items-center">{row.label}</div>
+                    {row.plans.map((val, j) => (
+                      <div key={j} className={`px-5 py-4 flex items-center justify-center ${comparablePlans[j]?.popular ? "bg-blue-50/30" : ""}`}>
+                        <CheckCell val={val} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </>
+            );
+          })()}
         </div>
       </section>
 
