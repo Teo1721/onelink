@@ -41,6 +41,7 @@ type ValidationError = { field: string; message: string }
 type InvoiceLineItem = {
   product: string; cosCategory: string; quantity: string
   unit: string; netPrice: string; vatRate: string
+  priceMode?: 'net' | 'gross'   // 'gross' = user typed brutto; back-calc net for storage
   ingredient_id?: string | null
   product_id?: string | null
   source?: 'ingredient' | 'product'
@@ -174,7 +175,7 @@ const PRODUCT_CATEGORIES = [
 
 const emptyLineItem: InvoiceLineItem = {
   product: '', cosCategory: '', quantity: '', unit: 'kg', netPrice: '', vatRate: '0.08',
-  ingredient_id: null, product_id: null, source: 'ingredient'
+  priceMode: 'net', ingredient_id: null, product_id: null, source: 'ingredient'
 }
 const emptySemisLine: SemisLineItem = { description: '', category: '', totalNet: '', vatRate: '0.23' }
 
@@ -2190,7 +2191,7 @@ export default function OpsDashboard() {
   })
   const [cosLineItems, setCosLineItems] = useState<InvoiceLineItem[]>([{ ...emptyLineItem }])
   const [semisLineItems, setSemisLineItems] = useState<SemisLineItem[]>([{ ...emptySemisLine }])
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
+  const [invoiceFiles, setInvoiceFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [invoiceErrors, setInvoiceErrors] = useState<ValidationError[]>([])
   const [excelLoading, setExcelLoading] = useState(false)
@@ -2567,8 +2568,13 @@ export default function OpsDashboard() {
   const isSalesBelow80 = planNet > 0 && planRealisation < 0.8
   const isCashDiffAbove20 = Math.abs(cashDiff) > 20
 
-  // Invoice calcs
-  const getLineNet = (i: InvoiceLineItem) => (Number(i.quantity) || 0) * (Number(i.netPrice) || 0)
+  // Invoice calcs — netPrice stores whatever the user typed; priceMode tells us how to interpret it
+  const getUnitNet = (i: InvoiceLineItem) => {
+    const price = Number(i.netPrice) || 0
+    if (i.priceMode === 'gross') return price / (1 + (Number(i.vatRate) || 0))
+    return price
+  }
+  const getLineNet = (i: InvoiceLineItem) => (Number(i.quantity) || 0) * getUnitNet(i)
   const getLineGross = (i: InvoiceLineItem) => getLineNet(i) * (1 + (Number(i.vatRate) || 0))
   const cosTotalNet = cosLineItems.reduce((s, i) => s + getLineNet(i), 0)
   const cosTotalGross = cosLineItems.reduce((s, i) => s + getLineGross(i), 0)
@@ -2621,9 +2627,9 @@ export default function OpsDashboard() {
     if (!invoiceCommon.invoiceNumber.trim()) e.push({ field: 'invoiceNumber', message: 'Numer faktury wymagany.' })
     if (!invoiceCommon.saleDate) e.push({ field: 'saleDate', message: 'Data sprzedaży wymagana.' })
     if (invoiceType === 'COS') {
-      if (!invoiceFile) e.push({ field: 'file', message: 'Załącznik obowiązkowy dla COS.' })
+      if (invoiceFiles.length === 0) e.push({ field: 'file', message: 'Załącznik obowiązkowy dla COS.' })
       const valid = cosLineItems.filter(i => i.product.trim() && Number(i.quantity) > 0 && Number(i.netPrice) > 0)
-      if (valid.length === 0) e.push({ field: 'lineItems', message: 'Dodaj min. jedną pozycję.' })
+      if (valid.length === 0) e.push({ field: 'lineItems', message: 'Dodaj min. jedną pozycję z ceną > 0.' })
       cosLineItems.forEach((i, idx) => {
         if (i.product.trim() && !i.cosCategory) e.push({ field: `lineItem_${idx}`, message: `Poz. ${idx + 1}: brak kategorii COS.` })
       })
@@ -2713,14 +2719,21 @@ export default function OpsDashboard() {
     setInvoiceErrors(errors)
     if (errors.length > 0) return
     setUploading(true)
-    let attachmentUrl: string | null = null
-    if (invoiceFile) {
-      const ext = invoiceFile.name.split('.').pop()
-      const fn = `${selectedLocation.location_id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('invoices').upload(fn, invoiceFile)
+    // Upload all selected files and collect their public URLs
+    const uploadedUrls: string[] = []
+    for (const file of invoiceFiles) {
+      const ext = file.name.split('.').pop()
+      const fn = `${selectedLocation.location_id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: upErr } = await supabase.storage.from('invoices').upload(fn, file)
       if (upErr) { alert('Błąd pliku: ' + upErr.message); setUploading(false); return }
-      attachmentUrl = supabase.storage.from('invoices').getPublicUrl(fn).data.publicUrl
+      uploadedUrls.push(supabase.storage.from('invoices').getPublicUrl(fn).data.publicUrl)
     }
+    // Store as JSON array if multiple, plain string if single, null if none
+    const attachmentUrl: string | null = uploadedUrls.length === 0
+      ? null
+      : uploadedUrls.length === 1
+        ? uploadedUrls[0]
+        : JSON.stringify(uploadedUrls)
 
     let invoiceId: string | null = null
 
@@ -2742,7 +2755,7 @@ export default function OpsDashboard() {
         cos_category: i.cosCategory,
         quantity: Number(i.quantity),
         unit: i.unit,
-        net_price: Number(i.netPrice),
+        net_price: getUnitNet(i),          // always net, regardless of entry mode
         net_value: getLineNet(i),
         vat_rate: Number(i.vatRate),
         gross_value: getLineGross(i),
@@ -2784,6 +2797,34 @@ export default function OpsDashboard() {
         setUploading(false); return
       }
       invoiceId = rpcRes?.invoice_id || null
+
+      // ── Auto-save products to catalog so they appear in autocomplete next time ──
+      const cid = selectedLocation.locations.company_id
+      const productsToUpsert = valid.map(i => ({
+        name: i.product.trim(),
+        unit: i.unit,
+        last_price: getUnitNet(i),
+        active: true,
+        company_id: cid || null,
+      }))
+      for (const p of productsToUpsert) {
+        // Check if product already exists for this company
+        const { data: existing } = await supabase
+          .from('inventory_products')
+          .select('id')
+          .eq('name', p.name)
+          .eq('company_id', p.company_id)
+          .maybeSingle()
+        if (existing?.id) {
+          // Update last known price and unit
+          await supabase.from('inventory_products')
+            .update({ last_price: p.last_price, unit: p.unit })
+            .eq('id', existing.id)
+        } else {
+          await supabase.from('inventory_products').insert(p)
+        }
+      }
+
       alert(`✅ Faktura COS zapisana (${valid.length} pozycji)`)
     }
 
@@ -2828,7 +2869,7 @@ export default function OpsDashboard() {
     setInvoiceCommon({ supplier: '', invoiceNumber: '', saleDate: new Date().toISOString().split('T')[0], receiptDate: new Date().toISOString().split('T')[0] })
     setCosLineItems([{ ...emptyLineItem }])
     setSemisLineItems([{ ...emptySemisLine }])
-    setInvoiceFile(null); setInvoiceErrors([]); setUploading(false)
+    setInvoiceFiles([]); setInvoiceErrors([]); setUploading(false)
   }
 
   const handleExcelUpload = async (e: any) => {
@@ -3755,9 +3796,28 @@ export default function OpsDashboard() {
                           <div className="space-y-2"><Label>Data wpływu</Label><Input type="date" value={invoiceCommon.receiptDate} onChange={e => setInvoiceCommon({...invoiceCommon, receiptDate: e.target.value})} /></div>
                         </div>
                         <div className={`mt-6 border-2 border-dashed p-4 rounded ${invoiceType === 'COS' && invErr('file') ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-gray-50'}`}>
-                          <Label className="mb-2 block font-semibold">{invoiceType === 'COS' ? 'Załącznik (obowiązkowy) *' : 'Załącznik (opcjonalnie)'}</Label>
-                          <Input type="file" accept="image/*,application/pdf" onChange={e => setInvoiceFile(e.target.files?.[0] || null)} />
-                          {invoiceFile && <p className="text-xs text-green-600 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" />{invoiceFile.name}</p>}
+                          <Label className="mb-1 block font-semibold">
+                            {invoiceType === 'COS' ? 'Załącznik (obowiązkowy) *' : 'Załącznik (opcjonalnie)'}
+                            <span className="ml-2 text-xs font-normal text-slate-500">— można wybrać kilka plików naraz</span>
+                          </Label>
+                          <Input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            multiple
+                            onChange={e => setInvoiceFiles(Array.from(e.target.files || []))}
+                          />
+                          {invoiceFiles.length > 0 && (
+                            <ul className="mt-2 space-y-1">
+                              {invoiceFiles.map((f, idx) => (
+                                <li key={idx} className="text-xs text-green-600 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3 shrink-0" />
+                                  {f.name}
+                                  <button type="button" className="ml-1 text-red-400 hover:text-red-600 text-xs"
+                                    onClick={() => setInvoiceFiles(prev => prev.filter((_, j) => j !== idx))}>✕</button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                         <div className="mt-4 bg-slate-50 rounded p-3 text-sm text-slate-600">💳 Płatność: <b>Przelew</b> (auto)</div>
                       </CardContent></Card>
@@ -3772,6 +3832,7 @@ export default function OpsDashboard() {
                             <div className="col-span-1 text-right">Ilość</div><div className="col-span-1">Jedn.</div>
                             <div className="col-span-1 text-right">Cena</div><div className="col-span-1 text-right">Netto</div>
                             <div className="col-span-1">VAT</div><div className="col-span-1 text-right">Brutto</div><div className="col-span-1" /></div>
+                          <div className="text-xs text-slate-400 mb-1">💡 Kliknij <b>N/B</b> przy cenie żeby przełączyć między ceną netto a brutto</div>
                           {cosLineItems.map((item, i) => (
                             <div key={i} className="grid grid-cols-12 gap-2 items-center text-sm">
                               <div className="col-span-1">
@@ -3806,8 +3867,23 @@ export default function OpsDashboard() {
                               <div className="col-span-1"><Input type="number" value={item.quantity} onChange={e => updateCosLine(i, 'quantity', e.target.value)} className="h-9 text-right" /></div>
                               <div className="col-span-1"><select value={item.unit} onChange={e => updateCosLine(i, 'unit', e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
                                 {UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}</select></div>
-                              <div className="col-span-1"><Input type="number" value={item.netPrice} onChange={e => updateCosLine(i, 'netPrice', e.target.value)} className="h-9 text-right" /></div>
-                              <div className="col-span-1 text-right text-slate-700 font-medium">{getLineNet(item) > 0 ? fmt2(getLineNet(item)) : '—'}</div>
+                              <div className="col-span-1 flex gap-1 items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], priceMode: c[i].priceMode === 'gross' ? 'net' : 'gross' }; return c })}
+                                  title={item.priceMode === 'gross' ? 'Tryb: brutto — kliknij dla netto' : 'Tryb: netto — kliknij dla brutto'}
+                                  className={`shrink-0 h-9 px-1.5 rounded text-[10px] font-bold border transition-colors ${item.priceMode === 'gross' ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}
+                                >{item.priceMode === 'gross' ? 'B' : 'N'}</button>
+                                <Input type="number" value={item.netPrice} onChange={e => updateCosLine(i, 'netPrice', e.target.value)}
+                                  className={`h-9 text-right ${item.priceMode === 'gross' ? 'border-amber-300 bg-amber-50' : ''}`}
+                                  placeholder={item.priceMode === 'gross' ? 'brutto' : 'netto'} />
+                              </div>
+                              <div className="col-span-1 text-right text-slate-700 font-medium text-xs">
+                                {getLineNet(item) > 0 ? fmt2(getLineNet(item)) : '—'}
+                                {item.priceMode === 'gross' && Number(item.netPrice) > 0 && (
+                                  <div className="text-[10px] text-amber-600">n:{fmt2(getUnitNet(item))}/szt</div>
+                                )}
+                              </div>
                               <div className="col-span-1"><select value={item.vatRate} onChange={e => updateCosLine(i, 'vatRate', e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
                                 {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}</select></div>
                               <div className="col-span-1 text-right font-medium">{getLineGross(item) > 0 ? fmt2(getLineGross(item)) : '—'}</div>
