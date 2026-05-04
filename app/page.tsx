@@ -886,7 +886,7 @@ export default function HomePage() {
               {/* Heading */}
               <h1 className="text-[48px] md:text-[64px] font-black tracking-[-0.025em] mb-7 text-white" style={{ lineHeight: 1 }}>
                 <span className="block">
-                  <WordReveal text={pl ? 'Twoja firma zarabia.' : 'Your business earns.'} delay={0.08} />
+                  <WordReveal text={pl ? 'Twoja firma traci pieniądze.' : 'Your business is losing money.'} delay={0.08} />
                 </span>
                 <motion.span
                   className="block"
@@ -900,7 +900,7 @@ export default function HomePage() {
                     backgroundClip: 'text',
                   }}
                 >
-                  {pl ? 'Ale nie wiesz dlaczego traci.' : "But you don't know why it loses."}
+                  {pl ? 'OneLink pokaże Ci gdzie.' : 'OneLink will show you where.'}
                 </motion.span>
               </h1>
 
@@ -912,8 +912,8 @@ export default function HomePage() {
                 style={{ color: 'rgba(255,255,255,0.65)', borderColor: 'rgba(96,165,250,0.4)' }}
               >
                 {pl
-                  ? 'OneLink zbiera dane z każdego obszaru biznesu i uruchamia Dyrektorów AI — CFO, COO — którzy mówią Ci co jest nie tak, zanim stanie się stratą. Dla właścicieli od 1 lokalu wzwyż.'
-                  : 'OneLink collects data from every area of your business and activates AI Directors — CFO, COO — who tell you what\'s wrong before it becomes a loss. For owners from 1 location up.'}
+                  ? 'Zamiast raportów i chaosu dostajesz konkretne decyzje: co poprawić, gdzie tracisz i kto odpowiada.'
+                  : 'Instead of reports and chaos, you get clear decisions: what to fix, where you\'re losing and who\'s responsible.'}
               </motion.p>
 
               {/* CTA Buttons */}
@@ -982,7 +982,114 @@ export default function HomePage() {
               transition={{ duration: 0.9, delay: 0.22, ease: EASE }}
               className="hidden lg:flex items-center justify-center"
             >
-              <ConsoleMockup />
+              {/* Wrapper: relative so callout badges can be absolutely positioned as siblings */}
+              <div className="relative">
+                <ConsoleMockup />
+
+                {/* ── Callout 1: KOSZT PRACY alert ── */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.78, x: 12 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  transition={{ duration: 0.45, delay: 1.1, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute pointer-events-none"
+                  style={{ top: 72, right: -8 }}
+                >
+                  <div style={{
+                    background: 'rgba(251,191,36,0.12)',
+                    border: '1px solid rgba(251,191,36,0.45)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 10,
+                    padding: '6px 11px 6px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    maxWidth: 210,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                  }}>
+                    {/* Arrow line */}
+                    <div style={{ position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 0 }}>
+                      <div style={{ width: 14, height: 1, background: 'rgba(251,191,36,0.7)' }} />
+                      <div style={{ width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '5px solid rgba(251,191,36,0.7)' }} />
+                    </div>
+                    {/* Pulsing dot */}
+                    <span style={{ position: 'relative', width: 8, height: 8, flexShrink: 0 }}>
+                      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#F59E0B', animation: 'pulse 1.8s ease-out infinite', opacity: 0.5 }} />
+                      <span style={{ position: 'absolute', inset: 1, borderRadius: '50%', background: '#F59E0B' }} />
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: '#FDE68A', lineHeight: 1.35, letterSpacing: 0 }}>
+                      system wykrył problem<br />w kosztach pracy
+                    </span>
+                  </div>
+                </motion.div>
+
+                {/* ── Callout 2: AI alert before loss ── */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.78, x: 12 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  transition={{ duration: 0.45, delay: 1.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute pointer-events-none"
+                  style={{ top: 188, right: -8 }}
+                >
+                  <div style={{
+                    background: 'rgba(59,130,246,0.12)',
+                    border: '1px solid rgba(59,130,246,0.45)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 10,
+                    padding: '6px 11px 6px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    maxWidth: 210,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                  }}>
+                    <div style={{ position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 0 }}>
+                      <div style={{ width: 14, height: 1, background: 'rgba(59,130,246,0.7)' }} />
+                      <div style={{ width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '5px solid rgba(59,130,246,0.7)' }} />
+                    </div>
+                    <span style={{ position: 'relative', width: 8, height: 8, flexShrink: 0 }}>
+                      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#3B82F6', animation: 'pulse 1.8s ease-out infinite 0.3s', opacity: 0.5 }} />
+                      <span style={{ position: 'absolute', inset: 1, borderRadius: '50%', background: '#3B82F6' }} />
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: '#BFDBFE', lineHeight: 1.35 }}>
+                      alert zanim<br />pojawi się strata
+                    </span>
+                  </div>
+                </motion.div>
+
+                {/* ── Callout 3: manager decision ── */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.78, x: 12 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  transition={{ duration: 0.45, delay: 1.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute pointer-events-none"
+                  style={{ bottom: 68, right: -8 }}
+                >
+                  <div style={{
+                    background: 'rgba(52,211,153,0.12)',
+                    border: '1px solid rgba(52,211,153,0.45)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 10,
+                    padding: '6px 11px 6px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    maxWidth: 210,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                  }}>
+                    <div style={{ position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 0 }}>
+                      <div style={{ width: 14, height: 1, background: 'rgba(52,211,153,0.7)' }} />
+                      <div style={{ width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '5px solid rgba(52,211,153,0.7)' }} />
+                    </div>
+                    <span style={{ position: 'relative', width: 8, height: 8, flexShrink: 0 }}>
+                      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#34D399', animation: 'pulse 1.8s ease-out infinite 0.6s', opacity: 0.5 }} />
+                      <span style={{ position: 'absolute', inset: 1, borderRadius: '50%', background: '#34D399' }} />
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: '#A7F3D0', lineHeight: 1.35 }}>
+                      konkretna decyzja<br />dla managera
+                    </span>
+                  </div>
+                </motion.div>
+              </div>
             </motion.div>
           </div>
         </div>
