@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ChatWidget } from "@/components/chat-widget";
 import { LanguageProvider } from "@/lib/i18n";
@@ -83,10 +84,54 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} font-sans antialiased bg-[#F7F8FA] text-[#111827]`}>
+
+        {/* ── Meta Pixel noscript fallback ── */}
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            height="1" width="1" style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1631501188010951&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+
         <LanguageProvider>
           {children}
           <ChatWidget />
         </LanguageProvider>
+
+        {/* ════════════════════════════════════════
+            META PIXEL (Facebook & Instagram)
+            ID: 1631501188010951
+        ════════════════════════════════════════ */}
+        <Script id="meta-pixel" strategy="afterInteractive">{`
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '1631501188010951');
+          fbq('track', 'PageView');
+        `}</Script>
+
+        {/* ════════════════════════════════════════
+            GOOGLE ADS CONVERSION TRACKING
+            ID: AW-16733670381
+        ════════════════════════════════════════ */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-16733670381"
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads-config" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-16733670381');
+        `}</Script>
+
       </body>
     </html>
   );
