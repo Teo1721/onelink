@@ -2122,7 +2122,7 @@ export default function AdminDashboard() {
         userRole={adminRole}
       />
 
-      <main className="flex-1 ml-[216px] p-8">
+      <main className="flex-1 md:ml-[216px] pt-16 md:pt-0 pb-20 md:pb-0 p-4 md:p-8">
         {/* ── ACCOUNT VIEW ── */}
         {activeView === 'account' && (
           <AdminAccountView supabase={supabase} router={router} />
