@@ -758,10 +758,8 @@ export default function HomePage() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6 text-[13px] text-[#6B7280]">
             <Link href="/demo" className="hover:text-[#111827] font-medium transition-colors duration-150">Demo</Link>
-            <a href="#directors" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Dyrektorzy AI' : 'AI Directors'}</a>
+            <a href="#how" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Jak to działa' : 'How it works'}</a>
             <Link href="/pricing" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Cennik' : 'Pricing'}</Link>
-            <Link href="/opinie" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Opinie' : 'Reviews'}</Link>
-            <Link href="/co-nowego" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Co nowego' : 'Changelog'}</Link>
             <Link href="/investors" className="hover:text-[#111827] font-medium transition-colors duration-150">{pl ? 'Inwestorzy' : 'Investors'}</Link>
           </div>
 
@@ -812,12 +810,9 @@ export default function HomePage() {
             <div className="px-5 py-3 space-y-0.5">
               {[
                 { href: '/demo', label: 'Demo' },
-                { href: '#directors', label: pl ? 'Dyrektorzy AI' : 'AI Directors' },
+                { href: '#how', label: pl ? 'Jak to działa' : 'How it works' },
                 { href: '/pricing', label: pl ? 'Cennik' : 'Pricing' },
-                { href: '/opinie', label: pl ? 'Opinie' : 'Reviews' },
-                { href: '/co-nowego', label: pl ? 'Co nowego' : 'Changelog' },
                 { href: '/investors', label: pl ? 'Inwestorzy' : 'Investors' },
-                { href: '/contact', label: pl ? 'Umów demo' : 'Book a demo' },
               ].map(({ href, label }, i) => (
                 href.startsWith('#')
                   ? <a key={label} href={href} onClick={() => setMobileMenuOpen(false)}
@@ -1820,6 +1815,8 @@ export default function HomePage() {
                 <li><a href="#directors" className="hover:text-[#111827] transition-colors">Dyrektorzy AI</a></li>
                 <li><a href="#how" className="hover:text-[#111827] transition-colors">Jak to działa</a></li>
                 <li><Link href="/pricing" className="hover:text-[#111827] transition-colors">Cennik</Link></li>
+                <li><Link href="/opinie" className="hover:text-[#111827] transition-colors">{pl ? 'Opinie' : 'Reviews'}</Link></li>
+                <li><Link href="/co-nowego" className="hover:text-[#111827] transition-colors">{pl ? 'Co nowego' : 'Changelog'}</Link></li>
                 <li><a href="#faq" className="hover:text-[#111827] transition-colors">FAQ</a></li>
               </ul>
             </div>

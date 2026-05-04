@@ -6,10 +6,11 @@ import { Input } from './ui/input'
 
 type Product = { id: string; name: string; unit?: string; last_price?: number; category?: string }
 
-export default function ProductAutocomplete({ value, onChange, onSelect, className }: {
+export default function ProductAutocomplete({ value, onChange, onSelect, companyId, className }: {
   value: string
   onChange: (v: string) => void
   onSelect?: (prod: Product) => void
+  companyId?: string | null
   className?: string
 }) {
   const supabase = createClient()
@@ -26,18 +27,22 @@ export default function ProductAutocomplete({ value, onChange, onSelect, classNa
     if (!query || query.trim().length < 1) { setResults([]); return }
     timer.current = window.setTimeout(async () => {
       const q = query.trim()
-      const { data } = await supabase
+      let dbQuery = supabase
         .from('inventory_products')
         .select('id,name,unit,last_price,category')
         .ilike('name', `%${q}%`)
-        .eq('active', true)
-        .limit(8)
+        .neq('active', false)   // include active=true AND active=null (legacy rows)
+        .limit(10)
+
+      if (companyId) dbQuery = dbQuery.eq('company_id', companyId)
+
+      const { data } = await dbQuery
       setResults((data as Product[]) || [])
       setOpen(true)
-    }, 200)
+    }, 180)
     return () => { if (timer.current) window.clearTimeout(timer.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query])
+  }, [query, companyId])
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {

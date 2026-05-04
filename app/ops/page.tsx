@@ -131,6 +131,32 @@ const COS_CATEGORIES = [
   { value: 'inne_cos', label: 'Inne (COS)' },
 ]
 
+// Maps any stored category value (ingredient-style or already COS) to a valid COS category key
+const COS_VALID = new Set(COS_CATEGORIES.map(c => c.value))
+const CATEGORY_TO_COS: Record<string, string> = {
+  // English ingredient categories
+  meat:       'mieso_drob',
+  fish:       'ryby_owoce_morza',
+  dairy:      'nabial',
+  vegetables: 'warzywa_owoce',
+  drinks:     'napoje',
+  dry:        'suche_przyprawy',
+  packaging:  'opakowania',
+  other:      'inne_cos',
+  inne:       'inne_cos',
+  // Polish labels (in case someone stored label instead of value)
+  mięso:      'mieso_drob',
+  nabiał:     'nabial',
+  napoje:     'napoje',
+  pieczywo:   'pieczywo',
+  opakowania: 'opakowania',
+}
+function toCosCategory(cat: string | null | undefined): string {
+  if (!cat) return ''
+  if (COS_VALID.has(cat)) return cat          // already a valid COS value
+  return CATEGORY_TO_COS[cat.toLowerCase()] ?? ''
+}
+
 const SEMIS_CATEGORIES = [
   { value: 'czynsz', label: 'Czynsz' },
   { value: 'media', label: 'Media (prąd, woda, gaz)' },
@@ -2804,6 +2830,7 @@ export default function OpsDashboard() {
         name: i.product.trim(),
         unit: i.unit,
         last_price: getUnitNet(i),
+        category: i.cosCategory || null,   // store COS category so it auto-fills next time
         active: true,
         company_id: cid || null,
       }))
@@ -2816,9 +2843,9 @@ export default function OpsDashboard() {
           .eq('company_id', p.company_id)
           .maybeSingle()
         if (existing?.id) {
-          // Update last known price and unit
+          // Update last known price, unit and category
           await supabase.from('inventory_products')
-            .update({ last_price: p.last_price, unit: p.unit })
+            .update({ last_price: p.last_price, unit: p.unit, category: p.category, active: true })
             .eq('id', existing.id)
         } else {
           await supabase.from('inventory_products').insert(p)
@@ -3855,8 +3882,21 @@ export default function OpsDashboard() {
                                   <ProductAutocomplete
                                     value={item.product}
                                     onChange={(v) => updateCosLine(i, 'product', v)}
+                                    companyId={selectedLocation?.locations?.company_id}
                                     onSelect={(prod) => {
-                                      setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], product: prod.name, product_id: prod.id, ingredient_id: null, unit: prod.unit || c[i].unit, netPrice: prod.last_price ? String(prod.last_price) : c[i].netPrice }; return c })
+                                      setCosLineItems(p => {
+                                        const c = [...p]
+                                        c[i] = {
+                                          ...c[i],
+                                          product: prod.name,
+                                          product_id: prod.id,
+                                          ingredient_id: null,
+                                          unit: prod.unit || c[i].unit,
+                                          netPrice: prod.last_price ? String(prod.last_price) : c[i].netPrice,
+                                          cosCategory: toCosCategory(prod.category) || c[i].cosCategory,
+                                        }
+                                        return c
+                                      })
                                     }}
                                   />
                                 )}
