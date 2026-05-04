@@ -1,11 +1,36 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Mail } from "lucide-react";
 import { OneLinkLogo } from "@/components/onelink-logo";
 
+// Declare gtag / fbq on window so TypeScript doesn't complain
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+    fbq?: (...args: unknown[]) => void;
+  }
+}
+
 export default function SignUpSuccessPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    // Google Ads — "Sign-up / Registration" conversion
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", "conversion", {
+        send_to: "AW-16733670381/9acTCKqInpscEO2Xnqs-",
+        value: 1.0,
+        currency: "EUR",
+      });
+    }
+
+    // Meta Pixel — CompleteRegistration event
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "CompleteRegistration");
+    }
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#F7F8FA] flex items-center justify-center p-4">
