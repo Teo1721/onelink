@@ -4032,9 +4032,9 @@ export default function OpsDashboard() {
                               className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
                             />
                             <div className="flex-1 grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
-                              <div className="col-span-1">Typ</div><div className="col-span-2">Produkt</div><div className="col-span-2">Kategoria</div>
+                              <div className="col-span-1">Typ</div><div className="col-span-2">Produkt</div><div className="col-span-1">Kat.</div>
                               <div className="col-span-1 text-right">Ilość</div><div className="col-span-1">Jedn.</div>
-                              <div className="col-span-1 text-right">Cena</div><div className="col-span-1 text-right">Netto</div>
+                              <div className="col-span-2 text-right">Cena jedn.</div><div className="col-span-1 text-right">Netto</div>
                               <div className="col-span-1">VAT</div><div className="col-span-1 text-right">Brutto</div><div className="col-span-1" />
                             </div>
                           </div>
@@ -4110,28 +4110,30 @@ export default function OpsDashboard() {
                                   />
                                 )}
                               </div>
-                              <div className="col-span-2"><select value={item.cosCategory} onChange={e => updateCosLine(i, 'cosCategory', e.target.value)}
+                              <div className="col-span-1"><select value={item.cosCategory} onChange={e => updateCosLine(i, 'cosCategory', e.target.value)}
                                 className={`h-9 w-full rounded-md border ${item.product && !item.cosCategory ? 'border-red-300' : 'border-input'} bg-background px-1 text-xs`}>
                                 <option value="">–</option>{COS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
-                              <div className="col-span-1"><Input type="number" value={item.quantity} onChange={e => updateCosLine(i, 'quantity', e.target.value)} className="h-9 text-right" /></div>
+                              <div className="col-span-1"><Input type="number" value={item.quantity} onChange={e => updateCosLine(i, 'quantity', e.target.value)} className="h-9 text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /></div>
                               <div className="col-span-1"><select value={item.unit} onChange={e => updateCosLine(i, 'unit', e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
                                 {UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}</select></div>
-                              <div className="col-span-1 flex gap-1 items-center">
+                              <div className="col-span-2 flex gap-1 items-center">
                                 <button
                                   type="button"
                                   onClick={() => setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], priceMode: c[i].priceMode === 'gross' ? 'net' : 'gross' }; return c })}
                                   title={item.priceMode === 'gross' ? 'Tryb: brutto — kliknij dla netto' : 'Tryb: netto — kliknij dla brutto'}
-                                  className={`shrink-0 h-9 px-1.5 rounded text-[10px] font-bold border transition-colors ${item.priceMode === 'gross' ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}
+                                  className={`shrink-0 h-9 w-8 rounded text-[11px] font-bold border transition-colors ${item.priceMode === 'gross' ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}
                                 >{item.priceMode === 'gross' ? 'B' : 'N'}</button>
-                                <Input type="number" value={item.netPrice} onChange={e => updateCosLine(i, 'netPrice', e.target.value)}
-                                  className={`h-9 text-right ${item.priceMode === 'gross' ? 'border-amber-300 bg-amber-50' : ''}`}
-                                  placeholder={item.priceMode === 'gross' ? 'brutto' : 'netto'} />
+                                <div className="flex-1 min-w-0">
+                                  <Input type="number" value={item.netPrice} onChange={e => updateCosLine(i, 'netPrice', e.target.value)}
+                                    className={`h-9 text-right font-medium [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${item.priceMode === 'gross' ? 'border-amber-300 bg-amber-50 text-amber-800' : ''}`}
+                                    placeholder={item.priceMode === 'gross' ? 'brutto' : 'netto'} />
+                                  {item.priceMode === 'gross' && Number(item.netPrice) > 0 && (
+                                    <div className="text-[10px] text-amber-600 text-right pr-1 mt-0.5">netto: {fmt2(getUnitNet(item))}</div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="col-span-1 text-right text-slate-700 font-medium text-xs">
+                              <div className="col-span-1 text-right text-slate-700 font-semibold text-xs tabular-nums">
                                 {getLineNet(item) > 0 ? fmt2(getLineNet(item)) : '—'}
-                                {item.priceMode === 'gross' && Number(item.netPrice) > 0 && (
-                                  <div className="text-[10px] text-amber-600">n:{fmt2(getUnitNet(item))}/szt</div>
-                                )}
                               </div>
                               <div className="col-span-1"><select value={item.vatRate} onChange={e => updateCosLine(i, 'vatRate', e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
                                 {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}</select></div>
@@ -4169,8 +4171,7 @@ export default function OpsDashboard() {
                               <div className="col-span-3">Opis</div>
                               <div className="col-span-2">Kategoria</div>
                               <div className="col-span-1 text-center">Ilość</div>
-                              <div className="col-span-1 text-center">N/B</div>
-                              <div className="col-span-2 text-right">Cena jedn.</div>
+                              <div className="col-span-3 text-right">Cena jedn.</div>
                               <div className="col-span-1 text-right">Netto</div>
                               <div className="col-span-1">VAT</div>
                               <div className="col-span-1" />
@@ -4222,26 +4223,26 @@ export default function OpsDashboard() {
                               </div>
                               {/* Ilość */}
                               <div className="col-span-1">
-                                <Input type="number" min="1" placeholder="1" value={item.quantity} onChange={e => updateSemisLine(i, 'quantity', e.target.value)} className="h-9 text-center text-sm" />
+                                <Input type="number" min="1" placeholder="1" value={item.quantity} onChange={e => updateSemisLine(i, 'quantity', e.target.value)} className="h-9 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                               </div>
-                              {/* N/B toggle */}
-                              <div className="col-span-1 flex justify-center">
+                              {/* N/B + Cena jednostkowa (merged) */}
+                              <div className="col-span-3 flex gap-1 items-center">
                                 <button type="button"
                                   onClick={() => setSemisLineItems(p => { const c = [...p]; c[i] = { ...c[i], priceMode: c[i].priceMode === 'gross' ? 'net' : 'gross' }; return c })}
                                   title={item.priceMode === 'gross' ? 'Tryb: brutto — kliknij dla netto' : 'Tryb: netto — kliknij dla brutto'}
-                                  className={`h-9 w-10 rounded text-[10px] font-bold border transition-colors ${item.priceMode === 'gross' ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}
+                                  className={`shrink-0 h-9 w-8 rounded text-[11px] font-bold border transition-colors ${item.priceMode === 'gross' ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}
                                 >{item.priceMode === 'gross' ? 'B' : 'N'}</button>
-                              </div>
-                              {/* Cena jednostkowa */}
-                              <div className="col-span-2">
-                                <div className="relative">
-                                  <span className="absolute left-2 top-2 text-gray-400 text-xs">zł</span>
-                                  <Input type="number" placeholder="0,00" value={item.totalNet} onChange={e => updateSemisLine(i, 'totalNet', e.target.value)} className="pl-6 h-9 text-right text-sm" />
+                                <div className="flex-1 min-w-0">
+                                  <Input type="number" placeholder="0,00" value={item.totalNet} onChange={e => updateSemisLine(i, 'totalNet', e.target.value)}
+                                    className={`h-9 text-right font-medium text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${item.priceMode === 'gross' ? 'border-amber-300 bg-amber-50 text-amber-800' : ''}`} />
+                                  {item.priceMode === 'gross' && Number(item.totalNet) > 0 && (
+                                    <div className="text-[10px] text-amber-600 text-right pr-1 mt-0.5">netto: {fmt2(getSemisLineNet(item) / (Number(item.quantity) || 1))}</div>
+                                  )}
                                 </div>
                               </div>
                               {/* Netto razem (read-only) */}
-                              <div className="col-span-1 text-right text-sm font-medium text-slate-700 tabular-nums">
-                                {getSemisLineNet(item) > 0 ? `${getSemisLineNet(item).toFixed(2)}` : '—'}
+                              <div className="col-span-1 text-right text-sm font-semibold text-slate-700 tabular-nums">
+                                {getSemisLineNet(item) > 0 ? fmt2(getSemisLineNet(item)) : '—'}
                               </div>
                               {/* VAT */}
                               <div className="col-span-1">
