@@ -47,7 +47,12 @@ type InvoiceLineItem = {
   source?: 'ingredient' | 'product'
 }
 type SemisLineItem = {
-  description: string; category: string; totalNet: string; vatRate: string
+  description: string
+  category: string
+  quantity: string          // how many units (default "1")
+  totalNet: string          // unit price — net or gross depending on priceMode
+  vatRate: string
+  priceMode?: 'net' | 'gross'
 }
 type InventoryJob = {
   id: string; location_id: string; type: 'MONTHLY' | 'WEEKLY'
@@ -203,7 +208,7 @@ const emptyLineItem: InvoiceLineItem = {
   product: '', cosCategory: '', quantity: '', unit: 'kg', netPrice: '', vatRate: '0.08',
   priceMode: 'net', ingredient_id: null, product_id: null, source: 'ingredient'
 }
-const emptySemisLine: SemisLineItem = { description: '', category: '', totalNet: '', vatRate: '0.23' }
+const emptySemisLine: SemisLineItem = { description: '', category: '', quantity: '1', totalNet: '', vatRate: '0.23', priceMode: 'net' }
 
 const emptySemisReconEntry: SemisReconciliationEntry = {
   location_id: '',
@@ -2605,11 +2610,17 @@ export default function OpsDashboard() {
   const cosTotalNet = cosLineItems.reduce((s, i) => s + getLineNet(i), 0)
   const cosTotalGross = cosLineItems.reduce((s, i) => s + getLineGross(i), 0)
   const cosTotalVat = cosTotalGross - cosTotalNet
-  const semisTotalNet = semisLineItems.reduce((s, item) => s + (Number(item.totalNet) || 0), 0)
-  const semisTotalGross = semisLineItems.reduce((s, item) => {
-    const net = Number(item.totalNet) || 0
-    return s + net * (1 + (Number(item.vatRate) || 0))
-  }, 0)
+
+  // SEMIS helpers — support quantity + net/gross toggle
+  const getSemisUnitNet = (item: SemisLineItem) => {
+    const price = Number(item.totalNet) || 0
+    if (item.priceMode === 'gross') return price / (1 + (Number(item.vatRate) || 0))
+    return price
+  }
+  const getSemisLineNet   = (item: SemisLineItem) => (Number(item.quantity) || 1) * getSemisUnitNet(item)
+  const getSemisLineGross = (item: SemisLineItem) => getSemisLineNet(item) * (1 + (Number(item.vatRate) || 0))
+  const semisTotalNet   = semisLineItems.reduce((s, item) => s + getSemisLineNet(item),   0)
+  const semisTotalGross = semisLineItems.reduce((s, item) => s + getSemisLineGross(item), 0)
 
   // Inventory filtered items
   const filteredJobItems = useMemo(() => {
@@ -2858,8 +2869,8 @@ export default function OpsDashboard() {
     if (invoiceType === 'SEMIS') {
       const validItems = semisLineItems.filter(item => item.category && Number(item.totalNet) > 0)
       const rows = validItems.map((item, idx) => {
-        const net = Number(item.totalNet) || 0
-        const gross = net * (1 + (Number(item.vatRate) || 0))
+        const net   = getSemisLineNet(item)
+        const gross = getSemisLineGross(item)
         return {
           location_id: selectedLocation.location_id,
           company_id: selectedLocation.locations.company_id,
@@ -3943,34 +3954,63 @@ export default function OpsDashboard() {
                       <Card className={`mb-6 ${invErr('semisAmount') ? 'border-red-400' : ''}`}>
                         <CardHeader><CardTitle>Krok 3 — Koszty (SEMIS)</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
+                          <p className="text-[11px] text-amber-600 flex items-center gap-1">
+                            💡 Kliknij <b>N/B</b> przy cenie żeby przełączyć między ceną netto a brutto
+                          </p>
                           <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
-                            <div className="col-span-4">Opis</div>
-                            <div className="col-span-3">Kategoria</div>
-                            <div className="col-span-2 text-right">Kwota netto</div>
-                            <div className="col-span-2">VAT</div>
+                            <div className="col-span-3">Opis</div>
+                            <div className="col-span-2">Kategoria</div>
+                            <div className="col-span-1 text-center">Ilość</div>
+                            <div className="col-span-1 text-center">N/B</div>
+                            <div className="col-span-2 text-right">Cena jedn.</div>
+                            <div className="col-span-1 text-right">Netto</div>
+                            <div className="col-span-1">VAT</div>
                             <div className="col-span-1" />
                           </div>
                           {semisLineItems.map((item, i) => (
                             <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                              <div className="col-span-4">
+                              {/* Opis */}
+                              <div className="col-span-3">
                                 <Input placeholder="Opis pozycji…" value={item.description} onChange={e => updateSemisLine(i, 'description', e.target.value)} className="h-9 text-sm" />
                               </div>
-                              <div className="col-span-3">
+                              {/* Kategoria */}
+                              <div className="col-span-2">
                                 <select value={item.category} onChange={e => updateSemisLine(i, 'category', e.target.value)}
                                   className={`h-9 w-full rounded-md border ${item.description && !item.category ? 'border-red-300' : 'border-input'} bg-background px-1 text-xs`}>
                                   <option value="">– wybierz –</option>
                                   {SEMIS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                                 </select>
                               </div>
-                              <div className="col-span-2">
-                                <div className="relative"><span className="absolute left-2 top-2 text-gray-400 text-xs">zł</span>
-                                  <Input type="number" placeholder="0,00" value={item.totalNet} onChange={e => updateSemisLine(i, 'totalNet', e.target.value)} className="pl-6 h-9 text-right text-sm" /></div>
+                              {/* Ilość */}
+                              <div className="col-span-1">
+                                <Input type="number" min="1" placeholder="1" value={item.quantity} onChange={e => updateSemisLine(i, 'quantity', e.target.value)} className="h-9 text-center text-sm" />
                               </div>
+                              {/* N/B toggle */}
+                              <div className="col-span-1 flex justify-center">
+                                <button type="button"
+                                  onClick={() => setSemisLineItems(p => { const c = [...p]; c[i] = { ...c[i], priceMode: c[i].priceMode === 'gross' ? 'net' : 'gross' }; return c })}
+                                  title={item.priceMode === 'gross' ? 'Tryb: brutto — kliknij dla netto' : 'Tryb: netto — kliknij dla brutto'}
+                                  className={`h-9 w-10 rounded text-[10px] font-bold border transition-colors ${item.priceMode === 'gross' ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}
+                                >{item.priceMode === 'gross' ? 'B' : 'N'}</button>
+                              </div>
+                              {/* Cena jednostkowa */}
                               <div className="col-span-2">
+                                <div className="relative">
+                                  <span className="absolute left-2 top-2 text-gray-400 text-xs">zł</span>
+                                  <Input type="number" placeholder="0,00" value={item.totalNet} onChange={e => updateSemisLine(i, 'totalNet', e.target.value)} className="pl-6 h-9 text-right text-sm" />
+                                </div>
+                              </div>
+                              {/* Netto razem (read-only) */}
+                              <div className="col-span-1 text-right text-sm font-medium text-slate-700 tabular-nums">
+                                {getSemisLineNet(item) > 0 ? `${getSemisLineNet(item).toFixed(2)}` : '—'}
+                              </div>
+                              {/* VAT */}
+                              <div className="col-span-1">
                                 <select value={item.vatRate} onChange={e => updateSemisLine(i, 'vatRate', e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
                                   {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                                 </select>
                               </div>
+                              {/* Usuń */}
                               <div className="col-span-1 flex justify-end">
                                 <Button variant="ghost" size="icon" onClick={() => removeSemisLine(i)} className="h-8 w-8 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
                               </div>
@@ -3996,7 +4036,7 @@ export default function OpsDashboard() {
                 {/* Excel import */}
                 <Card className="bg-green-50 border-green-200"><CardHeader><CardTitle className="text-green-800 flex items-center gap-2"><FileSpreadsheet className="w-5 h-5" />Import z Excela</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-green-700">Kolumny: <b>Data sprzedaży</b>, <b>Sprzedawca</b>, <b>RK</b>, <b>PLN Netto</b></p>
+                    <p className="text-sm text-green-700">Kolumny: <b>Data sprzedaży</b>, <b>Sprzedawca</b>, <b>RK</b> (opis / rodzaj kosztu), <b>PLN Netto</b></p>
                     <div className="bg-white p-6 rounded border border-green-200 text-center"><Input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} disabled={excelLoading} /></div>
                     {excelLoading ? <p className="text-center font-bold text-green-800 animate-pulse">Przetwarzanie…</p>
                       : <div className="flex items-center justify-center gap-2 text-green-700 text-sm"><CheckCircle className="w-4 h-4" />Gotowe</div>}
