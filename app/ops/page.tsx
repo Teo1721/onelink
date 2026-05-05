@@ -31,6 +31,7 @@ import { ChecklistOpsView } from '@/components/checklist-ops-view'
 import { useFormDraft } from '@/lib/use-form-draft'
 import { DraftBanner } from '@/components/draft-banner'
 import { SupplierAutocomplete } from '@/components/supplier-autocomplete'
+import { AiSidePanel } from '@/components/ai-side-panel'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -2163,6 +2164,7 @@ export default function OpsDashboard() {
   const [userRole, setUserRole] = useState('')
   const [userId, setUserId] = useState('')
   const [activeView, setActiveView] = useState<ActiveView>('reporting')
+  const [aiPanelOpen, setAiPanelOpen] = useState(true)
   const [reportDate, setReportDate] = useState('')
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [scheduleWeekStart, setScheduleWeekStart] = useState('')
@@ -3242,13 +3244,27 @@ export default function OpsDashboard() {
     })
   }
   const addCosLine = () => setCosLineItems(p => [...p, { ...emptyLineItem }])
-  const removeCosLine = (i: number) => setCosLineItems(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p)
+  const removeCosLine = (i: number) => { setCosSelected(new Set()); setCosLineItems(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p) }
   const updateCosLine = (i: number, f: keyof InvoiceLineItem, v: string) =>
     setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], [f]: v }; return c })
   const addSemisLine = () => setSemisLineItems(p => [...p, { ...emptySemisLine }])
-  const removeSemisLine = (i: number) => setSemisLineItems(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p)
+  const removeSemisLine = (i: number) => { setSemisSelected(new Set()); setSemisLineItems(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p) }
   const updateSemisLine = (i: number, f: keyof SemisLineItem, v: string) =>
     setSemisLineItems(p => { const c = [...p]; c[i] = { ...c[i], [f]: v }; return c })
+
+  // ── Bulk selection for COS ────────────────────────────────────────
+  const [cosSelected, setCosSelected] = useState<Set<number>>(new Set())
+  const toggleCosRow = (i: number) => setCosSelected(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+  const toggleCosAll = () => setCosSelected(prev => prev.size === cosLineItems.length ? new Set() : new Set(cosLineItems.map((_, i) => i)))
+  const cosBulkSetVat = (vatRate: string) => setCosLineItems(p => p.map((item, i) => cosSelected.has(i) ? { ...item, vatRate } : item))
+  const cosBulkSetMode = (mode: 'net' | 'gross') => setCosLineItems(p => p.map((item, i) => cosSelected.has(i) ? { ...item, priceMode: mode } : item))
+
+  // ── Bulk selection for SEMIS ──────────────────────────────────────
+  const [semisSelected, setSemisSelected] = useState<Set<number>>(new Set())
+  const toggleSemisRow = (i: number) => setSemisSelected(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+  const toggleSemisAll = () => setSemisSelected(prev => prev.size === semisLineItems.length ? new Set() : new Set(semisLineItems.map((_, i) => i)))
+  const semisBulkSetVat = (vatRate: string) => setSemisLineItems(p => p.map((item, i) => semisSelected.has(i) ? { ...item, vatRate } : item))
+  const semisBulkSetMode = (mode: 'net' | 'gross') => setSemisLineItems(p => p.map((item, i) => semisSelected.has(i) ? { ...item, priceMode: mode } : item))
 
   // ═══════════════════════════════════════════════════════════════════
   // RENDER
@@ -3256,7 +3272,7 @@ export default function OpsDashboard() {
   if (loading) return <div className="p-8 text-center text-gray-500"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Ładowanie…</div>
 
   if (!selectedLocation) return (
-    <div className="min-h-screen bg-gray-50 p-4 max-w-md mx-auto flex flex-col justify-center">
+    <div className="min-h-screen bg-[#F0F4FF] p-4 max-w-md mx-auto flex flex-col justify-center">
       <h1 className="text-2xl font-bold mb-8 text-center text-slate-900">Wybierz lokalizację</h1>
       <div className="grid gap-4">
         {myLocations.map((item, i) => (
@@ -3312,7 +3328,7 @@ export default function OpsDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
+    <div className="flex min-h-screen bg-[#F0F4FF] font-sans">
       <OpsSidebar
         locationName={selectedLocation.locations.name}
         activeView={activeView}
@@ -3322,7 +3338,20 @@ export default function OpsDashboard() {
         canSwitchToAdmin={['owner', 'superadmin'].includes(userRole)}
       />
 
-      <main className="flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 p-4 md:p-8">
+      <main className={`flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 p-4 md:p-8 transition-all duration-300 ${aiPanelOpen ? 'lg:mr-[300px]' : ''}`}>
+
+        {/* ── AI Panel toggle (shown only when panel is closed) ── */}
+        {!aiPanelOpen && (
+          <div className="hidden lg:flex justify-end mb-4">
+            <button
+              onClick={() => setAiPanelOpen(true)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-[12px] font-semibold shadow hover:opacity-90 transition-opacity"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              AI Dyrektorzy
+            </button>
+          </div>
+        )}
 
         {/* ── AI Director Tasks inbox ── */}
         {aiTasks.length > 0 && (
@@ -3994,14 +4023,54 @@ export default function OpsDashboard() {
                       <Card className={`mb-6 ${invErr('lineItems') ? 'border-red-400' : ''}`}>
                         <CardHeader><CardTitle>Krok 3 — Pozycje (COS)</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
-                          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
-                            <div className="col-span-1">Typ</div><div className="col-span-2">Produkt</div><div className="col-span-2">Kategoria</div>
-                            <div className="col-span-1 text-right">Ilość</div><div className="col-span-1">Jedn.</div>
-                            <div className="col-span-1 text-right">Cena</div><div className="col-span-1 text-right">Netto</div>
-                            <div className="col-span-1">VAT</div><div className="col-span-1 text-right">Brutto</div><div className="col-span-1" /></div>
-                          <div className="text-xs text-slate-400 mb-1">💡 Kliknij <b>N/B</b> przy cenie żeby przełączyć między ceną netto a brutto</div>
+                          {/* Header row */}
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={cosLineItems.length > 0 && cosSelected.size === cosLineItems.length}
+                              onChange={toggleCosAll}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+                            />
+                            <div className="flex-1 grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
+                              <div className="col-span-1">Typ</div><div className="col-span-2">Produkt</div><div className="col-span-2">Kategoria</div>
+                              <div className="col-span-1 text-right">Ilość</div><div className="col-span-1">Jedn.</div>
+                              <div className="col-span-1 text-right">Cena</div><div className="col-span-1 text-right">Netto</div>
+                              <div className="col-span-1">VAT</div><div className="col-span-1 text-right">Brutto</div><div className="col-span-1" />
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-400 -mt-2">💡 Kliknij <b>N/B</b> przy cenie żeby przełączyć między ceną netto a brutto</div>
+
+                          {/* Bulk action bar */}
+                          {cosSelected.size > 0 && (
+                            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
+                              <span className="text-[13px] font-bold text-blue-700">{cosSelected.size} {cosSelected.size === 1 ? 'wybrana' : 'wybrane'}</span>
+                              <div className="h-4 w-px bg-blue-200" />
+                              <span className="text-[12px] text-blue-600 font-medium">VAT:</span>
+                              <select
+                                defaultValue=""
+                                onChange={e => { if (e.target.value) { cosBulkSetVat(e.target.value); e.target.value = '' } }}
+                                className="h-8 rounded-lg border border-blue-300 bg-white text-[12px] px-2 text-blue-700 cursor-pointer"
+                              >
+                                <option value="" disabled>Ustaw VAT…</option>
+                                {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                              </select>
+                              <div className="h-4 w-px bg-blue-200" />
+                              <span className="text-[12px] text-blue-600 font-medium">Jedn.:</span>
+                              <button onClick={() => cosBulkSetMode('net')} className="h-8 px-2.5 rounded-lg bg-slate-100 border border-slate-300 text-[11px] font-bold text-slate-600 hover:bg-slate-200 transition-colors">Netto</button>
+                              <button onClick={() => cosBulkSetMode('gross')} className="h-8 px-2.5 rounded-lg bg-amber-100 border border-amber-400 text-[11px] font-bold text-amber-700 hover:bg-amber-200 transition-colors">Brutto</button>
+                              <button onClick={() => setCosSelected(new Set())} className="ml-auto text-[12px] text-blue-400 hover:text-blue-600 transition-colors">Odznacz</button>
+                            </div>
+                          )}
+
                           {cosLineItems.map((item, i) => (
-                            <div key={i} className="grid grid-cols-12 gap-2 items-center text-sm">
+                            <div key={i} className={`flex items-center gap-2 rounded-lg transition-colors ${cosSelected.has(i) ? 'bg-blue-50/60' : ''}`}>
+                              <input
+                                type="checkbox"
+                                checked={cosSelected.has(i)}
+                                onChange={() => toggleCosRow(i)}
+                                className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+                              />
+                            <div className="flex-1 grid grid-cols-12 gap-2 items-center text-sm">
                               <div className="col-span-1">
                                 <select value={item.source || 'ingredient'} onChange={e => setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], source: e.target.value as 'ingredient' | 'product', product: '', ingredient_id: null, product_id: null }; return c })}
                                   className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
@@ -4068,6 +4137,7 @@ export default function OpsDashboard() {
                                 {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}</select></div>
                               <div className="col-span-1 text-right font-medium">{getLineGross(item) > 0 ? fmt2(getLineGross(item)) : '—'}</div>
                               <div className="col-span-1 flex justify-end"><Button variant="ghost" size="icon" onClick={() => removeCosLine(i)} className="h-8 w-8 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button></div>
+                            </div>
                             </div>))}
                           <Button variant="outline" size="sm" onClick={addCosLine}><Plus className="w-4 h-4 mr-1" />Dodaj pozycję</Button>
                           <div className="border-t-2 pt-4 mt-4 grid grid-cols-3 gap-4">
@@ -4086,18 +4156,58 @@ export default function OpsDashboard() {
                           <p className="text-[11px] text-amber-600 flex items-center gap-1">
                             💡 Kliknij <b>N/B</b> przy cenie żeby przełączyć między ceną netto a brutto
                           </p>
-                          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
-                            <div className="col-span-3">Opis</div>
-                            <div className="col-span-2">Kategoria</div>
-                            <div className="col-span-1 text-center">Ilość</div>
-                            <div className="col-span-1 text-center">N/B</div>
-                            <div className="col-span-2 text-right">Cena jedn.</div>
-                            <div className="col-span-1 text-right">Netto</div>
-                            <div className="col-span-1">VAT</div>
-                            <div className="col-span-1" />
+
+                          {/* Header row */}
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={semisLineItems.length > 0 && semisSelected.size === semisLineItems.length}
+                              onChange={toggleSemisAll}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+                            />
+                            <div className="flex-1 grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
+                              <div className="col-span-3">Opis</div>
+                              <div className="col-span-2">Kategoria</div>
+                              <div className="col-span-1 text-center">Ilość</div>
+                              <div className="col-span-1 text-center">N/B</div>
+                              <div className="col-span-2 text-right">Cena jedn.</div>
+                              <div className="col-span-1 text-right">Netto</div>
+                              <div className="col-span-1">VAT</div>
+                              <div className="col-span-1" />
+                            </div>
                           </div>
+
+                          {/* Bulk action bar */}
+                          {semisSelected.size > 0 && (
+                            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
+                              <span className="text-[13px] font-bold text-blue-700">{semisSelected.size} {semisSelected.size === 1 ? 'wybrana' : 'wybrane'}</span>
+                              <div className="h-4 w-px bg-blue-200" />
+                              <span className="text-[12px] text-blue-600 font-medium">VAT:</span>
+                              <select
+                                defaultValue=""
+                                onChange={e => { if (e.target.value) { semisBulkSetVat(e.target.value); e.target.value = '' } }}
+                                className="h-8 rounded-lg border border-blue-300 bg-white text-[12px] px-2 text-blue-700 cursor-pointer"
+                              >
+                                <option value="" disabled>Ustaw VAT…</option>
+                                {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                              </select>
+                              <div className="h-4 w-px bg-blue-200" />
+                              <span className="text-[12px] text-blue-600 font-medium">Jedn.:</span>
+                              <button onClick={() => semisBulkSetMode('net')} className="h-8 px-2.5 rounded-lg bg-slate-100 border border-slate-300 text-[11px] font-bold text-slate-600 hover:bg-slate-200 transition-colors">Netto</button>
+                              <button onClick={() => semisBulkSetMode('gross')} className="h-8 px-2.5 rounded-lg bg-amber-100 border border-amber-400 text-[11px] font-bold text-amber-700 hover:bg-amber-200 transition-colors">Brutto</button>
+                              <button onClick={() => setSemisSelected(new Set())} className="ml-auto text-[12px] text-blue-400 hover:text-blue-600 transition-colors">Odznacz</button>
+                            </div>
+                          )}
+
                           {semisLineItems.map((item, i) => (
-                            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                            <div key={i} className={`flex items-center gap-2 rounded-lg transition-colors ${semisSelected.has(i) ? 'bg-blue-50/60' : ''}`}>
+                              <input
+                                type="checkbox"
+                                checked={semisSelected.has(i)}
+                                onChange={() => toggleSemisRow(i)}
+                                className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+                              />
+                            <div className="flex-1 grid grid-cols-12 gap-2 items-center">
                               {/* Opis */}
                               <div className="col-span-3">
                                 <Input placeholder="Opis pozycji…" value={item.description} onChange={e => updateSemisLine(i, 'description', e.target.value)} className="h-9 text-sm" />
@@ -4143,6 +4253,7 @@ export default function OpsDashboard() {
                               <div className="col-span-1 flex justify-end">
                                 <Button variant="ghost" size="icon" onClick={() => removeSemisLine(i)} className="h-8 w-8 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
                               </div>
+                            </div>
                             </div>
                           ))}
                           <Button variant="outline" size="sm" onClick={addSemisLine}><Plus className="w-4 h-4 mr-1" />Dodaj pozycję</Button>
@@ -4810,6 +4921,12 @@ export default function OpsDashboard() {
 
       </main>
 
+      {aiPanelOpen && (
+        <AiSidePanel
+          onNavigate={v => setActiveView(v as ActiveView)}
+          onClose={() => setAiPanelOpen(false)}
+        />
+      )}
       <HelpDrawer
         activeView={activeView}
         keyMap={{
