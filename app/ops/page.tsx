@@ -2868,25 +2868,39 @@ export default function OpsDashboard() {
 
     if (invoiceType === 'SEMIS') {
       const validItems = semisLineItems.filter(item => item.category && Number(item.totalNet) > 0)
-      const rows = validItems.map((item, idx) => {
-        const net   = getSemisLineNet(item)
-        const gross = getSemisLineGross(item)
-        return {
-          location_id: selectedLocation.location_id,
-          company_id: selectedLocation.locations.company_id,
-          invoice_type: 'SEMIS' as const, supplier_name: invoiceCommon.supplier,
-          invoice_number: invoiceCommon.invoiceNumber,
-          service_date: invoiceCommon.saleDate, receipt_date: invoiceCommon.receiptDate,
-          total_net: net, total_vat: gross - net,
-          total_gross: gross, semis_category: item.category,
-          description: item.description, payment_method: 'przelew',
-          attachment_url: idx === 0 ? attachmentUrl : null, status: 'submitted',
-        }
-      })
-      const { data: invRows, error: e } = await supabase.from('invoices').insert(rows).select('id')
+
+      // Build one consolidated description so all line items are visible in the admin panel
+      const descriptionSummary = validItems.map(item => {
+        const catLabel = SEMIS_CATEGORIES.find(c => c.value === item.category)?.label || item.category
+        const lineNet  = getSemisLineNet(item)
+        const qty      = Number(item.quantity) || 1
+        const qtyStr   = qty > 1 ? ` (${qty}×)` : ''
+        return `${item.description || catLabel}${qtyStr}: ${lineNet.toFixed(2)} zł`
+      }).join(' | ')
+
+      // One row per invoice — avoids the unique constraint on (invoice_number, location_id)
+      const semisRow = {
+        location_id:    selectedLocation.location_id,
+        company_id:     selectedLocation.locations.company_id,
+        invoice_type:   'SEMIS' as const,
+        supplier_name:  invoiceCommon.supplier,
+        invoice_number: invoiceCommon.invoiceNumber,
+        service_date:   invoiceCommon.saleDate,
+        receipt_date:   invoiceCommon.receiptDate,
+        total_net:      semisTotalNet,
+        total_vat:      semisTotalGross - semisTotalNet,
+        total_gross:    semisTotalGross,
+        semis_category: validItems[0]?.category || '',
+        description:    descriptionSummary,
+        payment_method: 'przelew',
+        attachment_url: attachmentUrl,
+        status:         'submitted',
+      }
+
+      const { data: invRows, error: e } = await supabase.from('invoices').insert([semisRow]).select('id')
       if (e) { alert('Błąd: ' + e.message); setUploading(false); return }
       invoiceId = invRows?.[0]?.id
-      alert(`✅ Faktura SEMIS zapisana (${rows.length} pozycji)`)
+      alert(`✅ Faktura SEMIS zapisana (${validItems.length} pozycji)`)
     }
 
     // Create notification for admin
