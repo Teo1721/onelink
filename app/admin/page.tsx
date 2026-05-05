@@ -16,7 +16,7 @@ import {
   ChevronRight, Edit2, ToggleLeft, ToggleRight,
   Clock, TrendingUp, AlertCircle, FileText, Receipt, Bell,
   ThumbsUp, ThumbsDown, ExternalLink, ImageIcon,
-  User, CreditCard, LogOut, ShieldCheck, X,
+  User, CreditCard, LogOut, ShieldCheck, X, Zap,
 } from 'lucide-react'
 import { HRDashboardView, AttendanceView, LeaveView, SwapView, CertsView, DocumentsView } from '@/components/hr-views'
 import { TipsView } from '@/components/tips-view'
@@ -45,6 +45,7 @@ import { RevenueForecast } from '@/components/revenue-forecast'
 import { CsvImport } from '@/components/csv-import'
 import { MenuEngineering } from '@/components/menu-engineering'
 import { ChecklistAdminView } from '@/components/checklist-admin-view'
+import { AiSidePanel } from '@/components/ai-side-panel'
 
 
 // ================= Ingredients DB =================
@@ -827,6 +828,7 @@ export default function AdminDashboard() {
   const [companyId, setCompanyId] = useState('')
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
+  const [aiPanelOpen, setAiPanelOpen] = useState(true)
 
   // ── Schedule ──
   const [scheduleLocationId, setScheduleLocationId] = useState<string>('')
@@ -2101,7 +2103,7 @@ export default function AdminDashboard() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="flex bg-[#F7F8FA] min-h-screen">
+    <div className="flex bg-[#F0F4FF] min-h-screen">
       <Sidebar
         adminName={adminName}
         activeView={activeView}
@@ -2124,7 +2126,7 @@ export default function AdminDashboard() {
         userRole={adminRole}
       />
 
-      <main className="flex-1 md:ml-[216px] pt-16 md:pt-0 pb-20 md:pb-0 p-4 md:p-8">
+      <main className={`flex-1 md:ml-[216px] pt-16 md:pt-0 pb-20 md:pb-0 p-4 md:p-8 transition-all duration-300 ${aiPanelOpen ? 'lg:mr-[300px]' : ''}`}>
         {/* ── ACCOUNT VIEW ── */}
         {activeView === 'account' && (
           <AdminAccountView supabase={supabase} router={router} />
@@ -2163,6 +2165,17 @@ export default function AdminDashboard() {
           </div>
           {dateLabel && <span className="text-[13px] text-[#6B7280]">{dateLabel}</span>}
           {loading && <span className="text-[12px] text-[#2563EB] animate-pulse">Ładowanie…</span>}
+          <div className="ml-auto hidden lg:flex">
+            {!aiPanelOpen && (
+              <button
+                onClick={() => setAiPanelOpen(true)}
+                className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white text-[12px] font-semibold shadow hover:opacity-90 transition-opacity"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                AI Dyrektorzy
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════ */}
@@ -4163,6 +4176,12 @@ export default function AdminDashboard() {
         </>}
       </main>
 
+      {aiPanelOpen && (
+        <AiSidePanel
+          onNavigate={v => setActiveView(v as ActiveView)}
+          onClose={() => setAiPanelOpen(false)}
+        />
+      )}
       <HelpDrawer activeView={activeView} />
     </div>
   )
