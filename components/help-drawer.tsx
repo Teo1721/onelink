@@ -431,7 +431,7 @@ export function HelpDrawer({ activeView, keyMap }: Props) {
       {/* ── Floating ? button ── */}
       <button
         onClick={() => { setOpen(true); setSearch(''); setExpanded(null) }}
-        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-[#2563EB] text-white shadow-lg shadow-blue-500/30 hover:bg-[#1D4ED8] transition-all hover:scale-105 flex items-center justify-center"
+        className="fixed bottom-[76px] md:bottom-6 right-4 md:right-6 z-40 w-12 h-12 rounded-full bg-[#2563EB] text-white shadow-lg shadow-blue-500/30 hover:bg-[#1D4ED8] transition-all hover:scale-105 flex items-center justify-center"
         title="Pomoc"
       >
         <HelpCircle className="w-6 h-6" />
