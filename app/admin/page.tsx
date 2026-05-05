@@ -44,6 +44,7 @@ import { SettingsView } from '@/components/settings-view'
 import { RevenueForecast } from '@/components/revenue-forecast'
 import { CsvImport } from '@/components/csv-import'
 import { MenuEngineering } from '@/components/menu-engineering'
+import { ChecklistAdminView } from '@/components/checklist-admin-view'
 
 
 // ================= Ingredients DB =================
@@ -471,6 +472,7 @@ type ActiveView =
   | 'revenue_forecast'
   | 'csv_import'
   | 'menu_engineering'
+  | 'checklist'
 
 /* ================================================================== */
 /*  HELPERS                                                            */
@@ -4148,6 +4150,16 @@ export default function AdminDashboard() {
             )}
           </>
         )}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/*  CHECKLIST                                            */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {activeView === 'checklist' && (
+          <ChecklistAdminView
+            supabase={supabase}
+            locations={locations}
+          />
+        )}
+
         </>}
       </main>
 

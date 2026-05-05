@@ -27,6 +27,10 @@ import {
 import * as XLSX from 'xlsx'
 import QRCode from 'react-qr-code'
 import { HelpDrawer } from '@/components/help-drawer'
+import { ChecklistOpsView } from '@/components/checklist-ops-view'
+import { useFormDraft } from '@/lib/use-form-draft'
+import { DraftBanner } from '@/components/draft-banner'
+import { SupplierAutocomplete } from '@/components/supplier-autocomplete'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -109,7 +113,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -2254,6 +2258,56 @@ export default function OpsDashboard() {
   const [inventorySaving, setInventorySaving] = useState(false)
 
   // ═══════════════════════════════════════════════════════════════════
+  // FORM DRAFTS (Supabase-backed auto-save)
+  // ═══════════════════════════════════════════════════════════════════
+  const locationId = selectedLocation?.location_id ?? null
+
+  // Daily report draft
+  const reportDraftData = useMemo(
+    () => ({ salesForm, employeeRows }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(salesForm), JSON.stringify(employeeRows)]
+  )
+  const reportDraft = useFormDraft({
+    supabase,
+    formType: 'daily_report',
+    locationId,
+    date: reportDate,
+    data: reportDraftData,
+    enabled: activeView === 'reporting' && reportingSubView === 'form',
+  })
+
+  // COS invoice draft
+  const cosDraftData = useMemo(
+    () => ({ invoiceCommon, cosLineItems }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(invoiceCommon), JSON.stringify(cosLineItems)]
+  )
+  const cosDraft = useFormDraft({
+    supabase,
+    formType: 'invoice_cos',
+    locationId,
+    date: new Date().toISOString().slice(0, 10),
+    data: cosDraftData,
+    enabled: activeView === 'invoices' && invoiceType === 'COS',
+  })
+
+  // SEMIS invoice draft
+  const semisDraftData = useMemo(
+    () => ({ invoiceCommon, semisLineItems }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(invoiceCommon), JSON.stringify(semisLineItems)]
+  )
+  const semisDraft = useFormDraft({
+    supabase,
+    formType: 'invoice_semis',
+    locationId,
+    date: new Date().toISOString().slice(0, 10),
+    data: semisDraftData,
+    enabled: activeView === 'invoices' && invoiceType === 'SEMIS',
+  })
+
+  // ═══════════════════════════════════════════════════════════════════
   // FORMATTING
   // ═══════════════════════════════════════════════════════════════════
   const fmt0 = (v: number) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', maximumFractionDigits: 0 }).format(v || 0)
@@ -2745,6 +2799,7 @@ export default function OpsDashboard() {
 
     alert('✅ Raport zapisany i wysłany do zatwierdzenia')
     setValidationErrors([])
+    reportDraft.clearDraft()
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -2917,6 +2972,8 @@ export default function OpsDashboard() {
       })
     }
 
+    if (invoiceType === 'COS') cosDraft.clearDraft()
+    else if (invoiceType === 'SEMIS') semisDraft.clearDraft()
     setInvoiceType('')
     setInvoiceCommon({ supplier: '', invoiceNumber: '', saleDate: new Date().toISOString().split('T')[0], receiptDate: new Date().toISOString().split('T')[0] })
     setCosLineItems([{ ...emptyLineItem }])
@@ -3452,6 +3509,17 @@ export default function OpsDashboard() {
         )}
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  CHECKLIST                                              ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'checklist' && selectedLocation && (
+          <ChecklistOpsView
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  ATTENDANCE / TIME RECORDS                              ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'attendance' && selectedLocation && (
@@ -3606,6 +3674,18 @@ export default function OpsDashboard() {
 
             {reportingSubView === 'form' && (
             <>
+            <DraftBanner
+              savedAt={reportDraft.savedAt}
+              hasDraft={reportDraft.hasDraft}
+              saving={reportDraft.saving}
+              onRestore={async () => {
+                const saved = await reportDraft.loadDraft()
+                if (!saved) return
+                setSalesForm(saved.salesForm)
+                setEmployeeRows(saved.employeeRows)
+              }}
+              onDiscard={reportDraft.clearDraft}
+            />
             {validationErrors.length > 0 && (
               <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-lg p-5">
                 <div className="flex items-center gap-2 mb-3"><ShieldAlert className="w-6 h-6 text-red-600" />
@@ -3834,6 +3914,35 @@ export default function OpsDashboard() {
 
                 {invoiceType && (
                   <>
+                    {/* Draft banner — shown once invoice type is chosen */}
+                    {invoiceType === 'COS' && (
+                      <DraftBanner
+                        savedAt={cosDraft.savedAt}
+                        hasDraft={cosDraft.hasDraft}
+                        saving={cosDraft.saving}
+                        onRestore={async () => {
+                          const saved = await cosDraft.loadDraft()
+                          if (!saved) return
+                          setInvoiceCommon(saved.invoiceCommon)
+                          setCosLineItems(saved.cosLineItems)
+                        }}
+                        onDiscard={cosDraft.clearDraft}
+                      />
+                    )}
+                    {invoiceType === 'SEMIS' && (
+                      <DraftBanner
+                        savedAt={semisDraft.savedAt}
+                        hasDraft={semisDraft.hasDraft}
+                        saving={semisDraft.saving}
+                        onRestore={async () => {
+                          const saved = await semisDraft.loadDraft()
+                          if (!saved) return
+                          setInvoiceCommon(saved.invoiceCommon)
+                          setSemisLineItems(saved.semisLineItems)
+                        }}
+                        onDiscard={semisDraft.clearDraft}
+                      />
+                    )}
                     {/* Common fields */}
                     <Card className="mb-6"><CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5" />Krok 2 — Dane faktury
                       <span className={`ml-2 text-xs px-2 py-1 rounded-full font-semibold ${invoiceType === 'COS' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
@@ -3841,7 +3950,13 @@ export default function OpsDashboard() {
                       <CardContent>
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2"><Label>Dostawca *{invErr('supplier') && <span className="text-red-500 text-xs ml-1">⚠</span>}</Label>
-                            <Input placeholder="np. Hurtownia" value={invoiceCommon.supplier} onChange={e => setInvoiceCommon({...invoiceCommon, supplier: e.target.value})} className={invErr('supplier') ? 'border-red-400' : ''} /></div>
+                            <SupplierAutocomplete
+                              value={invoiceCommon.supplier}
+                              onChange={v => setInvoiceCommon({ ...invoiceCommon, supplier: v })}
+                              supabase={supabase}
+                              companyId={selectedLocation?.locations?.company_id}
+                              hasError={invErr('supplier')}
+                            /></div>
                           <div className="space-y-2"><Label>Numer faktury *{invErr('invoiceNumber') && <span className="text-red-500 text-xs ml-1">⚠</span>}</Label>
                             <Input placeholder="FV/2025/001" value={invoiceCommon.invoiceNumber} onChange={e => setInvoiceCommon({...invoiceCommon, invoiceNumber: e.target.value})} className={invErr('invoiceNumber') ? 'border-red-400' : ''} /></div>
                           <div className="space-y-2"><Label>Data sprzedaży *</Label><Input type="date" value={invoiceCommon.saleDate} onChange={e => setInvoiceCommon({...invoiceCommon, saleDate: e.target.value})} /></div>
