@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertTriangle, Plus, Send, CheckCircle2, Truck, Loader2 } from 'lucide-react'
+import { SupplierAutocomplete } from '@/components/supplier-autocomplete'
 
 interface StockItem {
   id: string
@@ -478,7 +479,14 @@ export function CentralWarehousePanel({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-1.5 block">Dostawca</Label>
-                    <Input value={newDelivery.supplier_name} onChange={(e) => setNewDelivery({ ...newDelivery, supplier_name: e.target.value })} placeholder="Nazwa dostawcy" className="h-8 text-[13px]" />
+                    <SupplierAutocomplete
+                      value={newDelivery.supplier_name}
+                      onChange={v => setNewDelivery({ ...newDelivery, supplier_name: v })}
+                      supabase={supabase}
+                      companyId={companyId}
+                      placeholder="Nazwa dostawcy"
+                      className="[&_input]:h-8 [&_input]:text-[13px]"
+                    />
                   </div>
                   <div>
                     <Label className="text-[11px] font-semibold uppercase tracking-widest text-[#9CA3AF] mb-1.5 block">Numer faktury</Label>
