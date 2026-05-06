@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import IngredientAutocomplete from '@/components/ingredient-autocomplete'
 import ProductAutocomplete from '@/components/product-autocomplete'
+import SemisDescriptionAutocomplete from '@/components/semis-description-autocomplete'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -2234,6 +2235,10 @@ export default function OpsDashboard() {
   const [excelLoading, setExcelLoading] = useState(false)
   const [invoiceSubView, setInvoiceSubView] = useState<'form' | 'semis_recon' | 'history'>('form')
   const [invoiceHistory, setInvoiceHistory] = useState<InvoiceHistoryItem[]>([])
+  const [invoiceHistoryPage, setInvoiceHistoryPage] = useState(0)
+  const [invoiceHistoryTotal, setInvoiceHistoryTotal] = useState(0)
+  const [invoiceHistoryFilter, setInvoiceHistoryFilter] = useState<'all' | 'COS' | 'SEMIS'>('all')
+  const INVOICE_PAGE_SIZE = 50
 
   // ── SEMIS Reconciliation Entry ──
   const [semisReconEntries, setSemisReconEntries] = useState<SemisReconciliationEntry[]>([])
@@ -2559,15 +2564,20 @@ export default function OpsDashboard() {
   useEffect(() => {
     if (!selectedLocation || activeView !== 'invoices' || invoiceSubView !== 'history') return
     const fetchInvHistory = async () => {
-      const { data } = await supabase.from('invoices')
-        .select('id, invoice_type, supplier_name, invoice_number, service_date, total_gross, status, created_at')
+      const from = invoiceHistoryPage * INVOICE_PAGE_SIZE
+      const to   = from + INVOICE_PAGE_SIZE - 1
+      let q = supabase.from('invoices')
+        .select('id, invoice_type, supplier_name, invoice_number, service_date, total_gross, status, created_at', { count: 'exact' })
         .eq('location_id', selectedLocation.location_id)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .range(from, to)
+      if (invoiceHistoryFilter !== 'all') q = q.eq('invoice_type', invoiceHistoryFilter)
+      const { data, count } = await q
       if (data) setInvoiceHistory(data as InvoiceHistoryItem[])
+      if (count !== null) setInvoiceHistoryTotal(count)
     }
     fetchInvHistory()
-  }, [selectedLocation, activeView, invoiceSubView, supabase])
+  }, [selectedLocation, activeView, invoiceSubView, supabase, invoiceHistoryPage, invoiceHistoryFilter, INVOICE_PAGE_SIZE])
 
   // ═══════════════════════════════════════════════════════════════════
   // LOAD: Inventory products
@@ -3258,6 +3268,8 @@ export default function OpsDashboard() {
   const toggleCosAll = () => setCosSelected(prev => prev.size === cosLineItems.length ? new Set() : new Set(cosLineItems.map((_, i) => i)))
   const cosBulkSetVat = (vatRate: string) => setCosLineItems(p => p.map((item, i) => cosSelected.has(i) ? { ...item, vatRate } : item))
   const cosBulkSetMode = (mode: 'net' | 'gross') => setCosLineItems(p => p.map((item, i) => cosSelected.has(i) ? { ...item, priceMode: mode } : item))
+  const cosBulkSetCategory = (cosCategory: string) => setCosLineItems(p => p.map((item, i) => cosSelected.has(i) ? { ...item, cosCategory } : item))
+  const cosBulkSetUnit = (unit: string) => setCosLineItems(p => p.map((item, i) => cosSelected.has(i) ? { ...item, unit } : item))
 
   // ── Bulk selection for SEMIS ──────────────────────────────────────
   const [semisSelected, setSemisSelected] = useState<Set<number>>(new Set())
@@ -3265,6 +3277,7 @@ export default function OpsDashboard() {
   const toggleSemisAll = () => setSemisSelected(prev => prev.size === semisLineItems.length ? new Set() : new Set(semisLineItems.map((_, i) => i)))
   const semisBulkSetVat = (vatRate: string) => setSemisLineItems(p => p.map((item, i) => semisSelected.has(i) ? { ...item, vatRate } : item))
   const semisBulkSetMode = (mode: 'net' | 'gross') => setSemisLineItems(p => p.map((item, i) => semisSelected.has(i) ? { ...item, priceMode: mode } : item))
+  const semisBulkSetCategory = (category: string) => setSemisLineItems(p => p.map((item, i) => semisSelected.has(i) ? { ...item, category } : item))
 
   // ═══════════════════════════════════════════════════════════════════
   // RENDER
@@ -3911,7 +3924,7 @@ export default function OpsDashboard() {
                   <FileText className="w-4 h-4 mr-2" />Nowa faktura</Button>
                 <Button variant={invoiceSubView === 'semis_recon' ? 'default' : 'outline'} onClick={() => setInvoiceSubView('semis_recon')}>
                   <RefreshCw className="w-4 h-4 mr-2" />Uzgodnienie SEMIS</Button>
-                <Button variant={invoiceSubView === 'history' ? 'default' : 'outline'} onClick={() => setInvoiceSubView('history')}>
+                <Button variant={invoiceSubView === 'history' ? 'default' : 'outline'} onClick={() => { setInvoiceSubView('history'); setInvoiceHistoryPage(0) }}>
                   <Clock className="w-4 h-4 mr-2" />Historia</Button>
               </div>
             </header>
@@ -4042,10 +4055,10 @@ export default function OpsDashboard() {
 
                           {/* Bulk action bar */}
                           {cosSelected.size > 0 && (
-                            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
-                              <span className="text-[13px] font-bold text-blue-700">{cosSelected.size} {cosSelected.size === 1 ? 'wybrana' : 'wybrane'}</span>
-                              <div className="h-4 w-px bg-blue-200" />
-                              <span className="text-[12px] text-blue-600 font-medium">VAT:</span>
+                            <div className="flex flex-wrap items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
+                              <span className="text-[13px] font-bold text-blue-700 shrink-0">{cosSelected.size} {cosSelected.size === 1 ? 'wybrana' : 'wybrane'}</span>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">VAT:</span>
                               <select
                                 defaultValue=""
                                 onChange={e => { if (e.target.value) { cosBulkSetVat(e.target.value); e.target.value = '' } }}
@@ -4054,11 +4067,31 @@ export default function OpsDashboard() {
                                 <option value="" disabled>Ustaw VAT…</option>
                                 {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                               </select>
-                              <div className="h-4 w-px bg-blue-200" />
-                              <span className="text-[12px] text-blue-600 font-medium">Jedn.:</span>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">Kat.:</span>
+                              <select
+                                defaultValue=""
+                                onChange={e => { if (e.target.value) { cosBulkSetCategory(e.target.value); e.target.value = '' } }}
+                                className="h-8 rounded-lg border border-blue-300 bg-white text-[12px] px-2 text-blue-700 cursor-pointer"
+                              >
+                                <option value="" disabled>Ustaw kat.…</option>
+                                {COS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                              </select>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">Jedn.:</span>
+                              <select
+                                defaultValue=""
+                                onChange={e => { if (e.target.value) { cosBulkSetUnit(e.target.value); e.target.value = '' } }}
+                                className="h-8 rounded-lg border border-blue-300 bg-white text-[12px] px-2 text-blue-700 cursor-pointer"
+                              >
+                                <option value="" disabled>Ustaw jedn.…</option>
+                                {UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                              </select>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">Cena:</span>
                               <button onClick={() => cosBulkSetMode('net')} className="h-8 px-2.5 rounded-lg bg-slate-100 border border-slate-300 text-[11px] font-bold text-slate-600 hover:bg-slate-200 transition-colors">Netto</button>
                               <button onClick={() => cosBulkSetMode('gross')} className="h-8 px-2.5 rounded-lg bg-amber-100 border border-amber-400 text-[11px] font-bold text-amber-700 hover:bg-amber-200 transition-colors">Brutto</button>
-                              <button onClick={() => setCosSelected(new Set())} className="ml-auto text-[12px] text-blue-400 hover:text-blue-600 transition-colors">Odznacz</button>
+                              <button onClick={() => setCosSelected(new Set())} className="ml-auto text-[12px] text-blue-400 hover:text-blue-600 transition-colors shrink-0">Odznacz</button>
                             </div>
                           )}
 
@@ -4180,10 +4213,10 @@ export default function OpsDashboard() {
 
                           {/* Bulk action bar */}
                           {semisSelected.size > 0 && (
-                            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
-                              <span className="text-[13px] font-bold text-blue-700">{semisSelected.size} {semisSelected.size === 1 ? 'wybrana' : 'wybrane'}</span>
-                              <div className="h-4 w-px bg-blue-200" />
-                              <span className="text-[12px] text-blue-600 font-medium">VAT:</span>
+                            <div className="flex flex-wrap items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
+                              <span className="text-[13px] font-bold text-blue-700 shrink-0">{semisSelected.size} {semisSelected.size === 1 ? 'wybrana' : 'wybrane'}</span>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">VAT:</span>
                               <select
                                 defaultValue=""
                                 onChange={e => { if (e.target.value) { semisBulkSetVat(e.target.value); e.target.value = '' } }}
@@ -4192,11 +4225,21 @@ export default function OpsDashboard() {
                                 <option value="" disabled>Ustaw VAT…</option>
                                 {VAT_RATES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                               </select>
-                              <div className="h-4 w-px bg-blue-200" />
-                              <span className="text-[12px] text-blue-600 font-medium">Jedn.:</span>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">Kat.:</span>
+                              <select
+                                defaultValue=""
+                                onChange={e => { if (e.target.value) { semisBulkSetCategory(e.target.value); e.target.value = '' } }}
+                                className="h-8 rounded-lg border border-blue-300 bg-white text-[12px] px-2 text-blue-700 cursor-pointer"
+                              >
+                                <option value="" disabled>Ustaw kat.…</option>
+                                {SEMIS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                              </select>
+                              <div className="h-4 w-px bg-blue-200 shrink-0" />
+                              <span className="text-[12px] text-blue-600 font-medium shrink-0">Cena:</span>
                               <button onClick={() => semisBulkSetMode('net')} className="h-8 px-2.5 rounded-lg bg-slate-100 border border-slate-300 text-[11px] font-bold text-slate-600 hover:bg-slate-200 transition-colors">Netto</button>
                               <button onClick={() => semisBulkSetMode('gross')} className="h-8 px-2.5 rounded-lg bg-amber-100 border border-amber-400 text-[11px] font-bold text-amber-700 hover:bg-amber-200 transition-colors">Brutto</button>
-                              <button onClick={() => setSemisSelected(new Set())} className="ml-auto text-[12px] text-blue-400 hover:text-blue-600 transition-colors">Odznacz</button>
+                              <button onClick={() => setSemisSelected(new Set())} className="ml-auto text-[12px] text-blue-400 hover:text-blue-600 transition-colors shrink-0">Odznacz</button>
                             </div>
                           )}
 
@@ -4211,7 +4254,13 @@ export default function OpsDashboard() {
                             <div className="flex-1 grid grid-cols-12 gap-2 items-center">
                               {/* Opis */}
                               <div className="col-span-3">
-                                <Input placeholder="Opis pozycji…" value={item.description} onChange={e => updateSemisLine(i, 'description', e.target.value)} className="h-9 text-sm" />
+                                <SemisDescriptionAutocomplete
+                                  value={item.description}
+                                  onChange={v => updateSemisLine(i, 'description', v)}
+                                  supabase={supabase}
+                                  locationId={selectedLocation?.location_id ?? undefined}
+                                  companyId={selectedLocation?.locations?.company_id ?? undefined}
+                                />
                               </div>
                               {/* Kategoria */}
                               <div className="col-span-2">
@@ -4439,39 +4488,98 @@ export default function OpsDashboard() {
             {/* ── Invoice History ── */}
             {invoiceSubView === 'history' && (
               <Card>
-                <CardHeader><CardTitle>Historia wysłanych faktur</CardTitle></CardHeader>
+                <CardHeader>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <CardTitle>Historia wysłanych faktur</CardTitle>
+                    <div className="flex items-center gap-2">
+                      {/* Type filter */}
+                      <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[12px] font-medium">
+                        {(['all', 'COS', 'SEMIS'] as const).map(f => (
+                          <button key={f}
+                            onClick={() => { setInvoiceHistoryFilter(f); setInvoiceHistoryPage(0) }}
+                            className={`px-3 py-1.5 transition-colors ${invoiceHistoryFilter === f ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                            {f === 'all' ? 'Wszystkie' : f === 'COS' ? '🛒 COS' : '📋 SEMIS'}
+                          </button>
+                        ))}
+                      </div>
+                      {invoiceHistoryTotal > 0 && (
+                        <span className="text-[12px] text-slate-500">{invoiceHistoryTotal} faktur</span>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
                 <CardContent>
                   {invoiceHistory.length === 0 ? (
                     <p className="text-slate-400 text-center py-8">Brak faktur</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead><tr className="border-b text-left text-xs text-slate-500 uppercase">
-                          <th className="py-2 pr-3">Typ</th>
-                          <th className="pr-3">Nr faktury</th>
-                          <th className="pr-3">Dostawca</th>
-                          <th className="pr-3">Data sprzedaży</th>
-                          <th className="pr-3 text-right">Brutto</th>
-                          <th className="pr-3">Status</th>
-                        </tr></thead>
-                        <tbody>
-                          {invoiceHistory.map(inv => (
-                            <tr key={inv.id} className="border-b hover:bg-gray-50">
-                              <td className="py-2 pr-3">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${inv.invoice_type === 'COS' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                                  {inv.invoice_type === 'COS' ? 'COS (magazyn)' : 'SEMIS (koszt)'}
-                                </span>
-                              </td>
-                              <td className="pr-3 font-medium">{inv.invoice_number}</td>
-                              <td className="pr-3">{inv.supplier_name}</td>
-                              <td className="pr-3 text-slate-500">{inv.service_date}</td>
-                              <td className="pr-3 text-right font-medium">{fmt2(Number(inv.total_gross) || 0)}</td>
-                              <td className="pr-3"><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_LABELS[inv.status]?.color || 'bg-gray-100'}`}>{STATUS_LABELS[inv.status]?.label || inv.status}</span></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b text-left text-xs text-slate-500 uppercase">
+                            <th className="py-2 pr-3">Typ</th>
+                            <th className="pr-3">Nr faktury</th>
+                            <th className="pr-3">Dostawca</th>
+                            <th className="pr-3">Data sprzedaży</th>
+                            <th className="pr-3 text-right">Brutto</th>
+                            <th className="pr-3">Status</th>
+                          </tr></thead>
+                          <tbody>
+                            {invoiceHistory.map(inv => (
+                              <tr key={inv.id} className="border-b hover:bg-gray-50">
+                                <td className="py-2 pr-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${inv.invoice_type === 'COS' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                    {inv.invoice_type === 'COS' ? 'COS' : 'SEMIS'}
+                                  </span>
+                                </td>
+                                <td className="pr-3 font-medium">{inv.invoice_number}</td>
+                                <td className="pr-3">{inv.supplier_name}</td>
+                                <td className="pr-3 text-slate-500">{inv.service_date}</td>
+                                <td className="pr-3 text-right font-medium">{fmt2(Number(inv.total_gross) || 0)}</td>
+                                <td className="pr-3"><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_LABELS[inv.status]?.color || 'bg-gray-100'}`}>{STATUS_LABELS[inv.status]?.label || inv.status}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination */}
+                      {invoiceHistoryTotal > INVOICE_PAGE_SIZE && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                          <button
+                            onClick={() => setInvoiceHistoryPage(p => Math.max(0, p - 1))}
+                            disabled={invoiceHistoryPage === 0}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            ← Poprzednia
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.ceil(invoiceHistoryTotal / INVOICE_PAGE_SIZE) }, (_, i) => i).map(p => (
+                              <button key={p}
+                                onClick={() => setInvoiceHistoryPage(p)}
+                                className={`w-8 h-8 rounded-lg text-[12px] font-semibold transition-colors ${
+                                  p === invoiceHistoryPage
+                                    ? 'bg-slate-800 text-white'
+                                    : 'text-slate-500 hover:bg-slate-100'
+                                }`}>
+                                {p + 1}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setInvoiceHistoryPage(p => Math.min(Math.ceil(invoiceHistoryTotal / INVOICE_PAGE_SIZE) - 1, p + 1))}
+                            disabled={invoiceHistoryPage >= Math.ceil(invoiceHistoryTotal / INVOICE_PAGE_SIZE) - 1}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[13px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Następna →
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Page info */}
+                      <p className="text-center text-[11px] text-slate-400 mt-2">
+                        Strona {invoiceHistoryPage + 1} z {Math.ceil(invoiceHistoryTotal / INVOICE_PAGE_SIZE)} · wyświetlono {invoiceHistory.length} z {invoiceHistoryTotal}
+                      </p>
+                    </>
                   )}
                 </CardContent>
               </Card>
