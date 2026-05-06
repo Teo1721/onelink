@@ -2352,19 +2352,35 @@ export default function OpsDashboard() {
       if (['regional_manager', 'accounting', 'employee'].includes(role)) setIsReadOnly(true)
       fetchAiTasks()
 
-      // Owners/superadmins load all company locations; others use user_access
+      // Owners/superadmins: check for explicit user_access rows first.
+      // If they have any → restrict to those locations only.
+      // If none → fall back to all company locations (full access).
       if (['owner', 'superadmin'].includes(role) && profile?.company_id) {
-        const { data: locs } = await supabase
-          .from('locations')
-          .select('id, name, company_id')
-          .eq('company_id', profile.company_id)
-          .order('name')
-        const mapped = (locs ?? []).map((l: any) => ({
-          location_id: l.id,
-          locations: { id: l.id, name: l.name, company_id: l.company_id },
-        }))
-        setMyLocations(mapped as any)
-        if (mapped.length === 1) setSelectedLocation(mapped[0] as any)
+        const { data: accessRows } = await supabase
+          .from('user_access')
+          .select('location_id, locations ( id, name, company_id )')
+          .eq('user_id', user.id)
+
+        if (accessRows && accessRows.length > 0) {
+          // Explicit restriction — use only these locations
+          // @ts-expect-error - Supabase join type mismatch
+          setMyLocations(accessRows)
+          // @ts-expect-error - Supabase join type mismatch
+          if (accessRows.length === 1) setSelectedLocation(accessRows[0])
+        } else {
+          // No restriction — load all company locations
+          const { data: locs } = await supabase
+            .from('locations')
+            .select('id, name, company_id')
+            .eq('company_id', profile.company_id)
+            .order('name')
+          const mapped = (locs ?? []).map((l: any) => ({
+            location_id: l.id,
+            locations: { id: l.id, name: l.name, company_id: l.company_id },
+          }))
+          setMyLocations(mapped as any)
+          if (mapped.length === 1) setSelectedLocation(mapped[0] as any)
+        }
       } else {
         const { data: access } = await supabase
           .from('user_access')
