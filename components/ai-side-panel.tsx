@@ -86,6 +86,14 @@ export function AiSidePanel({ onNavigate, onClose }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Map side-panel agent keys to the director keys the briefings API understands
+  const DIRECTOR_MAP: Record<string, string> = {
+    cfo:      'profit',
+    hr:       'hr',
+    sales:    'revenue',
+    investor: 'investor',
+  }
+
   const sendMessage = async (text?: string) => {
     const msg = text ?? input.trim()
     if (!msg || loading) return
@@ -93,11 +101,15 @@ export function AiSidePanel({ onNavigate, onClose }: Props) {
     setMessages(prev => [...prev, { role: 'user', text: msg }])
     setLoading(true)
     try {
-      const res = await fetch('/api/ai/ask', {
+      const res = await fetch('/api/ai/briefings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: msg, director: activeAgent.key }),
+        body: JSON.stringify({
+          question: msg,
+          director: DIRECTOR_MAP[activeAgent.key] ?? activeAgent.key,
+        }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setMessages(prev => [...prev, {
         role: 'agent',
@@ -107,7 +119,7 @@ export function AiSidePanel({ onNavigate, onClose }: Props) {
     } catch {
       setMessages(prev => [...prev, {
         role: 'agent',
-        text: 'Przepraszam, wystąpił błąd. Spróbuj ponownie.',
+        text: 'Przepraszam, wystąpił błąd połączenia. Spróbuj ponownie.',
         agentName: activeAgent.name,
       }])
     } finally {
