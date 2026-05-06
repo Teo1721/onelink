@@ -36,6 +36,9 @@ type Submission = {
   done_count: number
   not_done_count: number
   submitted_at: string
+  status: 'pending' | 'approved' | 'rejected'
+  admin_note?: string | null
+  type?: 'opening' | 'closing'
   location?: { name: string }
 }
 
