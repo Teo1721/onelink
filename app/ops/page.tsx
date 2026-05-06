@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import IngredientAutocomplete from '@/components/ingredient-autocomplete'
 import ProductAutocomplete from '@/components/product-autocomplete'
 import SemisDescriptionAutocomplete from '@/components/semis-description-autocomplete'
+import { InvoiceAiPreview, type AiInvoiceResult } from '@/components/invoice-ai-preview'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -2240,6 +2241,11 @@ export default function OpsDashboard() {
   const [invoiceHistoryFilter, setInvoiceHistoryFilter] = useState<'all' | 'COS' | 'SEMIS'>('all')
   const INVOICE_PAGE_SIZE = 50
 
+  // ── AI invoice scan ──
+  const [aiScanning, setAiScanning] = useState(false)
+  const [aiScanError, setAiScanError] = useState<string | null>(null)
+  const [aiPreviewData, setAiPreviewData] = useState<AiInvoiceResult | null>(null)
+
   // ── SEMIS Reconciliation Entry ──
   const [semisReconEntries, setSemisReconEntries] = useState<SemisReconciliationEntry[]>([])
   const [newSemisEntry, setNewSemisEntry] = useState<SemisReconciliationEntry>({ ...emptySemisReconEntry })
@@ -3253,6 +3259,77 @@ export default function OpsDashboard() {
       return { ...prev, [key]: updated }
     })
   }
+  // ── AI scan invoice ────────────────────────────────────────────────
+  const handleAiScan = async () => {
+    if (!invoiceFiles[0]) return
+    setAiScanning(true); setAiScanError(null)
+    try {
+      const file = invoiceFiles[0]
+      let fileToSend: File | Blob = file
+
+      // PDFs must be rendered to an image first so vision API can read them
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      if (isPdf) {
+        try {
+          const { pdfToImageBlob } = await import('@/lib/pdf-to-image')
+          const imgBlob = await pdfToImageBlob(file)
+          fileToSend = new File([imgBlob], file.name.replace(/\.pdf$/i, '.jpg'), { type: 'image/jpeg' })
+        } catch (pdfErr) {
+          setAiScanError('Błąd renderowania PDF. Spróbuj zapisać jako obraz JPG/PNG.')
+          setAiScanning(false)
+          return
+        }
+      }
+
+      const fd = new FormData()
+      fd.append('file', fileToSend)
+      const res = await fetch('/api/ai/read-invoice', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) { setAiScanError(json.error || 'Błąd odczytu'); return }
+      setAiPreviewData(json as AiInvoiceResult)
+    } catch (e: unknown) {
+      setAiScanError((e as Error).message || 'Błąd połączenia')
+    } finally {
+      setAiScanning(false)
+    }
+  }
+
+  const applyAiResult = (data: AiInvoiceResult) => {
+    // Fill header
+    setInvoiceCommon({
+      supplier: data.supplier || invoiceCommon.supplier,
+      invoiceNumber: data.invoiceNumber || invoiceCommon.invoiceNumber,
+      saleDate: data.saleDate || invoiceCommon.saleDate,
+      receiptDate: data.receiptDate || invoiceCommon.receiptDate,
+    })
+    // Set invoice type
+    if (data.invoiceType) setInvoiceType(data.invoiceType)
+
+    if (data.invoiceType === 'COS') {
+      setCosLineItems(data.items.map(it => ({
+        ...emptyLineItem,
+        product: it.name,
+        quantity: it.quantity,
+        unit: it.unit || 'szt',
+        netPrice: it.unitPrice,
+        vatRate: it.vatRate || '0.08',
+        cosCategory: it.category || '',
+        priceMode: 'net' as const,
+      })))
+    } else {
+      setSemisLineItems(data.items.map(it => ({
+        ...emptySemisLine,
+        description: it.name,
+        quantity: it.quantity || '1',
+        totalNet: it.unitPrice,
+        vatRate: it.vatRate || '0.23',
+        category: it.category || '',
+        priceMode: 'net' as const,
+      })))
+    }
+    setAiPreviewData(null)
+  }
+
   const addCosLine = () => setCosLineItems(p => [...p, { ...emptyLineItem }])
   const removeCosLine = (i: number) => { setCosSelected(new Set()); setCosLineItems(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p) }
   const updateCosLine = (i: number, f: keyof InvoiceLineItem, v: string) =>
@@ -3915,6 +3992,14 @@ export default function OpsDashboard() {
         {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  2. INVOICES & COSTS                                     ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {aiPreviewData && (
+          <InvoiceAiPreview
+            data={aiPreviewData}
+            onApply={applyAiResult}
+            onClose={() => setAiPreviewData(null)}
+          />
+        )}
+
         {activeView === 'invoices' && (
           <div className="max-w-[1200px]">
             <header className="mb-6">
@@ -4013,7 +4098,7 @@ export default function OpsDashboard() {
                             type="file"
                             accept="image/*,application/pdf"
                             multiple
-                            onChange={e => setInvoiceFiles(Array.from(e.target.files || []))}
+                            onChange={e => { setInvoiceFiles(Array.from(e.target.files || [])); setAiScanError(null) }}
                           />
                           {invoiceFiles.length > 0 && (
                             <ul className="mt-2 space-y-1">
@@ -4026,6 +4111,34 @@ export default function OpsDashboard() {
                                 </li>
                               ))}
                             </ul>
+                          )}
+                          {/* AI scan button */}
+                          {invoiceFiles.length > 0 && (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={handleAiScan}
+                                disabled={aiScanning}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white text-[13px] font-bold hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
+                              >
+                                {aiScanning ? (
+                                  <>
+                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                    Odczytuję fakturę…
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.346A3.99 3.99 0 0014 18H10a3.99 3.99 0 00-2.829-1.172l-.346-.346z" /></svg>
+                                    Odczytaj fakturę AI ✨
+                                  </>
+                                )}
+                              </button>
+                              {aiScanError && (
+                                <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />{aiScanError}
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="mt-4 bg-slate-50 rounded p-3 text-sm text-slate-600">💳 Płatność: <b>Przelew</b> (auto)</div>
