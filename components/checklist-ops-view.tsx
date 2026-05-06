@@ -218,11 +218,12 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
       const active = templates.filter(t => t.type === checklistType || t.type === 'both')
       const doneCount    = active.filter(t => entries[t.id]?.status === 'done').length
       const notDoneCount = active.filter(t => entries[t.id]?.status === 'not_done').length
-      await supabase.from('checklist_submissions').upsert({
+      const { error: subErr } = await supabase.from('checklist_submissions').upsert({
         location_id: locationId, date: today, type: checklistType,
         total_items: active.length, done_count: doneCount, not_done_count: notDoneCount,
         submitted_at: new Date().toISOString(), status: 'pending', admin_note: null,
       }, { onConflict: 'location_id,date,type' })
+      if (subErr) throw subErr
       await fetchData()
     } catch (e: unknown) {
       setError((e as Error).message || 'Błąd wysyłki')
