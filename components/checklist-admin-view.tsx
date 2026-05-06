@@ -44,6 +44,7 @@ type EntryWithTemplate = {
   template_id: string
   status: 'done' | 'not_done'
   photo_url?: string | null
+  photo_urls?: string[]
   note?: string | null
   template?: { title: string }
 }
@@ -904,16 +905,22 @@ function SubmissionsTab({ supabase, locations }: { supabase: SupabaseClient; loc
                           ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                           : <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
                         <span className="flex-1 text-[13px] text-[#374151]">{entry.template?.title || entry.template_id}</span>
-                        {entry.photo_url && (
-                          <a href={entry.photo_url} target="_blank" rel="noopener noreferrer">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={entry.photo_url} alt="foto"
-                              className="h-12 w-16 object-cover rounded-lg border border-[#E5E7EB] hover:opacity-80 transition-opacity" />
-                          </a>
-                        )}
-                        {entry.status === 'done' && !entry.photo_url && (
-                          <span className="text-[11px] text-[#9CA3AF]">brak zdjęcia</span>
-                        )}
+                        {(() => {
+                          const photos: string[] = entry.photo_urls?.length
+                            ? entry.photo_urls
+                            : entry.photo_url ? [entry.photo_url] : []
+                          return photos.length > 0 ? (
+                            <div className="flex gap-1.5 flex-wrap justify-end">
+                              {photos.map((url, idx) => (
+                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={url} alt={`foto ${idx + 1}`}
+                                    className="h-12 w-12 object-cover rounded-lg border border-[#E5E7EB] hover:opacity-80 transition-opacity" />
+                                </a>
+                              ))}
+                            </div>
+                          ) : null
+                        })()}
                       </div>
                     ))}
                   </div>

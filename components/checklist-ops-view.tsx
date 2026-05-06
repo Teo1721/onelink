@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle, RefreshCw, Send, ChevronDown, ChevronRight, Sun, Moon } from 'lucide-react'
+import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle, RefreshCw, Send, ChevronDown, ChevronRight, Sun, Moon, X, Plus } from 'lucide-react'
 import { CameraCapture } from '@/components/camera-capture'
 
 type ChecklistType = 'opening' | 'closing' | 'both'
@@ -22,6 +22,7 @@ type ChecklistEntry = {
   template_id: string
   status: 'done' | 'not_done'
   photo_url?: string | null
+  photo_urls?: string[]
   note?: string | null
 }
 
@@ -98,17 +99,24 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // ── Upsert a checklist entry ──────────────────────────────────────
-  const upsertEntry = async (templateId: string, status: 'done' | 'not_done', photoUrl?: string) => {
+  // ── Upsert a checklist entry (appendPhotoUrl is added to the photos array) ──
+  const upsertEntry = async (templateId: string, status: 'done' | 'not_done', appendPhotoUrl?: string) => {
     setSaving(prev => ({ ...prev, [templateId]: true }))
     try {
       const existing = entries[templateId]
+      // Build the new photos array by appending (never replacing)
+      const currentPhotos: string[] = existing?.photo_urls?.length
+        ? existing.photo_urls
+        : existing?.photo_url ? [existing.photo_url] : []
+      const newPhotos = appendPhotoUrl ? [...currentPhotos, appendPhotoUrl] : currentPhotos
+
       if (existing) {
         const { data, error: err } = await supabase
           .from('checklist_entries')
           .update({
             status,
-            photo_url: photoUrl ?? existing.photo_url ?? null,
+            photo_url:  newPhotos[0] ?? null,
+            photo_urls: newPhotos,
             updated_at: new Date().toISOString(),
           })
           .eq('id', existing.id)
@@ -124,7 +132,8 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
             location_id: locationId,
             date: today,
             status,
-            photo_url: photoUrl ?? null,
+            photo_url:  appendPhotoUrl ?? null,
+            photo_urls: newPhotos,
           })
           .select()
           .single()
@@ -136,6 +145,41 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
     } finally {
       setSaving(prev => ({ ...prev, [templateId]: false }))
     }
+  }
+
+  // ── Remove a single photo from an entry ───────────────────────────
+  const removePhoto = async (templateId: string, urlToRemove: string) => {
+    const existing = entries[templateId]
+    if (!existing) return
+    setSaving(prev => ({ ...prev, [templateId]: true }))
+    try {
+      const currentPhotos: string[] = existing.photo_urls?.length
+        ? existing.photo_urls
+        : existing.photo_url ? [existing.photo_url] : []
+      const newPhotos = currentPhotos.filter(u => u !== urlToRemove)
+      const { data, error: err } = await supabase
+        .from('checklist_entries')
+        .update({
+          photo_url:  newPhotos[0] ?? null,
+          photo_urls: newPhotos,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select()
+        .single()
+      if (err) throw err
+      setEntries(prev => ({ ...prev, [templateId]: data as ChecklistEntry }))
+    } catch (e: unknown) {
+      setError((e as Error).message || 'Błąd usuwania zdjęcia')
+    } finally {
+      setSaving(prev => ({ ...prev, [templateId]: false }))
+    }
+  }
+
+  // ── Open camera to add a photo to any done item ───────────────────
+  const openCameraForPhoto = (templateId: string) => {
+    pendingTemplateRef.current = templateId
+    setCameraForTemplate(templateId)
   }
 
   // ── Tap "done" ────────────────────────────────────────────────────
@@ -417,28 +461,60 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
                                     Zrób zdjęcie aparatem
                                   </span>
                                 )}
-                                {isDone && entry?.photo_url && (
-                                  <div className="mt-2 flex items-end gap-2">
-                                    <a href={entry.photo_url} target="_blank" rel="noopener noreferrer">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img
-                                        src={entry.photo_url}
-                                        alt="Zdjęcie"
-                                        className="h-16 w-24 object-cover rounded-lg border border-green-200 hover:opacity-80 transition-opacity"
-                                      />
-                                    </a>
-                                    {!submitted && (
-                                      <button
-                                        onClick={() => handleDone(template)}
-                                        disabled={isSaving}
-                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#E5E7EB] text-[11px] font-medium text-[#6B7280] hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors disabled:opacity-40"
-                                      >
-                                        <RefreshCw className="w-3 h-3" />
-                                        Powtórz
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
+                                {isDone && (() => {
+                                  const photos: string[] = entry?.photo_urls?.length
+                                    ? entry.photo_urls
+                                    : entry?.photo_url ? [entry.photo_url] : []
+                                  return (
+                                    <div className="mt-2">
+                                      {photos.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                          {photos.map((url, idx) => (
+                                            <div key={idx} className="relative shrink-0">
+                                              <a href={url} target="_blank" rel="noopener noreferrer">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                  src={url}
+                                                  alt={`Zdjęcie ${idx + 1}`}
+                                                  className="h-16 w-16 object-cover rounded-xl border border-green-200 hover:opacity-80 transition-opacity"
+                                                />
+                                              </a>
+                                              {!submitted && (
+                                                <button
+                                                  onClick={() => removePhoto(template.id, url)}
+                                                  disabled={isSaving}
+                                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-40 shadow-sm"
+                                                >
+                                                  <X className="w-3 h-3" />
+                                                </button>
+                                              )}
+                                            </div>
+                                          ))}
+                                          {!submitted && (
+                                            <button
+                                              onClick={() => openCameraForPhoto(template.id)}
+                                              disabled={isSaving}
+                                              className="h-16 w-16 rounded-xl border-2 border-dashed border-[#D1D5DB] flex flex-col items-center justify-center gap-1 text-[#9CA3AF] hover:border-[#2563EB] hover:text-[#2563EB] hover:bg-blue-50 transition-colors disabled:opacity-40 shrink-0"
+                                            >
+                                              <Plus className="w-4 h-4" />
+                                              <span className="text-[9px] font-medium">Dodaj</span>
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                      {photos.length === 0 && !submitted && (
+                                        <button
+                                          onClick={() => openCameraForPhoto(template.id)}
+                                          disabled={isSaving}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[#D1D5DB] text-[11px] font-medium text-[#6B7280] hover:border-[#2563EB] hover:text-[#2563EB] hover:bg-blue-50 transition-colors disabled:opacity-40"
+                                        >
+                                          <Camera className="w-3.5 h-3.5" />
+                                          Dodaj zdjęcie
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
                               </div>
 
                               {/* Buttons */}
