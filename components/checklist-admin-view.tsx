@@ -919,8 +919,6 @@ function SubmissionsTab({ supabase, locations }: { supabase: SupabaseClient; loc
                                 </a>
                               ))}
                             </div>
-                          ) : entry.status === 'done' ? (
-                            <span className="text-[11px] text-[#9CA3AF]">brak zdjęcia</span>
                           ) : null
                         })()}
                       </div>
