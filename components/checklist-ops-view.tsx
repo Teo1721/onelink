@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle, RefreshCw, Send } from 'lucide-react'
+import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle, RefreshCw, Send, ChevronDown, ChevronRight, Sun, Moon } from 'lucide-react'
 import { CameraCapture } from '@/components/camera-capture'
+
+type ChecklistType = 'opening' | 'closing' | 'both'
 
 type ChecklistTemplate = {
   id: string
@@ -11,6 +13,8 @@ type ChecklistTemplate = {
   description?: string | null
   requires_photo: boolean
   sort_order: number
+  type: ChecklistType
+  category: string | null
 }
 
 type ChecklistEntry = {
@@ -36,8 +40,10 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
   const [saving, setSaving]         = useState<Record<string, boolean>>({})
   const [uploading, setUploading]   = useState<Record<string, boolean>>({})
   const [error, setError]           = useState<string | null>(null)
-  const [submitted, setSubmitted]   = useState(false)
+  const [submittedTypes, setSubmittedTypes] = useState<Set<'opening' | 'closing'>>(new Set())
   const [submitting, setSubmitting] = useState(false)
+  const [checklistType, setChecklistType] = useState<'opening' | 'closing'>('opening')
+  const [closedCategories, setClosedCategories] = useState<Set<string>>(new Set())
 
   // Camera modal state
   const [cameraForTemplate, setCameraForTemplate] = useState<string | null>(null)
@@ -69,13 +75,20 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
       }
       setEntries(map)
 
-      const { data: sub } = await supabase
+      // Fetch submissions for both types
+      const { data: subs } = await supabase
         .from('checklist_submissions')
-        .select('id')
+        .select('type')
         .eq('location_id', locationId)
         .eq('date', today)
-        .single()
-      setSubmitted(!!sub)
+
+      const submitted = new Set<'opening' | 'closing'>()
+      for (const s of (subs || []) as { type: string }[]) {
+        if (s.type === 'opening' || s.type === 'closing') {
+          submitted.add(s.type)
+        }
+      }
+      setSubmittedTypes(submitted)
     } catch (e: unknown) {
       setError((e as Error).message || 'Błąd wczytywania checklisty')
     } finally {
@@ -128,7 +141,6 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
   // ── Tap "done" ────────────────────────────────────────────────────
   const handleDone = (template: ChecklistTemplate) => {
     if (template.requires_photo) {
-      // Open real-time camera modal — no gallery access possible
       pendingTemplateRef.current = template.id
       setCameraForTemplate(template.id)
     } else {
@@ -164,21 +176,23 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
     }
   }
 
-  // ── Submit checklist to admin ────────────────────────────────────
+  // ── Submit checklist ────────────────────────────────────────────
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-      const doneCount    = templates.filter(t => entries[t.id]?.status === 'done').length
-      const notDoneCount = templates.filter(t => entries[t.id]?.status === 'not_done').length
+      const activeTemplates = templates.filter(t => t.type === checklistType || t.type === 'both')
+      const doneCount    = activeTemplates.filter(t => entries[t.id]?.status === 'done').length
+      const notDoneCount = activeTemplates.filter(t => entries[t.id]?.status === 'not_done').length
       await supabase.from('checklist_submissions').upsert({
         location_id:    locationId,
         date:           today,
-        total_items:    templates.length,
+        type:           checklistType,
+        total_items:    activeTemplates.length,
         done_count:     doneCount,
         not_done_count: notDoneCount,
         submitted_at:   new Date().toISOString(),
-      }, { onConflict: 'location_id,date' })
-      setSubmitted(true)
+      }, { onConflict: 'location_id,date,type' })
+      setSubmittedTypes(prev => new Set([...prev, checklistType]))
     } catch (e: unknown) {
       setError((e as Error).message || 'Błąd wysyłki')
     } finally {
@@ -186,11 +200,32 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
     }
   }
 
-  // ── Derived counts ────────────────────────────────────────────────
-  const doneCount    = templates.filter(t => entries[t.id]?.status === 'done').length
-  const notDoneCount = templates.filter(t => entries[t.id]?.status === 'not_done').length
+  // ── Derived state ─────────────────────────────────────────────────
+  const activeTemplates = templates.filter(t => t.type === checklistType || t.type === 'both')
+  const submitted = submittedTypes.has(checklistType)
+
+  const doneCount    = activeTemplates.filter(t => entries[t.id]?.status === 'done').length
+  const notDoneCount = activeTemplates.filter(t => entries[t.id]?.status === 'not_done').length
   const filledCount  = doneCount + notDoneCount
-  const allFilled    = templates.length > 0 && filledCount === templates.length
+  const allFilled    = activeTemplates.length > 0 && filledCount === activeTemplates.length
+
+  // Group by category
+  const grouped: Record<string, ChecklistTemplate[]> = {}
+  for (const t of activeTemplates) {
+    const cat = t.category || '__none__'
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat].push(t)
+  }
+  const sortedCats = Object.keys(grouped).sort((a, b) =>
+    a === '__none__' ? 1 : b === '__none__' ? -1 : a.localeCompare(b, 'pl'))
+
+  const toggleCategory = (cat: string) => {
+    setClosedCategories(prev => {
+      const n = new Set(prev)
+      n.has(cat) ? n.delete(cat) : n.add(cat)
+      return n
+    })
+  }
 
   // ── Render ────────────────────────────────────────────────────────
   if (loading) {
@@ -203,7 +238,7 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
 
   return (
     <>
-      {/* Camera modal — full-screen, real-time only, no gallery */}
+      {/* Camera modal */}
       {cameraForTemplate && (
         <CameraCapture
           onCapture={handleCameraCapture}
@@ -213,9 +248,39 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
 
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-5">
           <h1 className="text-[22px] font-bold text-[#111827]">Checklista dzienna</h1>
           <p className="text-[13px] text-[#6B7280] mt-0.5">{locationName} · {today}</p>
+        </div>
+
+        {/* Opening / Closing tabs */}
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={() => setChecklistType('opening')}
+            className={[
+              'flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-semibold transition-all',
+              checklistType === 'opening'
+                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200'
+                : 'bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-emerald-300 hover:text-emerald-600',
+            ].join(' ')}
+          >
+            <Sun className="w-4 h-4" />
+            Otwarcie
+            {submittedTypes.has('opening') && <CheckCircle2 className="w-3.5 h-3.5 ml-0.5" />}
+          </button>
+          <button
+            onClick={() => setChecklistType('closing')}
+            className={[
+              'flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-semibold transition-all',
+              checklistType === 'closing'
+                ? 'bg-indigo-500 text-white shadow-md shadow-indigo-200'
+                : 'bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-indigo-300 hover:text-indigo-600',
+            ].join(' ')}
+          >
+            <Moon className="w-4 h-4" />
+            Zamknięcie
+            {submittedTypes.has('closing') && <CheckCircle2 className="w-3.5 h-3.5 ml-0.5" />}
+          </button>
         </div>
 
         {error && (
@@ -229,13 +294,20 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
         {/* Progress */}
         <div className="mb-5 bg-white border border-[#E5E7EB] rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] font-semibold text-[#374151]">Postęp</span>
-            <span className="text-[13px] text-[#6B7280]">{filledCount} / {templates.length}</span>
+            <span className="text-[13px] font-semibold text-[#374151]">
+              {checklistType === 'opening' ? '🌅 Otwarcie' : '🌙 Zamknięcie'} — Postęp
+            </span>
+            <span className="text-[13px] text-[#6B7280]">{filledCount} / {activeTemplates.length}</span>
           </div>
           <div className="h-2 bg-[#F3F4F6] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#2563EB] to-[#06B6D4] rounded-full transition-all duration-300"
-              style={{ width: templates.length > 0 ? `${(filledCount / templates.length) * 100}%` : '0%' }}
+              className={[
+                'h-full rounded-full transition-all duration-300',
+                checklistType === 'opening'
+                  ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+                  : 'bg-gradient-to-r from-indigo-400 to-indigo-600',
+              ].join(' ')}
+              style={{ width: activeTemplates.length > 0 ? `${(filledCount / activeTemplates.length) * 100}%` : '0%' }}
             />
           </div>
           <div className="flex gap-4 mt-2">
@@ -248,101 +320,157 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
         {submitted && (
           <div className="flex items-center gap-2 p-3 mb-5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-[13px] font-medium">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            Checklista wysłana do admina
+            Checklista {checklistType === 'opening' ? 'otwarcia' : 'zamknięcia'} wysłana do admina
             <button onClick={fetchData} className="ml-auto text-green-500 hover:text-green-700">
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* Items */}
-        {templates.length === 0 ? (
+        {/* Items grouped by category */}
+        {activeTemplates.length === 0 ? (
           <div className="text-center py-16 text-[#9CA3AF] text-[14px]">
             Brak pozycji na checkliście.<br />
             <span className="text-[12px]">Admin może dodać pozycje w panelu administracyjnym.</span>
           </div>
         ) : (
-          <div className="space-y-3 mb-6">
-            {templates.map(template => {
-              const entry      = entries[template.id]
-              const isSaving   = saving[template.id] || uploading[template.id]
-              const isDone     = entry?.status === 'done'
-              const isNotDone  = entry?.status === 'not_done'
+          <div className="space-y-4 mb-6">
+            {sortedCats.map(cat => {
+              const items = grouped[cat]
+              const catLabel = cat === '__none__' ? null : cat
+              const isClosed = closedCategories.has(cat)
+
+              const catFilled = items.filter(t => entries[t.id] !== undefined).length
+              const catDone   = items.filter(t => entries[t.id]?.status === 'done').length
 
               return (
-                <div
-                  key={template.id}
-                  className={[
-                    'bg-white border rounded-2xl p-4 transition-all',
-                    isDone    ? 'border-green-200 bg-green-50/40'
-                    : isNotDone ? 'border-red-200 bg-red-50/30'
-                    : 'border-[#E5E7EB]',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-[#111827]">{template.title}</p>
-                      {template.description && (
-                        <p className="text-[12px] text-[#6B7280] mt-0.5">{template.description}</p>
-                      )}
-                      {template.requires_photo && !isDone && (
-                        <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-[#2563EB] font-medium">
-                          <Camera className="w-3 h-3" />
-                          Zrób zdjęcie aparatem
+                <div key={cat}>
+                  {/* Category header (only when named category exists) */}
+                  {catLabel && (
+                    <button
+                      onClick={() => toggleCategory(cat)}
+                      className="w-full flex items-center gap-2 mb-2 group"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {isClosed
+                          ? <ChevronRight className="w-4 h-4 text-[#9CA3AF] group-hover:text-[#374151] transition-colors" />
+                          : <ChevronDown className="w-4 h-4 text-[#9CA3AF] group-hover:text-[#374151] transition-colors" />
+                        }
+                        <span className="text-[13px] font-bold text-[#374151] group-hover:text-[#111827] transition-colors">
+                          {catLabel}
                         </span>
-                      )}
-                      {/* Photo thumbnail */}
-                      {isDone && entry?.photo_url && (
-                        <a href={entry.photo_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={entry.photo_url}
-                            alt="Zdjęcie"
-                            className="h-16 w-24 object-cover rounded-lg border border-green-200"
+                        <span className="text-[11px] text-[#9CA3AF]">({items.length})</span>
+                      </div>
+                      {/* Mini progress */}
+                      <div className="ml-auto flex items-center gap-1.5">
+                        {catFilled === items.length && (
+                          <span className="text-[10px] font-semibold text-green-600">
+                            {catDone === items.length ? '✓ Gotowe' : `${catDone}/${items.length}`}
+                          </span>
+                        )}
+                        <div className="w-16 h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+                          <div
+                            className={[
+                              'h-full rounded-full transition-all',
+                              catFilled === items.length && catDone === items.length
+                                ? 'bg-green-500'
+                                : checklistType === 'opening' ? 'bg-emerald-400' : 'bg-indigo-400',
+                            ].join(' ')}
+                            style={{ width: items.length > 0 ? `${(catFilled / items.length) * 100}%` : '0%' }}
                           />
-                        </a>
-                      )}
-                    </div>
+                        </div>
+                        <span className="text-[11px] text-[#9CA3AF] font-medium">
+                          {catFilled}/{items.length}
+                        </span>
+                      </div>
+                    </button>
+                  )}
 
-                    {/* Buttons */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isSaving ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" />
-                      ) : (
-                        <>
-                          {/* ✓ Done */}
-                          <button
-                            onClick={() => handleDone(template)}
-                            disabled={submitted}
+                  {/* Items */}
+                  {!isClosed && (
+                    <div className={['space-y-3', catLabel ? 'pl-5 border-l-2 border-[#F3F4F6]' : ''].join(' ')}>
+                      {items.map(template => {
+                        const entry     = entries[template.id]
+                        const isSaving  = saving[template.id] || uploading[template.id]
+                        const isDone    = entry?.status === 'done'
+                        const isNotDone = entry?.status === 'not_done'
+
+                        return (
+                          <div
+                            key={template.id}
                             className={[
-                              'w-11 h-11 rounded-xl flex items-center justify-center transition-all',
-                              isDone
-                                ? 'bg-green-500 text-white shadow-md shadow-green-200'
-                                : 'bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] hover:bg-green-50 hover:border-green-300 hover:text-green-600',
-                              submitted ? 'opacity-50 cursor-not-allowed' : '',
+                              'bg-white border rounded-2xl p-4 transition-all',
+                              isDone    ? 'border-green-200 bg-green-50/40'
+                              : isNotDone ? 'border-red-200 bg-red-50/30'
+                              : 'border-[#E5E7EB]',
                             ].join(' ')}
                           >
-                            <CheckCircle2 className="w-5 h-5" />
-                          </button>
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[14px] font-semibold text-[#111827]">{template.title}</p>
+                                {template.description && (
+                                  <p className="text-[12px] text-[#6B7280] mt-0.5">{template.description}</p>
+                                )}
+                                {template.requires_photo && !isDone && (
+                                  <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-[#2563EB] font-medium">
+                                    <Camera className="w-3 h-3" />
+                                    Zrób zdjęcie aparatem
+                                  </span>
+                                )}
+                                {isDone && entry?.photo_url && (
+                                  <a href={entry.photo_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={entry.photo_url}
+                                      alt="Zdjęcie"
+                                      className="h-16 w-24 object-cover rounded-lg border border-green-200"
+                                    />
+                                  </a>
+                                )}
+                              </div>
 
-                          {/* ✕ Not done */}
-                          <button
-                            onClick={() => handleNotDone(template.id)}
-                            disabled={submitted}
-                            className={[
-                              'w-11 h-11 rounded-xl flex items-center justify-center transition-all',
-                              isNotDone
-                                ? 'bg-red-500 text-white shadow-md shadow-red-200'
-                                : 'bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] hover:bg-red-50 hover:border-red-300 hover:text-red-500',
-                              submitted ? 'opacity-50 cursor-not-allowed' : '',
-                            ].join(' ')}
-                          >
-                            <XCircle className="w-5 h-5" />
-                          </button>
-                        </>
-                      )}
+                              {/* Buttons */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {isSaving ? (
+                                  <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" />
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => handleDone(template)}
+                                      disabled={submitted}
+                                      className={[
+                                        'w-11 h-11 rounded-xl flex items-center justify-center transition-all',
+                                        isDone
+                                          ? 'bg-green-500 text-white shadow-md shadow-green-200'
+                                          : 'bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] hover:bg-green-50 hover:border-green-300 hover:text-green-600',
+                                        submitted ? 'opacity-50 cursor-not-allowed' : '',
+                                      ].join(' ')}
+                                    >
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    </button>
+
+                                    <button
+                                      onClick={() => handleNotDone(template.id)}
+                                      disabled={submitted}
+                                      className={[
+                                        'w-11 h-11 rounded-xl flex items-center justify-center transition-all',
+                                        isNotDone
+                                          ? 'bg-red-500 text-white shadow-md shadow-red-200'
+                                          : 'bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] hover:bg-red-50 hover:border-red-300 hover:text-red-500',
+                                        submitted ? 'opacity-50 cursor-not-allowed' : '',
+                                      ].join(' ')}
+                                    >
+                                      <XCircle className="w-5 h-5" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  </div>
+                  )}
                 </div>
               )
             })}
@@ -350,20 +478,22 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
         )}
 
         {/* Submit */}
-        {!submitted && templates.length > 0 && (
+        {!submitted && activeTemplates.length > 0 && (
           <button
             onClick={handleSubmit}
             disabled={!allFilled || submitting}
             className={[
               'w-full h-12 rounded-xl text-[14px] font-bold transition-all flex items-center justify-center gap-2',
               allFilled
-                ? 'bg-gradient-to-r from-[#1D4ED8] to-[#06B6D4] text-white shadow-lg shadow-blue-500/20 hover:opacity-90'
+                ? checklistType === 'opening'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:opacity-90'
+                  : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:opacity-90'
                 : 'bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed',
             ].join(' ')}
           >
             {submitting
               ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <><Send className="w-4 h-4" />Wyślij checklistę do admina</>
+              : <><Send className="w-4 h-4" />Wyślij {checklistType === 'opening' ? 'otwarcie' : 'zamknięcie'} do admina</>
             }
           </button>
         )}

@@ -10,6 +10,8 @@ import {
 import * as XLSX from 'xlsx'
 
 /* ─────────────────── Types ─────────────────── */
+type ChecklistType = 'opening' | 'closing' | 'both'
+
 type Template = {
   id: string
   title: string
@@ -17,6 +19,8 @@ type Template = {
   requires_photo: boolean
   sort_order: number
   active: boolean
+  type: ChecklistType
+  category: string | null
 }
 
 type Location = { id: string; name: string }
@@ -80,6 +84,12 @@ export function ChecklistAdminView({ supabase, locations }: Props) {
 }
 
 /* ─────────────────── Manage tab ─────────────────── */
+const TYPE_CONFIG: Record<ChecklistType, { label: string; color: string; bg: string; border: string }> = {
+  opening: { label: 'Otwarcie',  color: 'text-emerald-700', bg: 'bg-emerald-50',  border: 'border-emerald-200' },
+  closing: { label: 'Zamknięcie', color: 'text-indigo-700',  bg: 'bg-indigo-50',   border: 'border-indigo-200' },
+  both:    { label: 'Oba',        color: 'text-[#6B7280]',   bg: 'bg-[#F3F4F6]',  border: 'border-[#E5E7EB]' },
+}
+
 function ManageTab({ supabase }: { supabase: SupabaseClient }) {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,8 +97,11 @@ function ManageTab({ supabase }: { supabase: SupabaseClient }) {
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [newPhoto, setNewPhoto] = useState(false)
+  const [newType, setNewType] = useState<ChecklistType>('both')
+  const [newCategory, setNewCategory] = useState('')
   const [adding, setAdding] = useState(false)
   const [deleting, setDeleting] = useState<Record<string, boolean>>({})
+  const [typeFilter, setTypeFilter] = useState<'all' | ChecklistType>('all')
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true)
@@ -113,9 +126,11 @@ function ManageTab({ supabase }: { supabase: SupabaseClient }) {
       requires_photo: newPhoto,
       sort_order: maxOrder + 10,
       active: true,
+      type: newType,
+      category: newCategory.trim() || null,
     })
     if (err) { setError(err.message) } else {
-      setNewTitle(''); setNewDesc(''); setNewPhoto(false)
+      setNewTitle(''); setNewDesc(''); setNewPhoto(false); setNewCategory('')
       await fetchTemplates()
     }
     setAdding(false)
@@ -123,9 +138,7 @@ function ManageTab({ supabase }: { supabase: SupabaseClient }) {
 
   const toggleActive = async (t: Template) => {
     const { error: err } = await supabase
-      .from('checklist_templates')
-      .update({ active: !t.active })
-      .eq('id', t.id)
+      .from('checklist_templates').update({ active: !t.active }).eq('id', t.id)
     if (err) { setError(err.message) } else {
       setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, active: !x.active } : x))
     }
@@ -141,18 +154,31 @@ function ManageTab({ supabase }: { supabase: SupabaseClient }) {
   }
 
   const move = async (id: string, dir: 'up' | 'down') => {
-    const idx = templates.findIndex(t => t.id === id)
+    const visible = filteredTemplates
+    const idx = visible.findIndex(t => t.id === id)
     if (idx < 0) return
     const swapIdx = dir === 'up' ? idx - 1 : idx + 1
-    if (swapIdx < 0 || swapIdx >= templates.length) return
-    const a = templates[idx]
-    const b = templates[swapIdx]
+    if (swapIdx < 0 || swapIdx >= visible.length) return
+    const a = visible[idx]; const b = visible[swapIdx]
     await Promise.all([
       supabase.from('checklist_templates').update({ sort_order: b.sort_order }).eq('id', a.id),
       supabase.from('checklist_templates').update({ sort_order: a.sort_order }).eq('id', b.id),
     ])
     await fetchTemplates()
   }
+
+  // Filter & group by category
+  const filteredTemplates = typeFilter === 'all' ? templates
+    : templates.filter(t => t.type === typeFilter || t.type === 'both')
+
+  const grouped: Record<string, Template[]> = {}
+  for (const t of filteredTemplates) {
+    const cat = t.category || '__none__'
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat].push(t)
+  }
+  const sortedCats = Object.keys(grouped).sort((a, b) =>
+    a === '__none__' ? 1 : b === '__none__' ? -1 : a.localeCompare(b, 'pl'))
 
   return (
     <div>
@@ -164,39 +190,39 @@ function ManageTab({ supabase }: { supabase: SupabaseClient }) {
       )}
 
       {/* Add new item */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 mb-5">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 mb-4">
         <p className="text-[13px] font-semibold text-[#111827] mb-3">Dodaj pozycję</p>
         <div className="space-y-2">
-          <input
-            value={newTitle}
-            onChange={e => setNewTitle(e.target.value)}
+          <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTemplate()}
             placeholder="Nazwa pozycji np. Temperatura lodówki"
-            className="w-full h-10 px-3 rounded-xl border border-[#E5E7EB] text-[13px] text-[#111827] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-          />
-          <input
-            value={newDesc}
-            onChange={e => setNewDesc(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border border-[#E5E7EB] text-[13px] text-[#111827] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" />
+          <input value={newDesc} onChange={e => setNewDesc(e.target.value)}
             placeholder="Opis (opcjonalnie)"
-            className="w-full h-10 px-3 rounded-xl border border-[#E5E7EB] text-[13px] text-[#111827] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-          />
+            className="w-full h-10 px-3 rounded-xl border border-[#E5E7EB] text-[13px] text-[#111827] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" />
+          <div className="flex gap-2">
+            {/* Category */}
+            <input value={newCategory} onChange={e => setNewCategory(e.target.value)}
+              placeholder="Kategoria (np. Sprzątanie, Magazyn)"
+              className="flex-1 h-10 px-3 rounded-xl border border-[#E5E7EB] text-[13px] text-[#111827] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]" />
+            {/* Type */}
+            <select value={newType} onChange={e => setNewType(e.target.value as ChecklistType)}
+              className="h-10 px-2 rounded-xl border border-[#E5E7EB] text-[13px] text-[#111827] bg-white focus:outline-none focus:border-[#2563EB]">
+              <option value="opening">🌅 Otwarcie</option>
+              <option value="closing">🌙 Zamknięcie</option>
+              <option value="both">↔ Oba</option>
+            </select>
+          </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={newPhoto}
-                onChange={e => setNewPhoto(e.target.checked)}
-                className="w-4 h-4 rounded border-[#E5E7EB] text-[#2563EB]"
-              />
+              <input type="checkbox" checked={newPhoto} onChange={e => setNewPhoto(e.target.checked)}
+                className="w-4 h-4 rounded border-[#E5E7EB] text-[#2563EB]" />
               <span className="text-[13px] text-[#374151] flex items-center gap-1">
-                <Camera className="w-3.5 h-3.5" />
-                Wymagaj zdjęcia przy zaznaczeniu +
+                <Camera className="w-3.5 h-3.5" />Wymagaj zdjęcia
               </span>
             </label>
-            <button
-              onClick={addTemplate}
-              disabled={!newTitle.trim() || adding}
-              className="ml-auto flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#2563EB] text-white text-[13px] font-semibold hover:bg-[#1D4ED8] disabled:opacity-50 transition-colors"
-            >
+            <button onClick={addTemplate} disabled={!newTitle.trim() || adding}
+              className="ml-auto flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#2563EB] text-white text-[13px] font-semibold hover:bg-[#1D4ED8] disabled:opacity-50 transition-colors">
               {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               Dodaj
             </button>
@@ -207,65 +233,76 @@ function ManageTab({ supabase }: { supabase: SupabaseClient }) {
       {/* Excel import */}
       <ExcelImportSection supabase={supabase} onImported={fetchTemplates} />
 
-      {/* Template list */}
+      {/* Type filter */}
+      <div className="flex gap-1.5 mb-4 flex-wrap">
+        {([['all', 'Wszystkie'], ['opening', '🌅 Otwarcie'], ['closing', '🌙 Zamknięcie'], ['both', '↔ Oba']] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setTypeFilter(k)}
+            className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-colors border ${
+              typeFilter === k ? 'bg-[#1D4ED8] text-white border-[#1D4ED8]' : 'bg-white text-[#374151] border-[#E5E7EB] hover:border-[#93C5FD]'
+            }`}>{label}</button>
+        ))}
+        <span className="ml-auto text-[12px] text-[#9CA3AF] self-center">{filteredTemplates.length} pozycji</span>
+      </div>
+
+      {/* Template list grouped by category */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /></div>
-      ) : templates.length === 0 ? (
+      ) : filteredTemplates.length === 0 ? (
         <div className="text-center py-12 text-[#9CA3AF] text-[14px]">Brak pozycji. Dodaj pierwszą powyżej.</div>
       ) : (
-        <div className="space-y-2">
-          {templates.map((t, idx) => (
-            <div
-              key={t.id}
-              className={[
-                'bg-white border rounded-2xl p-4 flex items-center gap-3 transition-all',
-                t.active ? 'border-[#E5E7EB]' : 'border-[#E5E7EB] opacity-50',
-              ].join(' ')}
-            >
-              <GripVertical className="w-4 h-4 text-[#D1D5DB] shrink-0" />
-
-              {/* Up/Down */}
-              <div className="flex flex-col gap-0.5 shrink-0">
-                <button onClick={() => move(t.id, 'up')} disabled={idx === 0} className="text-[#9CA3AF] hover:text-[#374151] disabled:opacity-30">
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => move(t.id, 'down')} disabled={idx === templates.length - 1} className="text-[#9CA3AF] hover:text-[#374151] disabled:opacity-30">
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[#111827]">{t.title}</p>
-                {t.description && <p className="text-[12px] text-[#6B7280]">{t.description}</p>}
-                {t.requires_photo && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-[#2563EB] font-medium mt-0.5">
-                    <Camera className="w-3 h-3" />Wymaga zdjęcia
+        <div>
+          {sortedCats.map(cat => {
+            const items = grouped[cat]
+            return (
+              <div key={cat} className="mb-5">
+                {/* Category header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+                    {cat === '__none__' ? 'Bez kategorii' : cat}
                   </span>
-                )}
+                  <div className="flex-1 h-px bg-[#F3F4F6]" />
+                  <span className="text-[11px] text-[#9CA3AF]">{items.length}</span>
+                </div>
+                <div className="space-y-2">
+                  {items.map((t, idx) => {
+                    const tc = TYPE_CONFIG[t.type ?? 'both']
+                    return (
+                      <div key={t.id} className={['bg-white border rounded-2xl p-3 flex items-center gap-3 transition-all', t.active ? 'border-[#E5E7EB]' : 'border-[#E5E7EB] opacity-50'].join(' ')}>
+                        <GripVertical className="w-4 h-4 text-[#D1D5DB] shrink-0" />
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <button onClick={() => move(t.id, 'up')} disabled={idx === 0} className="text-[#9CA3AF] hover:text-[#374151] disabled:opacity-30">
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => move(t.id, 'down')} disabled={idx === items.length - 1} className="text-[#9CA3AF] hover:text-[#374151] disabled:opacity-30">
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-[#111827]">{t.title}</p>
+                          {t.description && <p className="text-[12px] text-[#6B7280]">{t.description}</p>}
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${tc.color} ${tc.bg} ${tc.border}`}>{tc.label}</span>
+                            {t.requires_photo && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-[#2563EB] font-medium">
+                                <Camera className="w-3 h-3" />Zdjęcie
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button onClick={() => toggleActive(t)}
+                          className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors shrink-0 ${t.active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#F9FAFB] text-[#9CA3AF] border-[#E5E7EB]'}`}>
+                          {t.active ? 'Aktywna' : 'Ukryta'}
+                        </button>
+                        <button onClick={() => deleteTemplate(t.id)} disabled={deleting[t.id]} className="text-[#D1D5DB] hover:text-red-500 transition-colors shrink-0">
+                          {deleting[t.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-
-              {/* Active toggle */}
-              <button
-                onClick={() => toggleActive(t)}
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors ${
-                  t.active
-                    ? 'bg-green-50 text-green-700 border-green-200'
-                    : 'bg-[#F9FAFB] text-[#9CA3AF] border-[#E5E7EB]'
-                }`}
-              >
-                {t.active ? 'Aktywna' : 'Ukryta'}
-              </button>
-
-              {/* Delete */}
-              <button
-                onClick={() => deleteTemplate(t.id)}
-                disabled={deleting[t.id]}
-                className="text-[#D1D5DB] hover:text-red-500 transition-colors"
-              >
-                {deleting[t.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
