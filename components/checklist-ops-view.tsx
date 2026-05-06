@@ -418,14 +418,26 @@ export function ChecklistOpsView({ locationId, locationName, supabase }: Props) 
                                   </span>
                                 )}
                                 {isDone && entry?.photo_url && (
-                                  <a href={entry.photo_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={entry.photo_url}
-                                      alt="Zdjęcie"
-                                      className="h-16 w-24 object-cover rounded-lg border border-green-200"
-                                    />
-                                  </a>
+                                  <div className="mt-2 flex items-end gap-2">
+                                    <a href={entry.photo_url} target="_blank" rel="noopener noreferrer">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={entry.photo_url}
+                                        alt="Zdjęcie"
+                                        className="h-16 w-24 object-cover rounded-lg border border-green-200 hover:opacity-80 transition-opacity"
+                                      />
+                                    </a>
+                                    {!submitted && (
+                                      <button
+                                        onClick={() => handleDone(template)}
+                                        disabled={isSaving}
+                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#E5E7EB] text-[11px] font-medium text-[#6B7280] hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors disabled:opacity-40"
+                                      >
+                                        <RefreshCw className="w-3 h-3" />
+                                        Powtórz
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
 
