@@ -794,19 +794,31 @@ function ExcelImportSection({ supabase, onImported }: { supabase: SupabaseClient
 
 /* ─────────────────── Submissions tab ─────────────────── */
 function SubmissionsTab({ supabase, locations }: { supabase: SupabaseClient; locations: Location[] }) {
-  const [submissions, setSubmissions] = useState<Submission[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10))
-  const [filterLocation, setFilterLocation] = useState<string>('')
-  const [expanded, setExpanded] = useState<string | null>(null)
-  const [entries, setEntries] = useState<Record<string, EntryWithTemplate[]>>({})
-  const [loadingEntries, setLoadingEntries] = useState<Record<string, boolean>>({})
+  const [submissions,     setSubmissions]     = useState<Submission[]>([])
+  const [loading,         setLoading]         = useState(true)
+  const [error,           setError]           = useState<string | null>(null)
+  const [selectedDate,    setSelectedDate]    = useState(new Date().toISOString().slice(0, 10))
+  const [filterLocation,  setFilterLocation]  = useState<string>('')
+  const [expanded,        setExpanded]        = useState<string | null>(null)
+  const [entries,         setEntries]         = useState<Record<string, EntryWithTemplate[]>>({})
+  const [loadingEntries,  setLoadingEntries]  = useState<Record<string, boolean>>({})
+
+  // Approval
+  const [reviewLoading,  setReviewLoading]  = useState<Record<string, boolean>>({})
+  const [rejectingId,    setRejectingId]    = useState<string | null>(null)
+  const [rejectNote,     setRejectNote]     = useState('')
+
+  // Editing entries
+  const [editingSubId,    setEditingSubId]    = useState<string | null>(null)
+  const [editEntries,     setEditEntries]     = useState<EntryWithTemplate[]>([])
+  const [editNotes,       setEditNotes]       = useState<Record<string, string>>({})
+  const [savingEntry,     setSavingEntry]     = useState<Record<string, boolean>>({})
 
   const fetchSubmissions = useCallback(async () => {
     setLoading(true); setError(null)
     let q = supabase.from('checklist_submissions')
-      .select('*, location:locations(name)').eq('date', selectedDate).order('submitted_at', { ascending: false })
+      .select('*, location:locations(name)')
+      .eq('date', selectedDate).order('submitted_at', { ascending: false })
     if (filterLocation) q = q.eq('location_id', filterLocation)
     const { data, error: err } = await q
     if (err) setError(err.message)
@@ -816,19 +828,91 @@ function SubmissionsTab({ supabase, locations }: { supabase: SupabaseClient; loc
 
   useEffect(() => { fetchSubmissions() }, [fetchSubmissions])
 
-  const loadEntries = async (submissionLocationId: string, date: string, subId: string) => {
+  const loadEntries = async (locationId: string, date: string, subId: string) => {
     if (entries[subId]) { setExpanded(expanded === subId ? null : subId); return }
     setLoadingEntries(prev => ({ ...prev, [subId]: true }))
     const { data, error: err } = await supabase
       .from('checklist_entries').select('*, template:checklist_templates(title)')
-      .eq('location_id', submissionLocationId).eq('date', date).order('template_id')
+      .eq('location_id', locationId).eq('date', date).order('template_id')
     if (err) setError(err.message)
     else setEntries(prev => ({ ...prev, [subId]: (data as EntryWithTemplate[]) || [] }))
     setLoadingEntries(prev => ({ ...prev, [subId]: false }))
     setExpanded(subId)
   }
 
+  // ── Approve ──
+  const approve = async (sub: Submission) => {
+    setReviewLoading(p => ({ ...p, [sub.id]: true }))
+    const { error: err } = await supabase.from('checklist_submissions')
+      .update({ status: 'approved', admin_note: null, reviewed_at: new Date().toISOString() }).eq('id', sub.id)
+    if (err) setError(err.message)
+    else setSubmissions(p => p.map(s => s.id === sub.id ? { ...s, status: 'approved' } : s))
+    setReviewLoading(p => ({ ...p, [sub.id]: false }))
+  }
+
+  // ── Reject ──
+  const reject = async (sub: Submission) => {
+    setReviewLoading(p => ({ ...p, [sub.id]: true }))
+    const { error: err } = await supabase.from('checklist_submissions')
+      .update({ status: 'rejected', admin_note: rejectNote.trim() || null, reviewed_at: new Date().toISOString() }).eq('id', sub.id)
+    if (err) setError(err.message)
+    else setSubmissions(p => p.map(s => s.id === sub.id ? { ...s, status: 'rejected', admin_note: rejectNote.trim() || null } : s))
+    setRejectingId(null); setRejectNote('')
+    setReviewLoading(p => ({ ...p, [sub.id]: false }))
+  }
+
+  // ── Open edit mode ──
+  const openEdit = async (sub: Submission) => {
+    let ents = entries[sub.id]
+    if (!ents) {
+      setLoadingEntries(p => ({ ...p, [sub.id]: true }))
+      const { data } = await supabase.from('checklist_entries')
+        .select('*, template:checklist_templates(title)')
+        .eq('location_id', sub.location_id).eq('date', sub.date).order('template_id')
+      ents = (data as EntryWithTemplate[]) || []
+      setEntries(p => ({ ...p, [sub.id]: ents }))
+      setLoadingEntries(p => ({ ...p, [sub.id]: false }))
+    }
+    setEditEntries(ents)
+    const notes: Record<string, string> = {}
+    for (const e of ents) { if (e.note) notes[e.id] = e.note }
+    setEditNotes(notes)
+    setEditingSubId(sub.id)
+  }
+
+  // ── Toggle entry status in edit mode ──
+  const toggleEntryStatus = async (entry: EntryWithTemplate) => {
+    const newStatus = entry.status === 'done' ? 'not_done' : 'done'
+    setSavingEntry(p => ({ ...p, [entry.id]: true }))
+    const { error: err } = await supabase.from('checklist_entries')
+      .update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', entry.id)
+    if (!err) setEditEntries(p => p.map(e => e.id === entry.id ? { ...e, status: newStatus } : e))
+    else setError(err.message)
+    setSavingEntry(p => ({ ...p, [entry.id]: false }))
+  }
+
+  // ── Save entry note in edit mode ──
+  const saveEntryNote = async (entryId: string, note: string) => {
+    setSavingEntry(p => ({ ...p, [entryId]: true }))
+    await supabase.from('checklist_entries')
+      .update({ note: note.trim() || null, updated_at: new Date().toISOString() }).eq('id', entryId)
+    setEditEntries(p => p.map(e => e.id === entryId ? { ...e, note: note.trim() || null } : e))
+    setSavingEntry(p => ({ ...p, [entryId]: false }))
+  }
+
+  // ── Close edit and refresh ──
+  const closeEdit = () => {
+    if (editingSubId) setEntries(p => ({ ...p, [editingSubId]: editEntries }))
+    setEditingSubId(null)
+  }
+
   const pct = (s: Submission) => s.total_items > 0 ? Math.round((s.done_count / s.total_items) * 100) : 0
+
+  const STATUS_CONFIG = {
+    pending:  { label: 'Oczekuje',    bg: 'bg-yellow-50',  text: 'text-yellow-700',  border: 'border-yellow-200' },
+    approved: { label: 'Zatwierdzona', bg: 'bg-green-50',   text: 'text-green-700',   border: 'border-green-200'  },
+    rejected: { label: 'Odrzucona',   bg: 'bg-red-50',     text: 'text-red-600',     border: 'border-red-200'    },
+  }
 
   return (
     <div>
@@ -867,22 +951,44 @@ function SubmissionsTab({ supabase, locations }: { supabase: SupabaseClient; loc
         <div className="space-y-3">
           {submissions.map(sub => {
             const p = pct(sub)
-            const isExpanded = expanded === sub.id
+            const isExpanded  = expanded === sub.id
+            const isEditing   = editingSubId === sub.id
+            const isRejecting = rejectingId === sub.id
+            const statusCfg   = STATUS_CONFIG[sub.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending
+            const reviewing   = reviewLoading[sub.id]
+
             return (
               <div key={sub.id} className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden">
                 <div className="p-4">
+                  {/* Header row */}
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-[#111827]">{sub.location?.name || sub.location_id}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-[14px] font-semibold text-[#111827]">{sub.location?.name || sub.location_id}</p>
+                        {sub.type && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F3F4F6] border border-[#E5E7EB] text-[#6B7280] font-medium">
+                            {sub.type === 'opening' ? '🌅 Otwarcie' : '🌙 Zamknięcie'}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[12px] text-[#6B7280]">
                         Wysłano: {new Date(sub.submitted_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-[12px] font-bold ${
-                      p === 100 ? 'bg-green-100 text-green-700' : p >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
-                      {p}% ({sub.done_count}/{sub.total_items})
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Status badge */}
+                      <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                        {statusCfg.label}
+                      </span>
+                      {/* Score */}
+                      <div className={`px-3 py-1 rounded-full text-[12px] font-bold ${
+                        p === 100 ? 'bg-green-100 text-green-700' : p >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
+                        {p}%
+                      </div>
                     </div>
                   </div>
+
+                  {/* Progress bar */}
                   <div className="mt-3 h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all ${p === 100 ? 'bg-green-500' : p >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`}
                       style={{ width: `${p}%` }} />
@@ -891,38 +997,171 @@ function SubmissionsTab({ supabase, locations }: { supabase: SupabaseClient; loc
                     <span className="text-[11px] text-green-600">✓ {sub.done_count} wykonane</span>
                     <span className="text-[11px] text-red-500">✕ {sub.not_done_count} niewykonane</span>
                   </div>
-                  <button onClick={() => loadEntries(sub.location_id, sub.date, sub.id)}
-                    className="mt-3 flex items-center gap-1 text-[12px] text-[#2563EB] font-medium hover:underline">
-                    {loadingEntries[sub.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
-                    {isExpanded ? 'Ukryj szczegóły' : 'Zobacz szczegóły i zdjęcia'}
-                  </button>
-                </div>
-                {isExpanded && entries[sub.id] && (
-                  <div className="border-t border-[#F3F4F6] divide-y divide-[#F9FAFB]">
-                    {entries[sub.id].map(entry => (
-                      <div key={entry.id} className="px-4 py-3 flex items-center gap-3">
-                        {entry.status === 'done'
-                          ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                          : <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
-                        <span className="flex-1 text-[13px] text-[#374151]">{entry.template?.title || entry.template_id}</span>
-                        {(() => {
-                          const photos: string[] = entry.photo_urls?.length
-                            ? entry.photo_urls
-                            : entry.photo_url ? [entry.photo_url] : []
-                          return photos.length > 0 ? (
-                            <div className="flex gap-1.5 flex-wrap justify-end">
-                              {photos.map((url, idx) => (
-                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={url} alt={`foto ${idx + 1}`}
-                                    className="h-12 w-12 object-cover rounded-lg border border-[#E5E7EB] hover:opacity-80 transition-opacity" />
-                                </a>
-                              ))}
-                            </div>
-                          ) : null
-                        })()}
+
+                  {/* Admin note (if rejected) */}
+                  {sub.status === 'rejected' && sub.admin_note && (
+                    <p className="mt-2 text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-1.5 border border-red-100">
+                      Powód odrzucenia: {sub.admin_note}
+                    </p>
+                  )}
+
+                  {/* Reject input */}
+                  {isRejecting && (
+                    <div className="mt-3 space-y-2">
+                      <input
+                        value={rejectNote} onChange={e => setRejectNote(e.target.value)}
+                        placeholder="Powód odrzucenia (opcjonalnie)…"
+                        className="w-full h-9 px-3 rounded-xl border border-red-200 text-[13px] text-[#111827] focus:outline-none focus:border-red-400 bg-red-50"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => { setRejectingId(null); setRejectNote('') }}
+                          className="flex-1 h-9 rounded-xl border border-[#E5E7EB] text-[13px] text-[#374151] hover:bg-[#F9FAFB] transition-colors">
+                          Anuluj
+                        </button>
+                        <button onClick={() => reject(sub)} disabled={reviewing}
+                          className="flex-1 h-9 rounded-xl bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
+                          {reviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          Odrzuć
+                        </button>
                       </div>
-                    ))}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  {!isRejecting && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {/* Approve / Reject — only for pending */}
+                      {sub.status === 'pending' && (
+                        <>
+                          <button onClick={() => approve(sub)} disabled={reviewing}
+                            className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-green-500 text-white text-[12px] font-semibold hover:bg-green-600 disabled:opacity-40 transition-colors">
+                            {reviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                            Zatwierdź
+                          </button>
+                          <button onClick={() => { setRejectingId(sub.id); setRejectNote('') }}
+                            className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-red-50 border border-red-200 text-red-600 text-[12px] font-semibold hover:bg-red-100 transition-colors">
+                            <XCircle className="w-3 h-3" />Odrzuć
+                          </button>
+                        </>
+                      )}
+                      {/* Re-review approved/rejected */}
+                      {(sub.status === 'approved' || sub.status === 'rejected') && (
+                        <button onClick={() => approve(sub)} disabled={reviewing}
+                          className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#F3F4F6] text-[#374151] text-[12px] font-medium hover:bg-[#E5E7EB] transition-colors">
+                          {reviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                          {sub.status === 'approved' ? 'Cofnij zatwierdzenie' : 'Zatwierdź'}
+                        </button>
+                      )}
+
+                      {/* Details / Edit */}
+                      <button onClick={() => loadEntries(sub.location_id, sub.date, sub.id)}
+                        className="flex items-center gap-1 text-[12px] text-[#2563EB] font-medium hover:underline ml-auto">
+                        {loadingEntries[sub.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                        {isExpanded ? 'Ukryj' : 'Szczegóły'}
+                      </button>
+                      <button onClick={() => isEditing ? closeEdit() : openEdit(sub)}
+                        className="flex items-center gap-1 text-[12px] text-[#6B7280] font-medium hover:underline">
+                        {loadingEntries[sub.id] && !isExpanded ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pencil className="w-3.5 h-3.5" />}
+                        {isEditing ? 'Zamknij edycję' : 'Edytuj'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── View mode: entry details ── */}
+                {isExpanded && !isEditing && entries[sub.id] && (
+                  <div className="border-t border-[#F3F4F6] divide-y divide-[#F9FAFB]">
+                    {entries[sub.id].map(entry => {
+                      const photos: string[] = entry.photo_urls?.length ? entry.photo_urls : entry.photo_url ? [entry.photo_url] : []
+                      return (
+                        <div key={entry.id} className="px-4 py-3">
+                          <div className="flex items-start gap-3">
+                            {entry.status === 'done'
+                              ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                              : <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />}
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] text-[#374151]">{entry.template?.title || entry.template_id}</span>
+                              {entry.note && (
+                                <p className="text-[12px] text-[#6B7280] mt-0.5 italic">"{entry.note}"</p>
+                              )}
+                            </div>
+                            {photos.length > 0 && (
+                              <div className="flex gap-1.5 flex-wrap justify-end shrink-0">
+                                {photos.map((url, idx) => (
+                                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={url} alt={`foto ${idx + 1}`}
+                                      className="h-12 w-12 object-cover rounded-lg border border-[#E5E7EB] hover:opacity-80 transition-opacity" />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* ── Edit mode ── */}
+                {isEditing && (
+                  <div className="border-t border-[#F3F4F6]">
+                    <div className="px-4 py-2 bg-[#F8FAFF] border-b border-[#E5E7EB] flex items-center gap-2">
+                      <Pencil className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span className="text-[12px] font-semibold text-[#2563EB]">Tryb edycji — kliknij status aby zmienić, edytuj uwagę</span>
+                    </div>
+                    <div className="divide-y divide-[#F9FAFB]">
+                      {editEntries.map(entry => {
+                        const photos: string[] = entry.photo_urls?.length ? entry.photo_urls : entry.photo_url ? [entry.photo_url] : []
+                        const isSaving = savingEntry[entry.id]
+                        return (
+                          <div key={entry.id} className="px-4 py-3 space-y-2">
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => toggleEntryStatus(entry)} disabled={isSaving}
+                                className={[
+                                  'w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 disabled:opacity-40',
+                                  entry.status === 'done'
+                                    ? 'bg-green-500 text-white hover:bg-green-600'
+                                    : 'bg-red-100 text-red-500 hover:bg-red-200',
+                                ].join(' ')}>
+                                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : entry.status === 'done' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                              </button>
+                              <span className="flex-1 text-[13px] text-[#374151] font-medium">{entry.template?.title || entry.template_id}</span>
+                              {photos.length > 0 && (
+                                <div className="flex gap-1.5 shrink-0">
+                                  {photos.map((url, idx) => (
+                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={url} alt={`foto ${idx + 1}`}
+                                        className="h-10 w-10 object-cover rounded-lg border border-[#E5E7EB] hover:opacity-80" />
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {/* Note editable */}
+                            <div className="pl-11 relative">
+                              <input
+                                value={editNotes[entry.id] ?? entry.note ?? ''}
+                                onChange={e => setEditNotes(p => ({ ...p, [entry.id]: e.target.value }))}
+                                onBlur={e => saveEntryNote(entry.id, e.target.value)}
+                                placeholder="Uwaga (opcjonalnie)…"
+                                className="w-full h-8 px-3 rounded-lg border border-[#E5E7EB] text-[12px] text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#2563EB] bg-white"
+                              />
+                              {isSaving && <Loader2 className="w-3 h-3 animate-spin text-[#9CA3AF] absolute right-3 top-2.5" />}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="px-4 py-3 border-t border-[#F3F4F6]">
+                      <button onClick={closeEdit}
+                        className="w-full h-9 rounded-xl bg-[#2563EB] text-white text-[13px] font-semibold hover:bg-[#1D4ED8] transition-colors flex items-center justify-center gap-2">
+                        <Check className="w-3.5 h-3.5" />Zamknij edycję
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
