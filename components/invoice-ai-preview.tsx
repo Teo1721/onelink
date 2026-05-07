@@ -90,7 +90,10 @@ export function InvoiceAiPreview({ data, onApply, onClose }: Props) {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-[15px] font-bold text-slate-800">Podgląd odczytu AI</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[15px] font-bold text-slate-800">Podgląd odczytu AI</p>
+                <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold tracking-wide uppercase">Beta</span>
+              </div>
               <p className="text-[11px] text-slate-500">Sprawdź dane, popraw jeśli trzeba, a potem kliknij Wstaw</p>
             </div>
           </div>

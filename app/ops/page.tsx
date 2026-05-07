@@ -4149,6 +4149,7 @@ export default function OpsDashboard() {
                                   <>
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.346A3.99 3.99 0 0014 18H10a3.99 3.99 0 00-2.829-1.172l-.346-.346z" /></svg>
                                     Odczytaj fakturę AI ✨
+                                    <span className="ml-1 px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-bold tracking-wide uppercase">Beta</span>
                                   </>
                                 )}
                               </button>
