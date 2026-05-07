@@ -48,6 +48,8 @@ type ValidationError = { field: string; message: string }
 type InvoiceLineItem = {
   product: string; cosCategory: string; quantity: string
   unit: string; netPrice: string; vatRate: string
+  discount?: string             // discount value (percent or fixed amount)
+  discountMode?: 'pct' | 'amt' // 'pct' = percentage off, 'amt' = fixed amount off unit price
   priceMode?: 'net' | 'gross'   // 'gross' = user typed brutto; back-calc net for storage
   ingredient_id?: string | null
   product_id?: string | null
@@ -213,7 +215,7 @@ const PRODUCT_CATEGORIES = [
 
 const emptyLineItem: InvoiceLineItem = {
   product: '', cosCategory: '', quantity: '', unit: 'kg', netPrice: '', vatRate: '0.08',
-  priceMode: 'net', ingredient_id: null, product_id: null, source: 'ingredient'
+  discount: '', discountMode: 'pct', priceMode: 'net', ingredient_id: null, product_id: null, source: 'ingredient'
 }
 const emptySemisLine: SemisLineItem = { description: '', category: '', quantity: '1', totalNet: '', vatRate: '0.23', priceMode: 'net' }
 
@@ -2690,8 +2692,11 @@ export default function OpsDashboard() {
   // Invoice calcs — netPrice stores whatever the user typed; priceMode tells us how to interpret it
   const getUnitNet = (i: InvoiceLineItem) => {
     const price = Number(i.netPrice) || 0
-    if (i.priceMode === 'gross') return price / (1 + (Number(i.vatRate) || 0))
-    return price
+    const base = i.priceMode === 'gross' ? price / (1 + (Number(i.vatRate) || 0)) : price
+    const disc = Math.max(Number(i.discount) || 0, 0)
+    if (!disc) return base
+    if (i.discountMode === 'amt') return Math.max(base - disc, 0)
+    return base * (1 - Math.min(disc, 100) / 100)
   }
   const getLineNet = (i: InvoiceLineItem) => (Number(i.quantity) || 0) * getUnitNet(i)
   const getLineGross = (i: InvoiceLineItem) => getLineNet(i) * (1 + (Number(i.vatRate) || 0))
@@ -4177,10 +4182,12 @@ export default function OpsDashboard() {
                               onChange={toggleCosAll}
                               className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
                             />
-                            <div className="flex-1 grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
+                            <div className="flex-1 grid grid-cols-13 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
                               <div className="col-span-1">Typ</div><div className="col-span-2">Produkt</div><div className="col-span-1">Kat.</div>
                               <div className="col-span-1 text-right">Ilość</div><div className="col-span-1">Jedn.</div>
-                              <div className="col-span-2 text-right">Cena jedn.</div><div className="col-span-1 text-right">Netto</div>
+                              <div className="col-span-2 text-right">Cena jedn.</div>
+                              <div className="col-span-1 text-right text-green-600">Rab.%</div>
+                              <div className="col-span-1 text-right">Netto</div>
                               <div className="col-span-1">VAT</div><div className="col-span-1 text-right">Brutto</div><div className="col-span-1" />
                             </div>
                           </div>
@@ -4236,7 +4243,7 @@ export default function OpsDashboard() {
                                 onChange={() => toggleCosRow(i)}
                                 className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
                               />
-                            <div className="flex-1 grid grid-cols-12 gap-2 items-center text-sm">
+                            <div className="flex-1 grid grid-cols-13 gap-2 items-center text-sm">
                               <div className="col-span-1">
                                 <select value={item.source || 'ingredient'} onChange={e => setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], source: e.target.value as 'ingredient' | 'product', product: '', ingredient_id: null, product_id: null }; return c })}
                                   className="h-9 w-full rounded-md border border-input bg-background px-1 text-xs">
@@ -4297,6 +4304,22 @@ export default function OpsDashboard() {
                                     <div className="text-[10px] text-amber-600 text-right pr-1 mt-0.5">netto: {fmt2(getUnitNet(item))}</div>
                                   )}
                                 </div>
+                              </div>
+                              <div className="col-span-1 flex gap-0.5 items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setCosLineItems(p => { const c = [...p]; c[i] = { ...c[i], discountMode: c[i].discountMode === 'amt' ? 'pct' : 'amt', discount: '' }; return c })}
+                                  title={item.discountMode === 'amt' ? 'Tryb: kwota — kliknij dla %' : 'Tryb: % — kliknij dla kwoty'}
+                                  className={`shrink-0 h-9 w-7 rounded text-[10px] font-bold border transition-colors ${Number(item.discount) > 0 ? (item.discountMode === 'amt' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-green-100 border-green-400 text-green-700') : 'bg-slate-100 border-slate-300 text-slate-500'}`}
+                                >{item.discountMode === 'amt' ? 'zł' : '%'}</button>
+                                <Input
+                                  type="number"
+                                  value={item.discount || ''}
+                                  onChange={e => updateCosLine(i, 'discount', e.target.value)}
+                                  className={`h-9 text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none min-w-0 ${Number(item.discount) > 0 ? 'border-green-400 bg-green-50 text-green-700 font-semibold' : ''}`}
+                                  placeholder="0"
+                                  min="0"
+                                />
                               </div>
                               <div className="col-span-1 text-right text-slate-700 font-semibold text-xs tabular-nums">
                                 {getLineNet(item) > 0 ? fmt2(getLineNet(item)) : '—'}
