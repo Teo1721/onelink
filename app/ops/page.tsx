@@ -3283,22 +3283,25 @@ export default function OpsDashboard() {
       const file = invoiceFiles[0]
       let fileToSend: File | Blob = file
 
-      // PDFs must be rendered to an image first so vision API can read them
+      // PDFs: render ALL pages to images so vision API can read everything
       const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      const fd = new FormData()
+
       if (isPdf) {
         try {
-          const { pdfToImageBlob } = await import('@/lib/pdf-to-image')
-          const imgBlob = await pdfToImageBlob(file)
-          fileToSend = new File([imgBlob], file.name.replace(/\.pdf$/i, '.jpg'), { type: 'image/jpeg' })
-        } catch (pdfErr) {
+          const { pdfToImageBlobs } = await import('@/lib/pdf-to-image')
+          const pageBlobs = await pdfToImageBlobs(file)
+          pageBlobs.forEach((blob, idx) => {
+            fd.append('file', new File([blob], `page-${idx + 1}.jpg`, { type: 'image/jpeg' }))
+          })
+        } catch {
           setAiScanError('Błąd renderowania PDF. Spróbuj zapisać jako obraz JPG/PNG.')
           setAiScanning(false)
           return
         }
+      } else {
+        fd.append('file', fileToSend)
       }
-
-      const fd = new FormData()
-      fd.append('file', fileToSend)
       const res = await fetch('/api/ai/read-invoice', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) { setAiScanError(json.error || 'Błąd odczytu'); return }

@@ -99,6 +99,14 @@ export function InvoiceAiPreview({ data, onApply, onClose }: Props) {
           </button>
         </div>
 
+        {/* AI accuracy warning */}
+        <div className="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+          <p className="text-[12px] text-amber-800 leading-snug">
+            <span className="font-bold">Odczyt AI może nie być w 100% dokładny.</span> Sprawdź wszystkie pozycje, ilości i ceny przed wstawieniem do formularza. W razie błędu popraw ręcznie.
+          </p>
+        </div>
+
         <div className="px-6 py-5 space-y-5">
 
           {/* Invoice type toggle */}
