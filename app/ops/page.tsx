@@ -3283,22 +3283,25 @@ export default function OpsDashboard() {
       const file = invoiceFiles[0]
       let fileToSend: File | Blob = file
 
-      // PDFs must be rendered to an image first so vision API can read them
+      // PDFs: render ALL pages to images so vision API can read everything
       const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      const fd = new FormData()
+
       if (isPdf) {
         try {
-          const { pdfToImageBlob } = await import('@/lib/pdf-to-image')
-          const imgBlob = await pdfToImageBlob(file)
-          fileToSend = new File([imgBlob], file.name.replace(/\.pdf$/i, '.jpg'), { type: 'image/jpeg' })
-        } catch (pdfErr) {
+          const { pdfToImageBlobs } = await import('@/lib/pdf-to-image')
+          const pageBlobs = await pdfToImageBlobs(file)
+          pageBlobs.forEach((blob, idx) => {
+            fd.append('file', new File([blob], `page-${idx + 1}.jpg`, { type: 'image/jpeg' }))
+          })
+        } catch {
           setAiScanError('Błąd renderowania PDF. Spróbuj zapisać jako obraz JPG/PNG.')
           setAiScanning(false)
           return
         }
+      } else {
+        fd.append('file', fileToSend)
       }
-
-      const fd = new FormData()
-      fd.append('file', fileToSend)
       const res = await fetch('/api/ai/read-invoice', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) { setAiScanError(json.error || 'Błąd odczytu'); return }
@@ -4146,6 +4149,7 @@ export default function OpsDashboard() {
                                   <>
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.346A3.99 3.99 0 0014 18H10a3.99 3.99 0 00-2.829-1.172l-.346-.346z" /></svg>
                                     Odczytaj fakturę AI ✨
+                                    <span className="ml-1 px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-bold tracking-wide uppercase">Beta</span>
                                   </>
                                 )}
                               </button>

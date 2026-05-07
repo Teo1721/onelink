@@ -90,13 +90,24 @@ export function InvoiceAiPreview({ data, onApply, onClose }: Props) {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-[15px] font-bold text-slate-800">Podgląd odczytu AI</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[15px] font-bold text-slate-800">Podgląd odczytu AI</p>
+                <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold tracking-wide uppercase">Beta</span>
+              </div>
               <p className="text-[11px] text-slate-500">Sprawdź dane, popraw jeśli trzeba, a potem kliknij Wstaw</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/70 text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* AI accuracy warning */}
+        <div className="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+          <p className="text-[12px] text-amber-800 leading-snug">
+            <span className="font-bold">Odczyt AI może nie być w 100% dokładny.</span> Sprawdź wszystkie pozycje, ilości i ceny przed wstawieniem do formularza. W razie błędu popraw ręcznie.
+          </p>
         </div>
 
         <div className="px-6 py-5 space-y-5">
