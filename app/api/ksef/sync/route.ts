@@ -20,6 +20,33 @@ import {
 } from '@/lib/ksef'
 
 const CRON_SECRET = process.env.CRON_SECRET || ''
+const RESEND_FROM  = process.env.RESEND_FROM_EMAIL ?? 'OneLink <noreply@onelink.pl>'
+
+async function sendKsefEmail(recipientEmail: string, recipientName: string, companyName: string, imported: number) {
+  if (!process.env.RESEND_API_KEY) return
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: RESEND_FROM,
+      to: [recipientEmail],
+      subject: `KSeF: ${imported} ${imported === 1 ? 'nowa faktura' : 'nowych faktur'} do przeglądu — ${companyName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+          <h2 style="color:#1D4ED8">KSeF — nowe faktury elektroniczne</h2>
+          <p>Cześć <strong>${recipientName}</strong>,</p>
+          <p>Automatyczna synchronizacja KSeF pobrała <strong>${imported}</strong> ${imported === 1 ? 'nową fakturę' : 'nowych faktur'} dla firmy <strong>${companyName}</strong>.</p>
+          <p>Zaloguj się do panelu OneLink, aby przejrzeć i zaimportować faktury do systemu.</p>
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.onelink.pl'}/ops"
+             style="display:inline-block;margin-top:16px;padding:10px 20px;background:#1D4ED8;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">
+            Otwórz panel →
+          </a>
+          <p style="margin-top:32px;color:#9CA3AF;font-size:12px">OneLink — automatyczna integracja z KSeF</p>
+        </div>
+      `,
+    }),
+  }).catch(() => {}) // fire-and-forget
+}
 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('secret')
@@ -210,6 +237,19 @@ async function syncCompany(company: {
         errors:        errors.length,
         error_details: errors.length ? errors : null,
       })
+    }
+
+    // Email the company owner when new invoices arrive
+    if (imported.length > 0) {
+      const { data: owner } = await supabase
+        .from('user_profiles')
+        .select('email, full_name')
+        .eq('company_id', company.id)
+        .eq('role', 'owner')
+        .maybeSingle()
+      if (owner?.email) {
+        sendKsefEmail(owner.email, owner.full_name ?? owner.email, company.name, imported.length)
+      }
     }
 
     return { imported: imported.length, skipped: skipped.length, errors: errors.length, errorDetails: errors }

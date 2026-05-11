@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { RefreshCw, Download, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronRight, Building2, FileText } from 'lucide-react'
+import { RefreshCw, Download, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronRight, Building2, FileText, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type KsefInvoice = {
@@ -33,6 +33,31 @@ type Props = {
 
 const fmt2 = (n: number) => n.toFixed(2)
 
+function exportToCsv(invoices: KsefInvoice[]) {
+  const header = ['Nr faktury', 'Dostawca', 'NIP', 'Data wystawienia', 'Data sprzedaży', 'Netto', 'VAT', 'Brutto', 'Waluta', 'Status', 'KSeF ref']
+  const rows = invoices.map(inv => [
+    inv.invoice_number,
+    inv.supplier_name,
+    inv.supplier_nip,
+    inv.issue_date,
+    inv.sale_date,
+    fmt2(inv.total_net),
+    fmt2(inv.total_vat),
+    fmt2(inv.total_gross),
+    inv.currency,
+    inv.status,
+    inv.ksef_reference_number,
+  ])
+  const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `ksef-faktury-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function KsefInbox({ companyId, locationId, locationName }: Props) {
   const supabase = createClient()
   const [invoices, setInvoices]     = useState<KsefInvoice[]>([])
@@ -43,6 +68,8 @@ export function KsefInbox({ companyId, locationId, locationName }: Props) {
   const [invoiceTypes, setInvoiceTypes] = useState<Record<string, 'COS' | 'SEMIS'>>({})
   const [syncResult, setSyncResult] = useState<{ imported: number; errors: number; errorDetails?: string[] } | null>(null)
   const [error, setError]           = useState<string | null>(null)
+  const [categorizing, setCategorizing] = useState<string | null>(null)
+  const [aiCategories, setAiCategories] = useState<Record<string, Record<number, string>>>({}) // invoiceId → itemIndex → category
 
   const load = async () => {
     setLoading(true)
@@ -95,7 +122,7 @@ export function KsefInbox({ companyId, locationId, locationName }: Props) {
     }
   }
 
-  const handleImport = async (inv: KsefInvoice) => {
+  const handleImport = async (inv: KsefInvoice, force = false) => {
     setImporting(inv.id); setError(null)
     try {
       const res  = await fetch('/api/ksef/import', {
@@ -105,16 +132,50 @@ export function KsefInbox({ companyId, locationId, locationName }: Props) {
           ksefInvoiceId: inv.id,
           locationId,
           invoiceType: invoiceTypes[inv.id] || 'COS',
+          force,
         }),
       })
       const json = await res.json()
-      if (!res.ok) { setError(json.error || 'Import failed'); return }
+      if (!res.ok) {
+        if (json.duplicateWarning) {
+          // Soft duplicate — ask user to confirm
+          if (window.confirm(json.error)) {
+            await handleImport(inv, true)
+          }
+          return
+        }
+        setError(json.error || 'Import failed')
+        return
+      }
       await load()
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setImporting(null)
     }
+  }
+
+  const handleCategorize = async (inv: KsefInvoice) => {
+    if (categorizing || !inv.items_json?.length) return
+    setCategorizing(inv.id)
+    try {
+      const res  = await fetch('/api/ksef/categorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: inv.items_json, supplierName: inv.supplier_name }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) return
+      // Apply suggested invoice type
+      if (json.invoiceType) setInvoiceTypes(p => ({ ...p, [inv.id]: json.invoiceType }))
+      // Store per-item category suggestions
+      if (json.items?.length) {
+        const cats: Record<number, string> = {}
+        for (const it of json.items) cats[it.index] = it.category
+        setAiCategories(p => ({ ...p, [inv.id]: cats }))
+      }
+    } catch (_) {}
+    finally { setCategorizing(null) }
   }
 
   const handleIgnore = async (id: string) => {
@@ -137,16 +198,29 @@ export function KsefInbox({ companyId, locationId, locationName }: Props) {
           </h3>
           <p className="text-[12px] text-slate-500 mt-0.5">Faktury pobrane automatycznie z Krajowego Systemu e-Faktur</p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-1.5 text-[12px]"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Synchronizuję…' : 'Synchronizuj KSeF'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {invoices.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exportToCsv(invoices)}
+              className="flex items-center gap-1.5 text-[12px]"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              Eksport CSV
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-[12px]"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Synchronizuję…' : 'Synchronizuj KSeF'}
+          </Button>
+        </div>
       </div>
 
       {/* Active location banner */}
@@ -214,7 +288,11 @@ export function KsefInbox({ companyId, locationId, locationName }: Props) {
               {/* Row header */}
               <div className="flex items-center gap-3 px-4 py-3">
                 <button
-                  onClick={() => setExpanded(expanded === inv.id ? null : inv.id)}
+                  onClick={() => {
+                    const next = expanded === inv.id ? null : inv.id
+                    setExpanded(next)
+                    if (next && !aiCategories[inv.id]) handleCategorize(inv)
+                  }}
                   className="text-slate-400 hover:text-slate-600"
                 >
                   {expanded === inv.id
@@ -262,13 +340,28 @@ export function KsefInbox({ companyId, locationId, locationName }: Props) {
               {/* Expanded items */}
               {expanded === inv.id && (
                 <div className="border-t border-amber-200 px-4 pb-3 pt-2 bg-white/70">
-                  <p className="text-[10px] font-bold uppercase text-slate-400 mb-2">Pozycje ({inv.items_json?.length || 0})</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-[10px] font-bold uppercase text-slate-400">Pozycje ({inv.items_json?.length || 0})</p>
+                    {categorizing === inv.id && (
+                      <span className="text-[10px] text-blue-500 flex items-center gap-1">
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" /> AI kategoryzuje…
+                      </span>
+                    )}
+                    {aiCategories[inv.id] && categorizing !== inv.id && (
+                      <span className="text-[10px] text-green-600">✓ AI zasugerowało kategorię</span>
+                    )}
+                  </div>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {(inv.items_json || []).map((it, i) => (
                       <div key={i} className="flex items-center gap-2 text-[11px] text-slate-600">
                         <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-500 text-[9px] flex items-center justify-center shrink-0">{i + 1}</span>
                         <span className="flex-1 truncate">{it.name}</span>
                         <span className="text-slate-400">{it.quantity} {it.unit}</span>
+                        {aiCategories[inv.id]?.[i] && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-semibold shrink-0">
+                            {aiCategories[inv.id][i]}
+                          </span>
+                        )}
                         <span className="font-semibold text-slate-700 tabular-nums">{fmt2(it.netValue)} zł</span>
                       </div>
                     ))}

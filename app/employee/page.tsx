@@ -546,7 +546,7 @@ export default function EmployeeDashboard() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
 
       {/* ── Top header ── */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
@@ -561,32 +561,34 @@ export default function EmployeeDashboard() {
               {tab === 'swaps' && 'Zamiany zmian'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {'serviceWorker' in (typeof navigator !== 'undefined' ? navigator : {}) && (
               <button
                 onClick={togglePush}
                 disabled={pushLoading}
                 title={pushEnabled ? 'Wyłącz powiadomienia' : 'Włącz powiadomienia push'}
-                className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-colors ${
+                className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-colors ${
                   pushEnabled
-                    ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200'
-                    : 'text-gray-500 bg-gray-50 hover:bg-gray-100 border-gray-200'
+                    ? 'text-blue-600 bg-blue-50 border-blue-200'
+                    : 'text-gray-400 bg-gray-50 border-gray-200'
                 }`}
               >
-                {pushLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pushEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+                {pushLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : pushEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
               </button>
             )}
             <button
               onClick={() => setShowChangePw(true)}
-              className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-50 border border-gray-200 rounded-xl transition-colors hover:bg-gray-100"
+              title="Zmień hasło"
             >
-              <KeyRound className="w-3.5 h-3.5" />Hasło
+              <KeyRound className="w-4 h-4" />
             </button>
             <button
               onClick={() => { supabase.auth.signOut(); router.push('/auth/login') }}
-              className="flex items-center gap-1.5 text-xs text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center text-red-400 bg-red-50 border border-red-200 rounded-xl transition-colors hover:bg-red-100"
+              title="Wyloguj"
             >
-              <LogOut className="w-3.5 h-3.5" />Wyloguj
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -616,7 +618,12 @@ export default function EmployeeDashboard() {
             {/* Next shift hero */}
             {nextShift && (
               <div className="bg-gradient-to-br from-[#1E3A8A] to-[#1D4ED8] rounded-2xl p-5 text-white shadow-lg">
-                <p className="text-blue-200 text-[10px] font-bold uppercase tracking-widest mb-2">Następna zmiana</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-blue-200 text-[10px] font-bold uppercase tracking-widest">Następna zmiana</p>
+                  {nextShift.date === new Date().toISOString().slice(0,10) && (
+                    <span className="bg-green-400 text-green-900 text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wide">Dziś</span>
+                  )}
+                </div>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-2xl font-bold tabular-nums">{fmt(nextShift.time_start)} – {fmt(nextShift.time_end)}</p>
@@ -1306,20 +1313,20 @@ export default function EmployeeDashboard() {
       </div>
 
       {/* ── Bottom tab bar ── */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-lg mx-auto grid grid-cols-5">
           {([
-            { key: 'schedule', icon: Calendar, label: 'Grafik'   },
-            { key: 'suggest',  icon: Send,     label: 'Sugestie' },
-            { key: 'hours',    icon: Clock,    label: 'Godziny'  },
-            { key: 'leave',    icon: Umbrella, label: 'Urlopy'   },
-            { key: 'swaps',    icon: GitCompare, label: 'Zamiany' },
+            { key: 'schedule', icon: Calendar,    label: 'Grafik'   },
+            { key: 'suggest',  icon: Send,         label: 'Sugestie' },
+            { key: 'hours',    icon: Clock,        label: 'Godziny'  },
+            { key: 'leave',    icon: Umbrella,     label: 'Urlopy'   },
+            { key: 'swaps',    icon: GitCompare,   label: 'Zamiany'  },
           ] as const).map(({ key, icon: Icon, label }) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex flex-col items-center gap-1 py-3 transition-colors ${tab === key ? 'text-[#1D4ED8]' : 'text-gray-400 hover:text-gray-600'}`}>
+              className={`relative flex flex-col items-center gap-1 py-3 min-h-[56px] transition-colors ${tab === key ? 'text-[#1D4ED8]' : 'text-gray-400 active:text-gray-600'}`}>
+              {tab === key && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#1D4ED8] rounded-b-full" />}
               <Icon className="w-5 h-5" />
               <span className="text-[10px] font-semibold">{label}</span>
-              {tab === key && <div className="absolute bottom-0 w-8 h-0.5 bg-[#1D4ED8] rounded-t-full" />}
             </button>
           ))}
         </div>

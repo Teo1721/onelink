@@ -11,7 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: NextRequest) {
   try {
-    const { ksefInvoiceId, locationId, invoiceType } = await req.json()
+    const { ksefInvoiceId, locationId, invoiceType, force } = await req.json()
     if (!ksefInvoiceId || !locationId || !invoiceType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
@@ -31,6 +31,38 @@ export async function POST(req: NextRequest) {
 
     if (staged.status === 'imported') {
       return NextResponse.json({ error: 'Already imported' }, { status: 409 })
+    }
+
+    // Duplicate detection — check if this invoice already exists in the main invoices table
+    const { data: existingByRef } = await supabase
+      .from('invoices')
+      .select('id, invoice_number, supplier_name')
+      .eq('ksef_reference', staged.ksef_reference_number)
+      .maybeSingle()
+
+    if (existingByRef) {
+      return NextResponse.json(
+        { error: `Duplikat: ta faktura (${staged.invoice_number}) została już zaimportowana.`, duplicate: true },
+        { status: 409 },
+      )
+    }
+
+    // Secondary check — same supplier + invoice number (catches manual duplicates)
+    // Allow override with force=true
+    if (!force) {
+      const { data: existingByNumber } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('supplier_name', staged.supplier_name)
+        .eq('invoice_number', staged.invoice_number)
+        .maybeSingle()
+
+      if (existingByNumber) {
+        return NextResponse.json(
+          { error: `Możliwy duplikat: faktura ${staged.invoice_number} od ${staged.supplier_name} już istnieje. Importować mimo to?`, duplicate: true, duplicateWarning: true },
+          { status: 409 },
+        )
+      }
     }
 
     // Get location's company_id
