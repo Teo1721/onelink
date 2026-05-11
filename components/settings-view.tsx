@@ -5,13 +5,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   Building2, MapPin, CreditCard, Bell, Save, Plus, Trash2,
   Loader2, Check, ExternalLink, RefreshCw, Mail, Smartphone,
-  Shield, ChevronRight, AlertCircle,
+  Shield, ChevronRight, AlertCircle, FileText,
 } from 'lucide-react'
 
 type Location = { id: string; name: string; address: string | null }
 type Company  = { id: string; name: string }
 
-type Tab = 'company' | 'locations' | 'subscription' | 'notifications'
+type Tab = 'company' | 'locations' | 'subscription' | 'notifications' | 'integrations'
 
 /* ── Tab button ─────────────────────────────────────────── */
 function TabBtn({ active, onClick, icon: Icon, label }: {
@@ -363,6 +363,110 @@ function NotificationsTab({ supabase, userId }: { supabase: SupabaseClient; user
   )
 }
 
+/* ── Integrations tab (KSeF) ────────────────────────────── */
+function IntegrationsTab({ supabase, companyId }: { supabase: SupabaseClient; companyId: string }) {
+  const [nip,    setNip]    = useState('')
+  const [token,  setToken]  = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved,  setSaved]  = useState(false)
+  const [error,  setError]  = useState('')
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    supabase.from('companies').select('ksef_nip, ksef_token').eq('id', companyId).single()
+      .then(({ data }) => {
+        if (data) {
+          setNip(data.ksef_nip || '')
+          setToken(data.ksef_token ? '••••••••••••••••' : '')
+        }
+        setLoaded(true)
+      })
+  }, [companyId])
+
+  const save = async () => {
+    if (!nip.trim()) { setError('Wpisz NIP firmy'); return }
+    setSaving(true); setError(''); setSaved(false)
+    const updates: Record<string, string> = { ksef_nip: nip.trim(), ksef_env: 'prod' }
+    if (token && !token.startsWith('•')) updates.ksef_token = token.trim()
+    const { error: err } = await supabase.from('companies').update(updates).eq('id', companyId)
+    if (err) setError(err.message)
+    else { setSaved(true); setTimeout(() => setSaved(false), 3000) }
+    setSaving(false)
+  }
+
+  if (!loaded) return <div className="flex justify-center py-16"><Loader2 className="w-5 h-5 animate-spin text-[#9CA3AF]" /></div>
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-[15px] font-bold text-[#111827] mb-1">Integracje</h3>
+        <p className="text-[13px] text-[#6B7280]">Połącz OneLink z zewnętrznymi systemami.</p>
+      </div>
+
+      {/* KSeF card */}
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 space-y-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <FileText className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-[14px] font-bold text-[#111827]">KSeF — e-faktury</p>
+            <p className="text-[12px] text-[#6B7280] mt-0.5">
+              Połącz z Krajowym Systemem e-Faktur aby automatycznie pobierać faktury zakupowe.
+              Token uzyskasz na <span className="font-medium text-blue-600">ksef.mf.gov.pl</span>.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">NIP firmy</label>
+            <input
+              value={nip}
+              onChange={e => setNip(e.target.value.replace(/\D/g, ''))}
+              placeholder="1234567890"
+              maxLength={10}
+              className="w-full max-w-xs h-11 px-4 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] text-[14px] text-[#111827] focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Token KSeF</label>
+            <input
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              onFocus={() => { if (token.startsWith('•')) setToken('') }}
+              placeholder="Wklej token z ksef.mf.gov.pl…"
+              className="w-full h-11 px-4 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] text-[14px] font-mono text-[#111827] focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
+            />
+            <p className="text-[11px] text-[#9CA3AF] mt-1">Token jest zapisywany bezpiecznie. Środowisko: produkcyjne (ksef.mf.gov.pl).</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 text-[12px] text-red-600">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />{error}
+          </div>
+        )}
+
+        <button
+          onClick={save}
+          disabled={saving || !nip.trim()}
+          className="flex items-center gap-2 h-10 px-5 rounded-xl bg-[#111827] text-white text-[13px] font-semibold disabled:opacity-50 hover:bg-[#1F2937] transition-colors"
+        >
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+          {saved ? 'Zapisano!' : 'Zapisz dane KSeF'}
+        </button>
+      </div>
+
+      {/* Placeholder for future integrations */}
+      <div className="bg-[#F9FAFB] rounded-2xl border border-dashed border-[#E5E7EB] p-6 text-center">
+        <p className="text-[13px] font-semibold text-[#374151] mb-1">Więcej integracji wkrótce</p>
+        <p className="text-[12px] text-[#9CA3AF]">Novicloud, systemy księgowe i inne — w przygotowaniu.</p>
+      </div>
+    </div>
+  )
+}
+
 /* ══════════════════════════════════════════════════════════
    Main export
 ══════════════════════════════════════════════════════════ */
@@ -387,6 +491,7 @@ export function SettingsView({
     { key: 'locations',     label: 'Lokalizacje',    icon: MapPin },
     { key: 'subscription',  label: 'Subskrypcja',    icon: CreditCard },
     { key: 'notifications', label: 'Powiadomienia',  icon: Bell },
+    { key: 'integrations',  label: 'Integracje',     icon: FileText },
   ]
 
   return (
@@ -408,6 +513,7 @@ export function SettingsView({
         {tab === 'locations'     && <LocationsTab supabase={supabase} companyId={companyId} />}
         {tab === 'subscription'  && <SubscriptionTab plan={subscriptionPlan} />}
         {tab === 'notifications' && <NotificationsTab supabase={supabase} userId={userId} />}
+        {tab === 'integrations'  && <IntegrationsTab supabase={supabase} companyId={companyId} />}
       </div>
     </div>
   )

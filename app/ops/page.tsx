@@ -15,6 +15,7 @@ import IngredientAutocomplete from '@/components/ingredient-autocomplete'
 import ProductAutocomplete from '@/components/product-autocomplete'
 import SemisDescriptionAutocomplete from '@/components/semis-description-autocomplete'
 import { InvoiceAiPreview, type AiInvoiceResult } from '@/components/invoice-ai-preview'
+import { KsefInbox } from '@/components/ksef-inbox'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -2236,7 +2237,7 @@ export default function OpsDashboard() {
   const [uploading, setUploading] = useState(false)
   const [invoiceErrors, setInvoiceErrors] = useState<ValidationError[]>([])
   const [excelLoading, setExcelLoading] = useState(false)
-  const [invoiceSubView, setInvoiceSubView] = useState<'form' | 'semis_recon' | 'history'>('form')
+  const [invoiceSubView, setInvoiceSubView] = useState<'form' | 'semis_recon' | 'history' | 'ksef'>('form')
   const [invoiceHistory, setInvoiceHistory] = useState<InvoiceHistoryItem[]>([])
   const [invoiceHistoryPage, setInvoiceHistoryPage] = useState(0)
   const [invoiceHistoryTotal, setInvoiceHistoryTotal] = useState(0)
@@ -4035,6 +4036,10 @@ export default function OpsDashboard() {
                   <RefreshCw className="w-4 h-4 mr-2" />Uzgodnienie SEMIS</Button>
                 <Button variant={invoiceSubView === 'history' ? 'default' : 'outline'} onClick={() => { setInvoiceSubView('history'); setInvoiceHistoryPage(0) }}>
                   <Clock className="w-4 h-4 mr-2" />Historia</Button>
+                <Button variant={invoiceSubView === 'ksef' ? 'default' : 'outline'} onClick={() => setInvoiceSubView('ksef')}
+                  className={invoiceSubView !== 'ksef' ? 'border-violet-200 text-violet-700 hover:bg-violet-50' : ''}>
+                  <FileText className="w-4 h-4 mr-2" />KSeF
+                </Button>
               </div>
             </header>
 
@@ -4639,6 +4644,23 @@ export default function OpsDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            )}
+
+            {/* ── KSeF Inbox ── */}
+            {invoiceSubView === 'ksef' && (
+              <Card>
+                <CardContent className="pt-6">
+                  {selectedLocation ? (
+                    <KsefInbox
+                      companyId={selectedLocation.locations.company_id}
+                      locationId={selectedLocation.location_id}
+                      locationName={selectedLocation.locations.name}
+                    />
+                  ) : (
+                    <p className="text-slate-400 text-center py-8">Wybierz lokalizację aby zobaczyć faktury KSeF</p>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             {/* ── Invoice History ── */}
