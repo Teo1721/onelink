@@ -23,6 +23,18 @@
     {
       "path": "/api/ksef/sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/stock-alerts",
+      "schedule": "15 7 * * *"
+    },
+    {
+      "path": "/api/cron/daily-summary",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/anomaly-detection",
+      "schedule": "30 7 * * *"
     }
   ]
 }

@@ -35,6 +35,8 @@ import { useFormDraft } from '@/lib/use-form-draft'
 import { DraftBanner } from '@/components/draft-banner'
 import { SupplierAutocomplete } from '@/components/supplier-autocomplete'
 import { AiSidePanel } from '@/components/ai-side-panel'
+import { PlChat } from '@/components/pl-chat'
+import { SetupChecklist } from '@/components/setup-checklist'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -3678,7 +3680,12 @@ export default function OpsDashboard() {
         {/* ║  DASHBOARD (multi-location)                             ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'dashboard' && (
-          <DashboardView locations={myLocations} supabase={supabase} />
+          <>
+            {selectedLocation?.locations?.company_id && (
+              <SetupChecklist companyId={selectedLocation.locations.company_id} />
+            )}
+            <DashboardView locations={myLocations} supabase={supabase} />
+          </>
         )}
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}
@@ -5214,6 +5221,10 @@ export default function OpsDashboard() {
           onClose={() => setAiPanelOpen(false)}
         />
       )}
+      {selectedLocation?.locations?.company_id && (
+        <PlChat companyId={selectedLocation.locations.company_id} />
+      )}
+
       <HelpDrawer
         activeView={activeView}
         keyMap={{
