@@ -11,11 +11,6 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  icons: {
-    icon: '/company-logo.png',
-    shortcut: '/company-logo.png',
-    apple: '/company-logo.png',
-  },
   title: "OneLink — System Operacyjny dla Biznesu | P&L, Dyrektorzy AI, HR",
   description: "OneLink to system operacyjny dla właścicieli firm — P&L w czasie rzeczywistym, Dyrektorzy AI, ewidencja czasu pracy, magazyn i faktury w jednym panelu. Dla restauracji, siłowni, hoteli, sklepów i więcej. Zacznij bezpłatny 7-dniowy trial od 49,99 zł/mies.",
   openGraph: {
