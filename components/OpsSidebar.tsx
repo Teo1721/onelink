@@ -17,6 +17,8 @@ type OpsSidebarProps = {
   onLogout: () => void
   onSwitchLocation: () => void
   canSwitchToAdmin?: boolean
+  extraPermissions?: string[]
+  userRole?: string
 }
 
 const NAV_ITEMS = [
@@ -39,9 +41,15 @@ const NAV_ITEMS = [
   { key: 'account',     label: 'Konto',       labelFull: 'Konto',            icon: Settings },
 ]
 
-// Bottom bar shows first 4 + "More"
-const BOTTOM_MAIN = NAV_ITEMS.slice(0, 4)
-const BOTTOM_MORE = NAV_ITEMS.slice(4)
+// Keys always visible to employees (regardless of extra permissions)
+const EMPLOYEE_BASE_KEYS = new Set(['my_schedule', 'leave', 'swaps', 'certs', 'attendance', 'account'])
+
+function useVisibleItems(userRole?: string, extraPermissions?: string[]) {
+  if (!userRole || userRole !== 'employee') return NAV_ITEMS
+  return NAV_ITEMS.filter(({ key }) =>
+    EMPLOYEE_BASE_KEYS.has(key) || (extraPermissions ?? []).includes(key)
+  )
+}
 
 export function OpsSidebar({
   locationName,
@@ -50,9 +58,15 @@ export function OpsSidebar({
   onLogout,
   onSwitchLocation,
   canSwitchToAdmin = false,
+  extraPermissions,
+  userRole,
 }: OpsSidebarProps) {
   const [moreOpen, setMoreOpen] = useState(false)
   const router = useRouter()
+
+  const visibleItems = useVisibleItems(userRole, extraPermissions)
+  const bottomMain = visibleItems.slice(0, 4)
+  const bottomMore = visibleItems.slice(4)
 
   const navigate = (key: string) => {
     onNavigate(key)
@@ -85,7 +99,7 @@ export function OpsSidebar({
         {/* Nav */}
         <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] px-3 pb-1.5">Menu</p>
-          {NAV_ITEMS.map(({ key, labelFull, icon: Icon }) => {
+          {visibleItems.map(({ key, labelFull, icon: Icon }) => {
             const isActive = activeView === key
             return (
               <button
@@ -152,7 +166,7 @@ export function OpsSidebar({
           MOBILE bottom nav bar
       ══════════════════════════════════════════════════ */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0F172A] border-t border-[#1E293B] flex items-stretch">
-        {BOTTOM_MAIN.map(({ key, label, icon: Icon }) => {
+        {bottomMain.map(({ key, label, icon: Icon }) => {
           const isActive = activeView === key
           return (
             <button
@@ -167,15 +181,17 @@ export function OpsSidebar({
             </button>
           )
         })}
-        <button
-          onClick={() => setMoreOpen(true)}
-          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
-            BOTTOM_MORE.some(i => i.key === activeView) ? 'text-[#60A5FA]' : 'text-[#475569]'
-          }`}
-        >
-          <MoreHorizontal className="w-5 h-5" />
-          Więcej
-        </button>
+        {bottomMore.length > 0 && (
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+              bottomMore.some(i => i.key === activeView) ? 'text-[#60A5FA]' : 'text-[#475569]'
+            }`}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+            Więcej
+          </button>
+        )}
       </nav>
 
       {/* ══════════════════════════════════════════════════
@@ -189,7 +205,7 @@ export function OpsSidebar({
               <p className="text-[13px] font-semibold text-[#F1F5F9]">Więcej</p>
               <button onClick={() => setMoreOpen(false)} className="text-[#475569]"><X className="w-5 h-5" /></button>
             </div>
-            {BOTTOM_MORE.map(({ key, labelFull, icon: Icon }) => {
+            {bottomMore.map(({ key, labelFull, icon: Icon }) => {
               const isActive = activeView === key
               return (
                 <button

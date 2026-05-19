@@ -2169,6 +2169,7 @@ export default function OpsDashboard() {
   const [myLocations, setMyLocations] = useState<LocationData[]>([])
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null)
   const [userRole, setUserRole] = useState('')
+  const [extraPermissions, setExtraPermissions] = useState<string[]>([])
   const [userId, setUserId] = useState('')
   const [activeView, setActiveView] = useState<ActiveView>('reporting')
   const [aiPanelOpen, setAiPanelOpen] = useState(true)
@@ -2350,9 +2351,10 @@ export default function OpsDashboard() {
       setUserId(user.id)
 
       const { data: profile } = await supabase
-        .from('user_profiles').select('role, full_name, company_id').eq('id', user.id).single()
+        .from('user_profiles').select('role, full_name, company_id, extra_permissions').eq('id', user.id).single()
       const role = profile?.role || 'employee'
       setUserRole(role)
+      setExtraPermissions((profile as any)?.extra_permissions ?? [])
       setClosingPersonName(profile?.full_name || user.email || 'Nieznany')
       if (['regional_manager', 'accounting', 'employee'].includes(role)) setIsReadOnly(true)
       fetchAiTasks()
@@ -3453,6 +3455,8 @@ export default function OpsDashboard() {
         onLogout={async () => { await supabase.auth.signOut(); router.push('/auth/login') }}
         onSwitchLocation={() => setSelectedLocation(null)}
         canSwitchToAdmin={['owner', 'superadmin'].includes(userRole)}
+        extraPermissions={extraPermissions}
+        userRole={userRole}
       />
 
       <main className={`flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 p-4 md:p-8 transition-all duration-300 ${aiPanelOpen ? 'lg:mr-[300px]' : ''}`}>
@@ -3657,7 +3661,7 @@ export default function OpsDashboard() {
         {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  CHECKLIST                                              ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
-        {activeView === 'checklist' && selectedLocation && (
+        {activeView === 'checklist' && selectedLocation && (['owner','superadmin','regional_manager','accounting'].includes(userRole) || extraPermissions.includes('checklist')) && (
           <ChecklistOpsView
             locationId={selectedLocation.location_id}
             locationName={selectedLocation.locations?.name ?? ''}
@@ -3901,8 +3905,23 @@ export default function OpsDashboard() {
                     <p className="text-xs text-slate-500">Online: {gross > 0 && online > 0 ? fmtPct(onlinePercent) : '—'}</p></div>
                 </CardContent></Card>
 
-              {/* S2: Plan */}
-              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">2. Plan vs wykonanie</h3>
+              {/* S2: Gotówka */}
+              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">2. Kontrola gotówki</h3>
+              <Card className="mb-4"><CardContent className="grid grid-cols-3 gap-4 pt-4 text-sm">
+                <div className="space-y-2"><Label>Raport kasowy</Label><Input type="number" value={salesForm.cashReported} onChange={e => setSalesForm({...salesForm, cashReported: e.target.value})} disabled={isReadOnly} className="bg-gray-50" /></div>
+                <div className="space-y-2"><Label>Stan fizyczny</Label><Input type="number" value={salesForm.cashPhysical} onChange={e => setSalesForm({...salesForm, cashPhysical: e.target.value})} disabled={isReadOnly} className="bg-gray-50" /></div>
+                <div className="space-y-2"><Label>Różnica</Label><p className={`h-10 flex items-center font-bold ${cashDiffColor}`}>{fmt2(cashDiff)} {cashDiff === 0 ? '(OK)' : cashDiff > 0 ? '– nadw.' : '– niedob.'}</p></div>
+              </CardContent></Card>
+
+              {(Math.abs(cashDiff) > 0.01) && (
+                <div className={`mb-8 p-4 rounded border-2 ${fieldErr('cashDiffExplanation') ? 'bg-red-50 border-red-400' : 'bg-amber-50 border-amber-400'}`}>
+                  <p className={`font-bold text-sm mb-2 ${isCashDiffAbove20 ? 'text-red-800' : 'text-amber-800'}`}>⚠ Różnica: {fmt2(cashDiff)} — wyjaśnij *</p>
+                  <textarea value={salesForm.cashDiffExplanation} onChange={e => setSalesForm({...salesForm, cashDiffExplanation: e.target.value})}
+                    disabled={isReadOnly} placeholder="Przyczyna…" className="w-full min-h-[60px] rounded-md border border-input bg-white px-3 py-2 text-sm" /></div>
+              )}
+
+              {/* S3: Plan */}
+              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">3. Plan vs wykonanie</h3>
               <div className="grid grid-cols-2 gap-6 mb-4 bg-gray-50 p-6 rounded border border-gray-200">
                 <div className="space-y-2"><Label>Plan netto</Label><Input type="number" placeholder="0" value={salesForm.targetGross} onChange={e => setSalesForm({...salesForm, targetGross: e.target.value})} disabled={isReadOnly} className="bg-white" /></div>
                 <div className="space-y-2"><Label>Plan transakcji</Label><Input type="number" placeholder="0" value={salesForm.targetTx} onChange={e => setSalesForm({...salesForm, targetTx: e.target.value})} disabled={isReadOnly} className="bg-white" /></div>
@@ -3915,8 +3934,8 @@ export default function OpsDashboard() {
                     disabled={isReadOnly} placeholder="Przyczyna…" className="w-full min-h-[60px] rounded-md border border-input bg-white px-3 py-2 text-sm" /></div>
               )}
 
-              {/* S3: Obsada */}
-              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">3. Obsada zmian{fieldErr('staff') && <span className="text-red-500 text-sm ml-2">⚠</span>}</h3>
+              {/* S4: Obsada */}
+              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">4. Obsada zmian{fieldErr('staff') && <span className="text-red-500 text-sm ml-2">⚠</span>}</h3>
               <div className={`grid grid-cols-3 gap-6 mb-8 p-6 rounded border ${fieldErr('staff') ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}`}>
                 {[['staffMorning', '🌅 Rano'], ['staffAfternoon', '☀️ Popołudnie'], ['staffEvening', '🌙 Wieczór']].map(([key, label]) => (
                   <div key={key} className="space-y-2"><Label>{label as string}</Label>
@@ -3925,8 +3944,8 @@ export default function OpsDashboard() {
                 ))}
               </div>
 
-              {/* S4: Godziny */}
-              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">4. Godziny pracowników{fieldErr('hours') && <span className="text-red-500 text-sm ml-2">⚠</span>}</h3>
+              {/* S5: Godziny */}
+              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">5. Godziny pracowników{fieldErr('hours') && <span className="text-red-500 text-sm ml-2">⚠</span>}</h3>
               <Card className={`mb-6 ${fieldErr('hours') ? 'border-red-300' : ''}`}>
                 <CardContent className="space-y-3 pt-4">
                   <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 border-b pb-2">
@@ -3957,8 +3976,8 @@ export default function OpsDashboard() {
                     disabled={isReadOnly} placeholder="Przyczyna…" className="w-full min-h-[60px] rounded-md border border-input bg-white px-3 py-2 text-sm" /></div>
               )}
 
-              {/* S5: KPI */}
-              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">5. KPI dnia</h3>
+              {/* S6: KPI */}
+              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">6. KPI dnia</h3>
               <Card className="mb-8"><CardContent className="grid grid-cols-3 gap-4 text-sm pt-6">
                 <div><p className="text-xs text-slate-500 uppercase">Netto</p><p className="text-lg font-bold">{fmt0(net)}</p></div>
                 <div><p className="text-xs text-slate-500 uppercase">Plan %</p><p className={`text-lg font-bold ${isSalesBelow80 ? 'text-red-700' : ''}`}>{planNet > 0 ? fmtPct(planRealisation) : '—'}</p></div>
@@ -3967,21 +3986,6 @@ export default function OpsDashboard() {
                 <div><p className="text-xs text-slate-500 uppercase">Netto/h</p><p className="text-lg font-bold">{fmt2(salesPerHour)}</p></div>
                 <div><p className="text-xs text-slate-500 uppercase">Obsada</p><p className="text-lg font-bold">{totalStaff} <span className="text-xs font-normal text-slate-500">({staffMorning}/{staffAfternoon}/{staffEvening})</span></p></div>
               </CardContent></Card>
-
-              {/* S6: Gotówka */}
-              <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">6. Kontrola gotówki</h3>
-              <Card className="mb-4"><CardContent className="grid grid-cols-3 gap-4 pt-4 text-sm">
-                <div className="space-y-2"><Label>Raport kasowy</Label><Input type="number" value={salesForm.cashReported} onChange={e => setSalesForm({...salesForm, cashReported: e.target.value})} disabled={isReadOnly} className="bg-gray-50" /></div>
-                <div className="space-y-2"><Label>Stan fizyczny</Label><Input type="number" value={salesForm.cashPhysical} onChange={e => setSalesForm({...salesForm, cashPhysical: e.target.value})} disabled={isReadOnly} className="bg-gray-50" /></div>
-                <div className="space-y-2"><Label>Różnica</Label><p className={`h-10 flex items-center font-bold ${cashDiffColor}`}>{fmt2(cashDiff)} {cashDiff === 0 ? '(OK)' : cashDiff > 0 ? '– nadw.' : '– niedob.'}</p></div>
-              </CardContent></Card>
-
-              {(Math.abs(cashDiff) > 0.01) && (
-                <div className={`mb-8 p-4 rounded border-2 ${fieldErr('cashDiffExplanation') ? 'bg-red-50 border-red-400' : 'bg-amber-50 border-amber-400'}`}>
-                  <p className={`font-bold text-sm mb-2 ${isCashDiffAbove20 ? 'text-red-800' : 'text-amber-800'}`}>⚠ Różnica: {fmt2(cashDiff)} — wyjaśnij *</p>
-                  <textarea value={salesForm.cashDiffExplanation} onChange={e => setSalesForm({...salesForm, cashDiffExplanation: e.target.value})}
-                    disabled={isReadOnly} placeholder="Przyczyna…" className="w-full min-h-[60px] rounded-md border border-input bg-white px-3 py-2 text-sm" /></div>
-              )}
 
               {/* S7: Koszty ops */}
               <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">7. Koszty operacyjne</h3>
@@ -4775,7 +4779,7 @@ export default function OpsDashboard() {
         {/* ╔══════════════════════════════════════════════════════════╗ */}
         {/* ║  3. INVENTORY                                            ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
-        {activeView === 'inventory' && (
+        {activeView === 'inventory' && (['owner','superadmin','regional_manager','accounting'].includes(userRole) || extraPermissions.includes('inventory')) && (
           <div className="max-w-[1200px]">
             <header className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
