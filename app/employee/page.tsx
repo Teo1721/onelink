@@ -179,6 +179,7 @@ export default function EmployeeDashboard() {
 
   /* ── schedule ── */
   const [shifts,      setShifts]      = useState<Shift[]>([])
+  const [dayRoster,   setDayRoster]   = useState<Record<string, { name: string; time: string; position?: string | null }[]>>({})
   const [view,        setView]        = useState<'week' | 'month' | 'list'>('week')
   const [weekStart,   setWeekStart]   = useState(getWeekStart(today))
   const [calYear,     setCalYear]     = useState(new Date().getFullYear())
@@ -329,7 +330,29 @@ export default function EmployeeDashboard() {
       .or(filter).eq('is_posted', true)
       .gte('date', startDate).order('date').limit(90)
     setShifts((data ?? []) as unknown as Shift[])
-  }, [userId, employeeId, weekStart, today, supabase])
+
+    // Load full day roster for the employee's location
+    if (locationId) {
+      const endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + 90)
+      const { data: allShifts } = await supabase
+        .from('shifts')
+        .select('date, time_start, time_end, position, employees(full_name)')
+        .eq('location_id', locationId)
+        .eq('is_posted', true)
+        .gte('date', startDate)
+        .lte('date', endDate.toISOString().slice(0, 10))
+        .order('time_start')
+      const roster: Record<string, { name: string; time: string; position?: string | null }[]> = {}
+      for (const s of allShifts ?? []) {
+        const name = (s.employees as any)?.full_name
+        if (!name) continue
+        if (!roster[s.date]) roster[s.date] = []
+        roster[s.date].push({ name, time: `${fmt(s.time_start)}–${fmt(s.time_end)}`, position: s.position })
+      }
+      setDayRoster(roster)
+    }
+  }, [userId, employeeId, weekStart, today, locationId, supabase])
 
   useEffect(() => {
     if (userId) loadShifts()
@@ -687,13 +710,15 @@ export default function EmployeeDashboard() {
                 <div className="grid grid-cols-7 gap-1">
                   {weekDays.map(d => {
                     const dayShifts = weekShifts.filter(s => s.date === d.iso)
+                    const isSelected = selectedDay === d.iso
                     return (
-                      <div key={d.iso} className={`rounded-xl border p-1.5 min-h-[90px] flex flex-col gap-1
-                        ${d.isToday ? 'border-blue-400 bg-blue-50' : d.isWeekend ? 'border-slate-100 bg-slate-50' : 'border-slate-100 bg-white'}`}>
+                      <button key={d.iso} onClick={() => setSelectedDay(isSelected ? null : d.iso)}
+                        className={`rounded-xl border p-1.5 min-h-[90px] flex flex-col gap-1 w-full text-left transition-all
+                          ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : d.isToday ? 'border-blue-400 bg-blue-50' : d.isWeekend ? 'border-slate-100 bg-slate-50' : 'border-slate-100 bg-white'}`}>
                         <div className="text-center">
                           <p className={`text-[9px] font-bold uppercase ${d.isToday ? 'text-blue-500' : 'text-slate-400'}`}>{d.label}</p>
                           <div className={`w-5 h-5 rounded-full flex items-center justify-center mx-auto text-[11px] font-bold
-                            ${d.isToday ? 'bg-blue-500 text-white' : 'text-slate-700'}`}>{d.dateFull}</div>
+                            ${d.isToday ? 'bg-blue-500 text-white' : isSelected ? 'bg-blue-100 text-blue-700' : 'text-slate-700'}`}>{d.dateFull}</div>
                         </div>
                         {dayShifts.map(shift => (
                           <div key={shift.id} className={`rounded-lg border px-1 py-0.5 text-center ${posColor(shift.position)}`}>
@@ -706,10 +731,38 @@ export default function EmployeeDashboard() {
                             <span className="text-[10px] text-slate-200">–</span>
                           </div>
                         )}
-                      </div>
+                        {(dayRoster[d.iso]?.length ?? 0) > 0 && (
+                          <p className="text-[8px] text-slate-400 text-center mt-auto">👥 {dayRoster[d.iso].length}</p>
+                        )}
+                      </button>
                     )
                   })}
                 </div>
+
+                {/* Day roster panel */}
+                {selectedDay && (
+                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                    <p className="text-[11px] font-bold text-blue-800 mb-2 uppercase tracking-wide">
+                      Obsada {new Date(selectedDay + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                    {(dayRoster[selectedDay]?.length ?? 0) === 0 ? (
+                      <p className="text-[12px] text-blue-400">Brak zaplanowanych zmian</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {dayRoster[selectedDay].map((r, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="text-[12px] font-semibold text-blue-900">{r.name}</span>
+                            <span className="text-[11px] text-blue-500 tabular-nums">{r.time}</span>
+                            {r.position && (
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-semibold capitalize ${posColor(r.position)}`}>{r.position}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -830,41 +883,58 @@ export default function EmployeeDashboard() {
                   const hrs = calcHours(fmt(shift.time_start), fmt(shift.time_end), shift.break_minutes ?? 0)
                   const isToday = shift.date === today
                   return (
-                    <div key={shift.id} className={`bg-white rounded-xl overflow-hidden flex border ${isToday ? 'border-blue-400' : 'border-gray-100'} shadow-sm`}>
-                      <div className={`w-1.5 shrink-0 ${posDot(shift.position)}`} />
-                      <div className="flex-1 p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
-                              {isToday ? 'DZIŚ · ' : ''}{new Date(shift.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })}
-                            </p>
-                            <p className="text-base font-bold text-gray-900 tabular-nums">{fmt(shift.time_start)} – {fmt(shift.time_end)}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">{hrs.toFixed(1)}h</span>
-                              {shift.locations?.[0]?.name && <span className="text-xs text-gray-400">📍 {shift.locations[0].name}</span>}
+                    <div key={shift.id} className={`bg-white rounded-xl overflow-hidden border ${isToday ? 'border-blue-400' : 'border-gray-100'} shadow-sm`}>
+                      <div className="flex">
+                        <div className={`w-1.5 shrink-0 ${posDot(shift.position)}`} />
+                        <div className="flex-1 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                                {isToday ? 'DZIŚ · ' : ''}{new Date(shift.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              </p>
+                              <p className="text-base font-bold text-gray-900 tabular-nums">{fmt(shift.time_start)} – {fmt(shift.time_end)}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500">{hrs.toFixed(1)}h</span>
+                                {shift.locations?.[0]?.name && <span className="text-xs text-gray-400">📍 {shift.locations[0].name}</span>}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            {shift.position && (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${posColor(shift.position)}`}>
-                                {shift.position}
-                              </span>
-                            )}
-                            {shift.date >= today && employeeId && (
-                              <button
-                                onClick={() => {
-                                  loadColleagues()
-                                  setSwapModal({ shiftId: shift.id, shiftLabel: `${shift.date} · ${fmt(shift.time_start)} – ${fmt(shift.time_end)}` })
-                                  setTab('swaps')
-                                }}
-                                className="text-[10px] font-semibold text-blue-500 hover:text-blue-700 flex items-center gap-0.5"
-                              >
-                                <GitCompare className="w-3 h-3" />Zamień
-                              </button>
-                            )}
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              {shift.position && (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${posColor(shift.position)}`}>
+                                  {shift.position}
+                                </span>
+                              )}
+                              {shift.date >= today && employeeId && (
+                                <button
+                                  onClick={() => {
+                                    loadColleagues()
+                                    setSwapModal({ shiftId: shift.id, shiftLabel: `${shift.date} · ${fmt(shift.time_start)} – ${fmt(shift.time_end)}` })
+                                    setTab('swaps')
+                                  }}
+                                  className="text-[10px] font-semibold text-blue-500 hover:text-blue-700 flex items-center gap-0.5"
+                                >
+                                  <GitCompare className="w-3 h-3" />Zamień
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
+                      {/* Full day roster for this day */}
+                      {(dayRoster[shift.date]?.length ?? 0) > 0 && (
+                        <div className="border-t border-gray-100 px-3 py-2 bg-gray-50">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">👥 Cały zespół tego dnia</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            {dayRoster[shift.date].map((r, i) => (
+                              <div key={i} className="flex items-center gap-1 text-[11px] text-gray-600">
+                                <div className="w-1 h-1 rounded-full bg-gray-400 shrink-0" />
+                                <span className="font-medium">{r.name}</span>
+                                <span className="text-gray-400">{r.time}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}

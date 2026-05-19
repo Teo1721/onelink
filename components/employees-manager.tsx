@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Plus, Upload, Save, Trash2, Edit2, X, Loader2, Mail, CheckCircle2, AlertCircle, Users, Phone, KeyRound } from 'lucide-react'
+import { Plus, Upload, Save, Trash2, Edit2, X, Loader2, Mail, CheckCircle2, AlertCircle, Users, Phone, KeyRound, ClipboardList, CheckSquare } from 'lucide-react'
 
 const POSITIONS = ['kucharz','kelner','kasjer','manager','zmywak','barista','dostawa','inne']
 
@@ -73,6 +73,10 @@ export function EmployeesManager({
   // auth status map (user_id → confirmed/last_sign_in)
   const [authStatus, setAuthStatus]       = useState<Record<string, AuthStatus>>({})
 
+  // extra permissions map (user_id → string[])
+  const [extraPerms, setExtraPerms]       = useState<Record<string, string[]>>({})
+  const [permSaving, setPermSaving]       = useState<string | null>(null)
+
   // invite state
   const [inviting, setInviting]           = useState<Record<string, boolean>>({})
 
@@ -130,11 +134,38 @@ export function EmployeesManager({
         ;(json.users ?? []).forEach((u: AuthStatus) => { map[u.id] = u })
         setAuthStatus(map)
       } catch { /* non-critical */ }
+
+      // Load extra_permissions for linked accounts
+      try {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, extra_permissions')
+          .in('id', ids)
+        const permMap: Record<string, string[]> = {}
+        ;(profiles ?? []).forEach((p: { id: string; extra_permissions: string[] | null }) => {
+          permMap[p.id] = p.extra_permissions ?? []
+        })
+        setExtraPerms(permMap)
+      } catch { /* non-critical */ }
     }
     setLoading(false)
   }, [supabase, filterLoc, locations])
 
   useEffect(() => { fetchEmployees() }, [fetchEmployees])
+
+  // ── extra permissions toggle ──
+  const togglePerm = async (userId: string, perm: string) => {
+    const current = extraPerms[userId] ?? []
+    const next = current.includes(perm) ? current.filter(p => p !== perm) : [...current, perm]
+    setPermSaving(userId + perm)
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, extraPermissions: next }),
+    })
+    if (res.ok) setExtraPerms(prev => ({ ...prev, [userId]: next }))
+    setPermSaving(null)
+  }
 
   // ── invite employee ──
   const inviteEmployee = async (emp: Employee) => {
@@ -555,7 +586,7 @@ export function EmployeesManager({
                           {(emp.base_rate ?? emp.real_hour_cost) && <span className="font-medium text-[#374151]">{emp.base_rate ?? emp.real_hour_cost} zł/h</span>}
                         </div>
 
-                        {/* Account status row */}
+                        {/* Account status + permissions row */}
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           {!emp.user_id ? (
                             <>
@@ -605,6 +636,35 @@ export function EmployeesManager({
                                   <button onClick={() => setTempPasswords(p => { const n = {...p}; delete n[emp.id]; return n })} className="ml-1 text-yellow-500">✕</button>
                                 </span>
                               )}
+                            </>
+                          )}
+                          {/* Extra permissions — only shown when employee has a linked account */}
+                          {emp.user_id && (
+                            <>
+                              {[
+                                { key: 'inventory', label: 'Inwentarz', Icon: ClipboardList },
+                                { key: 'checklist', label: 'Checklista', Icon: CheckSquare },
+                              ].map(({ key, label, Icon }) => {
+                                const active = (extraPerms[emp.user_id!] ?? []).includes(key)
+                                const saving = permSaving === emp.user_id + key
+                                return (
+                                  <button
+                                    key={key}
+                                    onClick={() => togglePerm(emp.user_id!, key)}
+                                    disabled={saving}
+                                    title={active ? `Odbierz dostęp: ${label}` : `Przyznaj dostęp: ${label}`}
+                                    className={[
+                                      'flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium border transition-all disabled:opacity-50',
+                                      active
+                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                        : 'bg-white text-slate-400 border-slate-200 hover:border-indigo-400 hover:text-indigo-600',
+                                    ].join(' ')}
+                                  >
+                                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
+                                    {label}
+                                  </button>
+                                )
+                              })}
                             </>
                           )}
                         </div>

@@ -10,6 +10,85 @@ type CreateUserBody = {
   locationName?: string;
 };
 
+export async function GET() {
+  const supabase = await createServerClient()
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role, company_id')
+    .eq('id', currentUser.id)
+    .maybeSingle()
+
+  if (profile?.role !== 'owner' && profile?.role !== 'superadmin')
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const admin = createAdminClient()
+  const { data: users } = await admin
+    .from('user_profiles')
+    .select('id, full_name, role, extra_permissions')
+    .eq('company_id', profile.company_id)
+    .neq('role', 'owner')
+    .order('full_name')
+
+  // Fetch emails from auth.users for display
+  const ids = (users ?? []).map(u => u.id)
+  const emails: Record<string, string> = {}
+  for (const id of ids) {
+    const { data: au } = await admin.auth.admin.getUserById(id)
+    if (au?.user?.email) emails[id] = au.user.email
+  }
+
+  const result = (users ?? []).map(u => ({
+    id: u.id,
+    name: u.full_name ?? emails[u.id] ?? u.id,
+    email: emails[u.id] ?? '',
+    role: u.role,
+    extraPermissions: (u.extra_permissions ?? []) as string[],
+  }))
+
+  return NextResponse.json({ users: result })
+}
+
+export async function PATCH(request: Request) {
+  const supabase = await createServerClient()
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role, company_id')
+    .eq('id', currentUser.id)
+    .maybeSingle()
+
+  if (profile?.role !== 'owner' && profile?.role !== 'superadmin')
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { userId, extraPermissions } = await request.json()
+  if (!userId || !Array.isArray(extraPermissions))
+    return NextResponse.json({ error: 'userId and extraPermissions required' }, { status: 400 })
+
+  const admin = createAdminClient()
+  // Verify target user belongs to same company
+  const { data: target } = await admin
+    .from('user_profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (target?.company_id !== profile.company_id)
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { error } = await admin
+    .from('user_profiles')
+    .update({ extra_permissions: extraPermissions })
+    .eq('id', userId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
 export async function POST(request: Request) {
   try {
     const { email, role, password, locationId, locationName }: CreateUserBody =
