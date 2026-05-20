@@ -62,7 +62,8 @@ export async function PATCH(request: Request) {
     .eq('id', currentUser.id)
     .maybeSingle()
 
-  if (profile?.role !== 'owner' && profile?.role !== 'superadmin')
+  const allowed = ['owner', 'superadmin', 'point_manager', 'regional_manager']
+  if (!profile?.role || !allowed.includes(profile.role))
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId, extraPermissions } = await request.json()
