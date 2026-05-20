@@ -57,7 +57,7 @@ export function EmployeesManager({
   // ── state ──
   const [employees, setEmployees]         = useState<Employee[]>([])
   const [loading, setLoading]             = useState(true)
-  const [tab, setTab]                     = useState<'list' | 'add' | 'csv'>('list')
+  const [tab, setTab]                     = useState<'list' | 'add' | 'csv' | 'permissions'>('list')
   const [filterLoc, setFilterLoc]         = useState<string>('all')
 
   // manual add
@@ -345,6 +345,9 @@ export function EmployeesManager({
           )}
           {tab === 'list' && (
             <>
+              <button onClick={() => setTab('permissions')} className="h-8 px-3 text-[12px] font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5" /> Uprawnienia
+              </button>
               <button onClick={() => setTab('add')} className="h-8 px-3 text-[12px] font-medium rounded-lg bg-[#111827] text-white hover:bg-[#1F2937] flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> Dodaj ręcznie
               </button>
@@ -691,6 +694,61 @@ export function EmployeesManager({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── PERMISSIONS TAB ── */}
+      {tab === 'permissions' && (
+        <div className="space-y-3">
+          <p className="text-[13px] text-[#6B7280]">
+            Przyznaj pracownikowi dostęp do dodatkowych modułów w panelu ops.
+            Uprawnienia działają tylko dla kont z aktywnym logowaniem.
+          </p>
+          {employees.length === 0 && (
+            <p className="text-[13px] text-[#9CA3AF] text-center py-8">Brak pracowników</p>
+          )}
+          {employees.map(emp => {
+            const hasAccount = !!emp.user_id
+            const perms = extraPerms[emp.user_id ?? ''] ?? []
+            return (
+              <div key={emp.id} className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${hasAccount ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-[#111827] truncate">{emp.full_name}</p>
+                  <p className="text-[11px] text-[#9CA3AF]">
+                    {hasAccount
+                      ? authStatus[emp.user_id!]?.confirmed_at ? '✓ Konto aktywne' : '📧 Zaproszony'
+                      : 'Brak konta — najpierw zaproś pracownika'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {[
+                    { key: 'inventory', label: 'Inwentarz', Icon: ClipboardList },
+                    { key: 'checklist', label: 'Checklista', Icon: CheckSquare },
+                  ].map(({ key, label, Icon }) => {
+                    const active = perms.includes(key)
+                    const saving = permSaving === (emp.user_id ?? '') + key
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => emp.user_id && togglePerm(emp.user_id, key)}
+                        disabled={!hasAccount || saving}
+                        className={[
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all',
+                          !hasAccount ? 'opacity-40 cursor-not-allowed bg-white text-slate-400 border-slate-200' :
+                          active
+                            ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-400 hover:text-indigo-600',
+                        ].join(' ')}
+                      >
+                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
