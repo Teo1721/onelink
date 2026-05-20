@@ -7,7 +7,9 @@ import {
   LayoutDashboard, FileText, ClipboardList, LogOut, MapPin,
   Calendar, Users, Settings, CalendarDays, MoreHorizontal, X, QrCode, Clock,
   Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen, Banknote, UserCheck,
-  ArrowLeftRight, CheckSquare,
+  ArrowLeftRight, CheckSquare, NotebookPen, BookUser, Trash2, Thermometer,
+  TrendingUp, LineChart, ShoppingCart, PiggyBank,
+  ChefHat, ShieldCheck, Landmark,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -36,9 +38,20 @@ const NAV_ITEMS = [
   { key: 'documents',   label: 'Dokumenty',   labelFull: 'Dokumenty',        icon: FolderOpen },
   { key: 'tips',        label: 'Napiwki',     labelFull: 'Napiwki',          icon: Banknote  },
   { key: 'onboarding',  label: 'Onboarding',  labelFull: 'Onboarding',       icon: UserCheck },
-  { key: 'checklist',   label: 'Checklista',  labelFull: 'Checklista',       icon: CheckSquare },
-  { key: 'kiosk',       label: 'Kiosk',       labelFull: 'Kiosk QR',         icon: QrCode },
-  { key: 'account',     label: 'Konto',       labelFull: 'Konto',            icon: Settings },
+  { key: 'checklist',     label: 'Checklista',  labelFull: 'Checklista',          icon: CheckSquare },
+  { key: 'handover',      label: 'Przekazanie', labelFull: 'Notatki zmiany',      icon: NotebookPen },
+  { key: 'suppliers',     label: 'Dostawcy',    labelFull: 'Książka dostawców',   icon: BookUser },
+  { key: 'waste',         label: 'Odpady',      labelFull: 'Ewidencja odpadów',   icon: Trash2 },
+  { key: 'haccp',         label: 'HACCP',       labelFull: 'Kontrola HACCP',      icon: Thermometer },
+  { key: 'forecast',        label: 'Prognoza',    labelFull: 'Prognoza przychodów', icon: TrendingUp },
+  { key: 'price_tracking',  label: 'Ceny',        labelFull: 'Historia cen',        icon: LineChart },
+  { key: 'purchase_orders', label: 'Zamówienia',  labelFull: 'Zamówienia do dostawców', icon: ShoppingCart },
+  { key: 'budget',          label: 'Budżet',      labelFull: 'Budżet miesięczny',   icon: PiggyBank },
+  { key: 'recipes',         label: 'Receptury',   labelFull: 'Kalkulacja receptur', icon: ChefHat },
+  { key: 'allergens',       label: 'Alergeny',    labelFull: 'Rejestr alergenów',   icon: ShieldCheck },
+  { key: 'cash_audit',      label: 'Kasa',        labelFull: 'Kontrola kasy',       icon: Landmark },
+  { key: 'kiosk',           label: 'Kiosk',       labelFull: 'Kiosk QR',            icon: QrCode },
+  { key: 'account',       label: 'Konto',       labelFull: 'Konto',               icon: Settings },
 ]
 
 // Keys always visible to employees (regardless of extra permissions)
