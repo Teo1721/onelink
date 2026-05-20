@@ -9,7 +9,7 @@ import {
   Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen, Banknote, UserCheck,
   ArrowLeftRight, CheckSquare, NotebookPen, BookUser, Trash2, Thermometer,
   TrendingUp, LineChart, ShoppingCart, PiggyBank,
-  ChefHat, ShieldCheck, Landmark,
+  ShieldCheck, Landmark,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -47,8 +47,7 @@ const NAV_ITEMS = [
   { key: 'price_tracking',  label: 'Ceny',        labelFull: 'Historia cen',        icon: LineChart },
   { key: 'purchase_orders', label: 'Zamówienia',  labelFull: 'Zamówienia do dostawców', icon: ShoppingCart },
   { key: 'budget',          label: 'Budżet',      labelFull: 'Budżet miesięczny',   icon: PiggyBank },
-  { key: 'recipes',         label: 'Receptury',   labelFull: 'Kalkulacja receptur', icon: ChefHat },
-  { key: 'allergens',       label: 'Alergeny',    labelFull: 'Rejestr alergenów',   icon: ShieldCheck },
+{ key: 'allergens',       label: 'Alergeny',    labelFull: 'Rejestr alergenów',   icon: ShieldCheck },
   { key: 'cash_audit',      label: 'Kasa',        labelFull: 'Kontrola kasy',       icon: Landmark },
   { key: 'kiosk',           label: 'Kiosk',       labelFull: 'Kiosk QR',            icon: QrCode },
   { key: 'account',       label: 'Konto',       labelFull: 'Konto',               icon: Settings },

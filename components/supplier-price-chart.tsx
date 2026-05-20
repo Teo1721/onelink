@@ -26,7 +26,7 @@ interface PriceEntry {
 }
 
 interface InvoiceItem {
-  product: string
+  product_name: string
   quantity: number
   unit: string
   net_price: number
@@ -41,12 +41,12 @@ interface Invoice {
 }
 
 interface Props {
-  companyId: string
+  locationId: string
   supabase: SupabaseClient
 }
 
 /* ─── main component ──────────────────────────────────────────────────────── */
-export function SupplierPriceChart({ companyId, supabase }: Props) {
+export function SupplierPriceChart({ locationId, supabase }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [productMap, setProductMap] = useState<Map<string, PriceEntry[]>>(new Map())
@@ -56,7 +56,7 @@ export function SupplierPriceChart({ companyId, supabase }: Props) {
 
   useEffect(() => {
     fetchData()
-  }, [companyId])
+  }, [locationId])
 
   async function fetchData() {
     setLoading(true)
@@ -64,8 +64,8 @@ export function SupplierPriceChart({ companyId, supabase }: Props) {
     try {
       const { data, error: dbErr } = await supabase
         .from('invoices')
-        .select('id, supplier_name, service_date, invoice_items(product, quantity, unit, net_price, cos_category)')
-        .eq('company_id', companyId)
+        .select('id, supplier_name, service_date, invoice_items(product_name, quantity, unit, net_price, cos_category)')
+        .eq('location_id', locationId)
         .eq('status', 'approved')
         .order('service_date', { ascending: false })
         .limit(200)
@@ -80,17 +80,17 @@ export function SupplierPriceChart({ companyId, supabase }: Props) {
       for (const inv of invoices) {
         const items = Array.isArray(inv.invoice_items) ? inv.invoice_items : []
         for (const item of items) {
-          if (!item.product) continue
+          if (!item.product_name) continue
           const pricePerUnit =
             item.quantity && item.quantity !== 0
               ? item.net_price / item.quantity
               : item.net_price
 
-          if (!map.has(item.product)) {
-            map.set(item.product, [])
-            firstSeen.push(item.product)
+          if (!map.has(item.product_name)) {
+            map.set(item.product_name, [])
+            firstSeen.push(item.product_name)
           }
-          map.get(item.product)!.push({
+          map.get(item.product_name)!.push({
             date: inv.service_date,
             supplier: inv.supplier_name ?? '—',
             price_per_unit: pricePerUnit,

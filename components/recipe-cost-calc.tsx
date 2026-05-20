@@ -45,6 +45,7 @@ function computeIngredientCost(
   ingredient: RecipeIngredient,
   priceMap: PriceMap,
 ): number | null {
+  if (!ingredient.ingredient_name) return null
   const key = ingredient.ingredient_name.trim().toLowerCase()
   const pricePerUnit = priceMap[key]
   if (!pricePerUnit) return null
@@ -53,6 +54,7 @@ function computeIngredientCost(
 
 function computeTotalCost(ingredients: RecipeIngredient[], priceMap: PriceMap): number {
   return ingredients.reduce((sum, ing) => {
+    if (!ing.ingredient_name?.trim()) return sum
     const c = computeIngredientCost(ing, priceMap)
     return sum + (c ?? 0)
   }, 0)
@@ -90,7 +92,7 @@ export function RecipeCostCalc({ companyId, supabase }: Props) {
   const fetchPriceMap = useCallback(async () => {
     const { data, error } = await supabase
       .from('invoice_items')
-      .select('product, net_price, quantity, unit, invoices(service_date, company_id)')
+      .select('product_name, net_price, quantity, unit, invoices(service_date, company_id)')
       .eq('invoices.company_id', companyId)
       .order('invoices.service_date', { ascending: false })
 
@@ -98,8 +100,8 @@ export function RecipeCostCalc({ companyId, supabase }: Props) {
 
     const map: PriceMap = {}
     for (const item of data) {
-      if (!item.product || !item.net_price || !item.quantity) continue
-      const key = String(item.product).trim().toLowerCase()
+      if (!item.product_name || !item.net_price || !item.quantity) continue
+      const key = String(item.product_name).trim().toLowerCase()
       // only store the first (most recent) occurrence
       if (!(key in map)) {
         map[key] = item.net_price / item.quantity
