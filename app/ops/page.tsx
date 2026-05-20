@@ -45,7 +45,6 @@ import { WasteLog } from '@/components/waste-log'
 import { HaccpLog } from '@/components/haccp-log'
 import { PurchaseOrders } from '@/components/purchase-orders'
 import { BudgetPlanning } from '@/components/budget-planning'
-import { RecipeCostCalc } from '@/components/recipe-cost-calc'
 import { AllergenRegister } from '@/components/allergen-register'
 import { CashAudit } from '@/components/cash-audit'
 
@@ -134,7 +133,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'recipes' | 'allergens' | 'cash_audit'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -5331,7 +5330,7 @@ export default function OpsDashboard() {
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'price_tracking' && selectedLocation && (
           <SupplierPriceChart
-            companyId={selectedLocation.locations?.company_id ?? ''}
+            locationId={selectedLocation.location_id}
             supabase={supabase}
           />
         )}
@@ -5355,16 +5354,6 @@ export default function OpsDashboard() {
           <BudgetPlanning
             locationId={selectedLocation.location_id}
             locationName={selectedLocation.locations?.name ?? ''}
-            companyId={selectedLocation.locations?.company_id ?? ''}
-            supabase={supabase}
-          />
-        )}
-
-        {/* ╔══════════════════════════════════════════════════════════╗ */}
-        {/* ║  RECIPE COST CALCULATOR                                 ║ */}
-        {/* ╚══════════════════════════════════════════════════════════╝ */}
-        {activeView === 'recipes' && selectedLocation && (
-          <RecipeCostCalc
             companyId={selectedLocation.locations?.company_id ?? ''}
             supabase={supabase}
           />
