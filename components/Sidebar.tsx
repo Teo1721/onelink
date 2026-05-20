@@ -11,6 +11,7 @@ import {
   LogOut, Bell, CheckSquare, DollarSign, AlertTriangle, Truck, Users, Settings,
   Clock, Umbrella, GitCompare, GraduationCap, FolderOpen, LayoutGrid, Banknote, UserCheck,
   ArrowLeftRight, Brain, TrendingUp, Sparkles, MoreHorizontal, X, ChevronDown, ChevronRight,
+  UtensilsCrossed,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -105,6 +106,7 @@ export function Sidebar({
     {
       label: pl ? 'Raporty' : 'Reports',
       items: [
+        { key: 'food_cost',  label: pl ? 'Food Cost %' : 'Food Cost %', icon: UtensilsCrossed },
         { key: 'reports',    label: pl ? 'Raporty'      : 'Reports',      icon: BarChart3 },
         { key: 'history',    label: pl ? 'Historia'     : 'History',      icon: History },
         { key: 'imported',   label: pl ? 'Import Excel' : 'Excel Import', icon: FileSpreadsheet },

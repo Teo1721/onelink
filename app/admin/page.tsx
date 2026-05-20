@@ -45,6 +45,7 @@ import { RevenueForecast } from '@/components/revenue-forecast'
 import { CsvImport } from '@/components/csv-import'
 import { MenuEngineering } from '@/components/menu-engineering'
 import { ChecklistAdminView } from '@/components/checklist-admin-view'
+import { FoodCostDashboard } from '@/components/food-cost-dashboard'
 import { AiSidePanel } from '@/components/ai-side-panel'
 
 
@@ -474,6 +475,7 @@ type ActiveView =
   | 'csv_import'
   | 'menu_engineering'
   | 'checklist'
+  | 'food_cost'
 
 /* ================================================================== */
 /*  HELPERS                                                            */
@@ -4168,6 +4170,16 @@ export default function AdminDashboard() {
         {/* ═══════════════════════════════════════════════════════ */}
         {activeView === 'checklist' && (
           <ChecklistAdminView
+            supabase={supabase}
+            locations={locations}
+          />
+        )}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/*  FOOD COST DASHBOARD                                  */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {activeView === 'food_cost' && companyId && (
+          <FoodCostDashboard
+            companyId={companyId}
             supabase={supabase}
             locations={locations}
           />
