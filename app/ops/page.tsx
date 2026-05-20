@@ -37,6 +37,17 @@ import { SupplierAutocomplete } from '@/components/supplier-autocomplete'
 import { AiSidePanel } from '@/components/ai-side-panel'
 import { PlChat } from '@/components/pl-chat'
 import { SetupChecklist } from '@/components/setup-checklist'
+import { HandoverNotes } from '@/components/handover-notes'
+import { SupplierBook } from '@/components/supplier-book'
+import { RevenueForecast } from '@/components/revenue-forecast'
+import { SupplierPriceChart } from '@/components/supplier-price-chart'
+import { WasteLog } from '@/components/waste-log'
+import { HaccpLog } from '@/components/haccp-log'
+import { PurchaseOrders } from '@/components/purchase-orders'
+import { BudgetPlanning } from '@/components/budget-planning'
+import { RecipeCostCalc } from '@/components/recipe-cost-calc'
+import { AllergenRegister } from '@/components/allergen-register'
+import { CashAudit } from '@/components/cash-audit'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -111,6 +122,8 @@ type InvoiceHistoryItem = {
   total_gross: number
   status: string
   created_at: string
+  payment_status: 'unpaid' | 'paid' | 'partial' | null
+  paid_at: string | null
 }
 
 type InventoryProduct = {
@@ -121,7 +134,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'recipes' | 'allergens' | 'cash_audit'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -2245,7 +2258,22 @@ export default function OpsDashboard() {
   const [invoiceHistoryPage, setInvoiceHistoryPage] = useState(0)
   const [invoiceHistoryTotal, setInvoiceHistoryTotal] = useState(0)
   const [invoiceHistoryFilter, setInvoiceHistoryFilter] = useState<'all' | 'COS' | 'SEMIS'>('all')
+  const [invoicePaymentFilter, setInvoicePaymentFilter] = useState<'all' | 'unpaid' | 'paid'>('all')
+  const [paymentSaving, setPaymentSaving] = useState<string | null>(null)
   const INVOICE_PAGE_SIZE = 50
+
+  const markInvoicePaid = async (inv: InvoiceHistoryItem) => {
+    const nextStatus = inv.payment_status === 'paid' ? 'unpaid' : 'paid'
+    setPaymentSaving(inv.id)
+    await supabase.from('invoices').update({
+      payment_status: nextStatus,
+      paid_at: nextStatus === 'paid' ? new Date().toISOString() : null,
+    }).eq('id', inv.id)
+    setInvoiceHistory(prev => prev.map(i =>
+      i.id === inv.id ? { ...i, payment_status: nextStatus, paid_at: nextStatus === 'paid' ? new Date().toISOString() : null } : i
+    ))
+    setPaymentSaving(null)
+  }
 
   // ── AI invoice scan ──
   const [aiScanning, setAiScanning] = useState(false)
@@ -2596,17 +2624,19 @@ export default function OpsDashboard() {
       const from = invoiceHistoryPage * INVOICE_PAGE_SIZE
       const to   = from + INVOICE_PAGE_SIZE - 1
       let q = supabase.from('invoices')
-        .select('id, invoice_type, supplier_name, invoice_number, service_date, total_gross, status, created_at', { count: 'exact' })
+        .select('id, invoice_type, supplier_name, invoice_number, service_date, total_gross, status, created_at, payment_status, paid_at', { count: 'exact' })
         .eq('location_id', selectedLocation.location_id)
         .order('created_at', { ascending: false })
         .range(from, to)
       if (invoiceHistoryFilter !== 'all') q = q.eq('invoice_type', invoiceHistoryFilter)
+      if (invoicePaymentFilter === 'unpaid') q = q.or('payment_status.is.null,payment_status.eq.unpaid')
+      else if (invoicePaymentFilter === 'paid') q = q.eq('payment_status', 'paid')
       const { data, count } = await q
       if (data) setInvoiceHistory(data as InvoiceHistoryItem[])
       if (count !== null) setInvoiceHistoryTotal(count)
     }
     fetchInvHistory()
-  }, [selectedLocation, activeView, invoiceSubView, supabase, invoiceHistoryPage, invoiceHistoryFilter, INVOICE_PAGE_SIZE])
+  }, [selectedLocation, activeView, invoiceSubView, supabase, invoiceHistoryPage, invoiceHistoryFilter, invoicePaymentFilter, INVOICE_PAGE_SIZE])
 
   // ═══════════════════════════════════════════════════════════════════
   // LOAD: Inventory products
@@ -4681,6 +4711,16 @@ export default function OpsDashboard() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <CardTitle>Historia wysłanych faktur</CardTitle>
                     <div className="flex items-center gap-2">
+                      {/* Payment filter */}
+                      <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[12px] font-medium">
+                        {(['all', 'unpaid', 'paid'] as const).map(f => (
+                          <button key={f}
+                            onClick={() => { setInvoicePaymentFilter(f); setInvoiceHistoryPage(0) }}
+                            className={`px-3 py-1.5 transition-colors ${invoicePaymentFilter === f ? 'bg-emerald-700 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                            {f === 'all' ? 'Płatność: wszystkie' : f === 'unpaid' ? '⚠ Niezapłacone' : '✓ Zapłacone'}
+                          </button>
+                        ))}
+                      </div>
                       {/* Type filter */}
                       <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[12px] font-medium">
                         {(['all', 'COS', 'SEMIS'] as const).map(f => (
@@ -4711,6 +4751,7 @@ export default function OpsDashboard() {
                             <th className="pr-3">Data sprzedaży</th>
                             <th className="pr-3 text-right">Brutto</th>
                             <th className="pr-3">Status</th>
+                            <th className="pr-3">Płatność</th>
                           </tr></thead>
                           <tbody>
                             {invoiceHistory.map(inv => (
@@ -4725,6 +4766,19 @@ export default function OpsDashboard() {
                                 <td className="pr-3 text-slate-500">{inv.service_date}</td>
                                 <td className="pr-3 text-right font-medium">{fmt2(Number(inv.total_gross) || 0)}</td>
                                 <td className="pr-3"><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_LABELS[inv.status]?.color || 'bg-gray-100'}`}>{STATUS_LABELS[inv.status]?.label || inv.status}</span></td>
+                                <td className="pr-3">
+                                  <button
+                                    onClick={() => markInvoicePaid(inv)}
+                                    disabled={paymentSaving === inv.id}
+                                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium border transition-all ${
+                                      inv.payment_status === 'paid'
+                                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+                                        : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                                    }`}
+                                  >
+                                    {paymentSaving === inv.id ? '…' : inv.payment_status === 'paid' ? `✓ ${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('pl-PL') : 'Zapłacono'}` : 'Oznacz jako zapłaconą'}
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -5215,6 +5269,126 @@ export default function OpsDashboard() {
               />
             )}
           </div>
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  HANDOVER NOTES                                         ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'handover' && selectedLocation && (
+          <HandoverNotes
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+            userFullName={accountProfile?.full_name}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  SUPPLIER BOOK                                          ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'suppliers' && selectedLocation && (
+          <SupplierBook
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  WASTE LOG                                              ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'waste' && selectedLocation && (
+          <WasteLog
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  HACCP TEMPERATURE LOG                                  ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'haccp' && selectedLocation && (
+          <HaccpLog
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  REVENUE FORECAST                                       ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'forecast' && selectedLocation && (
+          <RevenueForecast
+            locationId={selectedLocation.location_id}
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  SUPPLIER PRICE TRACKING                                ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'price_tracking' && selectedLocation && (
+          <SupplierPriceChart
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  PURCHASE ORDERS                                        ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'purchase_orders' && selectedLocation && (
+          <PurchaseOrders
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  BUDGET PLANNING                                        ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'budget' && selectedLocation && (
+          <BudgetPlanning
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  RECIPE COST CALCULATOR                                 ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'recipes' && selectedLocation && (
+          <RecipeCostCalc
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  ALLERGEN REGISTER                                      ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'allergens' && selectedLocation && (
+          <AllergenRegister
+            companyId={selectedLocation.locations?.company_id ?? ''}
+            supabase={supabase}
+          />
+        )}
+
+        {/* ╔══════════════════════════════════════════════════════════╗ */}
+        {/* ║  CASH AUDIT                                             ║ */}
+        {/* ╚══════════════════════════════════════════════════════════╝ */}
+        {activeView === 'cash_audit' && selectedLocation && (
+          <CashAudit
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
+            supabase={supabase}
+          />
         )}
 
       </main>
