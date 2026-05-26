@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import OpenAI from 'openai'
 
 /**
  * GET /api/cron/investor-analysis
@@ -16,7 +15,6 @@ import OpenAI from 'openai'
  * - 4-week revenue trajectory (accelerating vs decelerating)
  */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 function today()            { return new Date().toLocaleDateString('sv-SE') }
 function daysAgo(n: number) {
@@ -24,25 +22,8 @@ function daysAgo(n: number) {
   return d.toLocaleDateString('sv-SE')
 }
 
-async function explainInvestorAnomaly(type: string, context: string): Promise<string> {
-  if (!process.env.OPENAI_API_KEY) return context
-  try {
-    const res = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 140,
-      messages: [
-        {
-          role: 'system',
-          content: `Jesteś Markiem — Dyrektorem Inwestorskim AI dla restauracji. Piszesz po polsku, jak CFO raportujący do zarządu.
-Format (2 zdania max):
-Zdanie 1: ocena sytuacji finansowej z perspektywy inwestorskiej.
-Zdanie 2: jedna konkretna rekomendacja dla właściciela dotycząca wzrostu wartości biznesu.`,
-        },
-        { role: 'user', content: `Sytuacja: ${type}\nDane: ${context}` },
-      ],
-    })
-    return res.choices[0]?.message?.content?.trim() ?? context
-  } catch { return context }
+function explainInvestorAnomaly(type: string, context: string): string {
+  return `${type}. ${context}`
 }
 
 async function getTrendDays(

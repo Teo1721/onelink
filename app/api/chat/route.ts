@@ -1,64 +1,38 @@
-import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const SYSTEM_PROMPT = `Jesteś pomocnym asystentem OneLink — polskiego systemu zarządzania dla firm, sklepów i sieci MŚP.
-
-Odpowiadaj TYLKO po polsku, chyba że użytkownik pisze w innym języku.
-Bądź pomocny, konkretny i przyjazny. Odpowiedzi utrzymuj zwięzłe (2-4 zdania, chyba że pytanie wymaga więcej).
-
-INFORMACJE O ONELINKU:
-• Co to jest: Panel do zarządzania P&L, food cost, magazynem i fakturami dla właścicieli firm — dane w czasie rzeczywistym, dostęp z telefonu i komputera.
-• Dla kogo: Restauracje, piekarnie, kawiarnie, cukiernie, delikatesy, catering i sieci MŚP.
-• Główne funkcje: Dashboard P&L na żywo, kontrola food cost, moduł magazynowy, zatwierdzanie faktur, alerty o odchyleniach, multi-lokalizacja, raporty EBIT, symulator cen menu.
-• Jak działa: Manager wpisuje dane przez telefon (sprzedaż, faktury, stany), właściciel widzi pełny P&L od razu.
-
-CENNIK:
-• Plan Start: 19,99 zł/mies. netto (+VAT) — 1 lokal, 1 manager, P&L, alerty
-• Plan Rozwój: 39,99 zł/mies. netto (+VAT) — do 2 lokali, 2 managerów, magazyn, food cost, faktury ★ NAJPOPULARNIEJSZY
-• Plan Sieć: 59,99 zł/mies. netto (+VAT) — do 5 lokali, 5 managerów, raporty cross-lokalizacyjne, panel regionalny
-• Wszystkie plany: 7-dniowy bezpłatny trial (karta Stripe wymagana do aktywacji, ale nie pobieramy opłaty przez 7 dni), anulowanie w dowolnym momencie.
-
-REJESTRACJA I TRIAL:
-• Rejestracja zajmuje 3 minuty na /auth/sign-up
-• Konfiguracja do 20 minut, zero działu IT
-• Karta wymagana tylko do aktywacji, nie do opłaty w trialu
-
-BEZPIECZEŃSTWO:
-• Dane szyfrowane TLS 1.3 w przesyle, AES-256 w spoczynku
-• Serwery w Unii Europejskiej (Supabase), zgodność z RODO
-• Płatności przez Stripe (PCI DSS Level 1), nie przechowujemy danych kart
-
-KONTAKT:
-• Email: kontakt@onelink.pl
-• Odpowiedź w 4 godziny w dni robocze (pon–pt, 9:00–17:00)
-• Demo: można umówić 20-minutową sesję przez Zoom lub Meet
-• Strona kontaktowa: /contact
-
-LINKI DO UŻYCIA (wspominaj je gdy pasuje):
-• Cennik: /pricing
-• Rejestracja: /auth/sign-up
-• Logowanie: /auth/login
-• Kontakt/demo: /contact
-• Bezpieczeństwo: /security
-• O nas: /about
-
-Gdy ktoś pyta o cenę, wymień wszystkie 3 plany zwięźle.
-Gdy ktoś chce zacząć / wypróbować — zachęć do rejestracji na /auth/sign-up.
-Gdy pytanie dotyczy technikaliów których nie znasz — odsyłaj do kontakt@onelink.pl.
-Nie wymyślaj funkcji które nie są wymienione powyżej.`;
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
 
-export async function POST(req: NextRequest) {
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: "Chatbot tymczasowo niedostępny." }, { status: 503 });
-  }
+const RESPONSES: Array<{ keywords: string[]; reply: string }> = [
+  {
+    keywords: ["cena", "cennik", "ile kosztuje", "koszt", "plan", "pakiet", "abonament"],
+    reply: "OneLink oferuje 3 plany:\n• **Start** — 19,99 zł/mies. netto: 1 lokal, 1 manager, P&L, alerty\n• **Rozwój** — 39,99 zł/mies. netto: do 2 lokali, magazyn, food cost, faktury ★ najpopularniejszy\n• **Sieć** — 59,99 zł/mies. netto: do 5 lokali, raporty cross-lokalizacyjne\n\nWszystkie plany mają 7-dniowy bezpłatny trial. Więcej na /pricing",
+  },
+  {
+    keywords: ["rejestracja", "zarejestruj", "zacznij", "trial", "wypróbuj", "darmowy", "bezpłatny"],
+    reply: "Rejestracja zajmuje 3 minuty i nie wymaga działu IT. Masz 7 dni bezpłatnego trialu — karta jest potrzebna tylko do aktywacji, ale nie pobieramy opłaty przez 7 dni. Zacznij na /auth/sign-up",
+  },
+  {
+    keywords: ["bezpieczeństwo", "rodo", "gdpr", "szyfrowanie", "dane"],
+    reply: "Dane są szyfrowane TLS 1.3 w przesyle i AES-256 w spoczynku. Serwery w UE (Supabase), zgodność z RODO. Płatności przez Stripe PCI DSS Level 1. Więcej na /security",
+  },
+  {
+    keywords: ["kontakt", "pomoc", "support", "demo", "spotkanie", "zoom"],
+    reply: "Napisz do nas: kontakt@onelink.pl — odpowiadamy w 4 godziny w dni robocze (pon–pt, 9:00–17:00). Możesz też umówić 20-minutowe demo przez Zoom lub Meet na /contact",
+  },
+  {
+    keywords: ["food cost", "faktury", "magazyn", "inwentaryzacja", "sprzedaż", "raport", "przychód"],
+    reply: "OneLink to panel do zarządzania P&L, food cost, magazynem i fakturami w czasie rzeczywistym — dostępny z telefonu i komputera. Manager wpisuje dane ze smartfona, właściciel widzi pełny P&L od razu. Sprawdź na /pricing lub zacznij trial na /auth/sign-up",
+  },
+  {
+    keywords: ["co to", "o czym", "czym jest", "onelink", "jak działa", "co robi"],
+    reply: "OneLink to system zarządzania dla restauracji, kawiarni, piekarni i sieci MŚP. Główne funkcje: Dashboard P&L na żywo, kontrola food cost, moduł magazynowy, zatwierdzanie faktur, alerty o odchyleniach, multi-lokalizacja. Więcej na /pricing",
+  },
+]
 
+export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json() as { messages: Message[] };
 
@@ -66,17 +40,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak wiadomości." }, { status: 400 });
     }
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 512,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages.slice(-10),
-      ],
-    });
+    const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() ?? "";
 
-    const text = response.choices[0]?.message?.content ?? "";
-    return NextResponse.json({ message: text });
+    for (const { keywords, reply } of RESPONSES) {
+      if (keywords.some(k => lastMessage.includes(k))) {
+        return NextResponse.json({ message: reply });
+      }
+    }
+
+    return NextResponse.json({
+      message: "Dziękuję za wiadomość! Skontaktuj się z nami przez kontakt@onelink.pl lub umów demo na /contact — odpowiemy w ciągu 4 godzin.",
+    });
   } catch {
     return NextResponse.json({ error: "Błąd. Spróbuj ponownie." }, { status: 500 });
   }

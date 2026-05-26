@@ -85,24 +85,20 @@ Dane firmy (ostatnie 7 dni):
 - Oczekujące faktury: ${(pendingInvoices ?? []).length} (wartość: ${(pendingInvoices ?? []).reduce((s: number, i: any) => s + (i.total_amount || 0), 0).toFixed(0)} zł)
 `.trim()
 
-  const completion = await openai.chat.completions.create({
+  const systemPrompt = `Jesteś doradcą finansowym dla polskiej firmy gastronomicznej. Masz dostęp do aktualnych danych operacyjnych.
+Analizujesz scenariusze "co jeśli" i odpowiadasz konkretnie z liczbami. Używaj danych kontekstowych do kalkulacji.
+Odpowiadaj po polsku, zwięźle (max 5 zdań). Podawaj konkretne liczby i wnioski.`
+
+  const res = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
-      {
-        role: 'system',
-        content: `Jesteś analitykiem biznesowym dla restauracji/gastronomii. Odpowiadasz na pytania "co jeśli" bazując na rzeczywistych danych firmy.
-Bądź konkretny: podawaj szacunkowe liczby (zł, %), porównuj scenariusze, wskazuj ryzyka i szanse.
-Odpowiadaj po polsku, zwięźle (3-5 zdań lub krótka lista). Format: najpierw bezpośrednia odpowiedź, potem 2-3 kluczowe liczby/wnioski.`,
-      },
-      {
-        role: 'user',
-        content: `${context}\n\nPytanie: ${question}`,
-      },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `DANE FIRMY:\n${context}\n\nPYTANIE: ${question}` },
     ],
-    max_tokens: 400,
-    temperature: 0.7,
+    max_tokens: 500,
+    temperature: 0.3,
   })
 
-  const answer = completion.choices[0]?.message?.content ?? 'Brak odpowiedzi.'
+  const answer = res.choices[0]?.message?.content?.trim() ?? 'Brak odpowiedzi.'
   return NextResponse.json({ answer })
 }

@@ -88,11 +88,11 @@ export default function RootLayout({
         {/* ── Meta Pixel noscript fallback ── */}
         <noscript>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            height="1" width="1" style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=1631501188010951&ev=PageView&noscript=1"
-            alt=""
-          />
+          <img height="1" width="1" style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1631501188010951&ev=PageView&noscript=1" alt="" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img height="1" width="1" style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=891324850050538&ev=PageView&noscript=1" alt="" />
         </noscript>
 
         <LanguageProvider>
@@ -114,6 +114,7 @@ export default function RootLayout({
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '1631501188010951');
+          fbq('init', '891324850050538');
           fbq('track', 'PageView');
         `}</Script>
 

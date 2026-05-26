@@ -1,17 +1,11 @@
 /**
  * POST /api/ai/pl-chat
- * Body: { message: string, companyId: string }
- *
- * AI assistant with access to real P&L data — answers questions like:
- * "Dlaczego food cost wzrósł w tym tygodniu?"
- * "Który lokal ma najwyższy przychód w tym miesiącu?"
- * "Ile wynoszą niezatwierdzone faktury?"
+ * Body: { message: string, companyId: string, history?: {role,content}[] }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import OpenAI from 'openai'
-
 export const runtime = 'nodejs'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -110,20 +104,22 @@ Gdy widzisz problem (wysoki food cost, spadek przychodu, dużo oczekujących fak
 
 ${contextBlock}`
 
-    const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      ...history.slice(-6).map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user' as const, content: message },
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      ...(history as { role: 'user' | 'assistant'; content: string }[]).map(h => ({
+        role: h.role,
+        content: h.content,
+      })),
+      { role: 'user', content: message },
     ]
 
-    const completion = await openai.chat.completions.create({
+    const res = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      temperature: 0.3,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
       max_tokens: 600,
-      messages,
+      temperature: 0.3,
     })
 
-    const reply = completion.choices[0]?.message?.content ?? 'Przepraszam, nie mogę teraz odpowiedzieć.'
+    const reply = res.choices[0]?.message?.content?.trim() ?? 'Brak odpowiedzi.'
     return NextResponse.json({ ok: true, reply })
 
   } catch (err) {

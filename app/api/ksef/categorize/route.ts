@@ -2,57 +2,71 @@
  * POST /api/ksef/categorize
  * Body: { items: { name, quantity, unit, netValue, vatRate }[], supplierName: string }
  *
- * Uses OpenAI to suggest invoice_type (COS/SEMIS) and cos_category for each line item.
+ * Uses keyword matching to suggest invoice_type (COS/SEMIS) and cos_category for each line item.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const COS_KEYWORDS: Record<string, string[]> = {
+  mieso:          ['mięso', 'wołowina', 'wieprzowina', 'kurczak', 'drób', 'karkówka', 'schab', 'filet', 'łopatka', 'wędlin', 'kiełbas', 'boczek', 'szynka', 'salami', 'pasztet'],
+  nabiał:         ['mleko', 'śmietana', 'jogurt', 'kefir', 'twaróg', 'ser', 'masło', 'jaj', 'jaja', 'śmietanka', 'ricotta', 'mozzarella'],
+  napoje:         ['woda', 'sok', 'napój', 'piwo', 'wino', 'alkohol', 'cola', 'pepsi', 'sprite', 'fanta', 'red bull', 'energy', 'herbata', 'syrop'],
+  kawa:           ['kawa', 'espresso', 'cappuccino', 'latte', 'arabica', 'robusta'],
+  warzywa_owoce:  ['ziemniak', 'marchew', 'cebula', 'pomidor', 'ogórek', 'sałat', 'kapust', 'papryka', 'czosnek', 'pieczark', 'grzyb', 'jabłko', 'banan', 'pomarańcz', 'cytryn', 'truskawk', 'malina', 'warzywa', 'owoce'],
+  suche:          ['mąka', 'ryż', 'makaron', 'kasza', 'płatki', 'cukier', 'sól', 'olej', 'oliwa', 'ocet', 'przypraw', 'pieprz', 'oregano', 'bazylia', 'pieczywo', 'chleb', 'bułk', 'drożdże', 'proszek', 'skrobia', 'groch', 'fasola', 'soczewic'],
+  opakowania:     ['opakow', 'torba', 'worek', 'kubek', 'talerz', 'sztućce', 'serwetka', 'folia', 'tacka', 'pojemnik', 'karton'],
+  chemia:         ['detergent', 'płyn do naczyń', 'środek czyszczący', 'mop', 'gąbka', 'papier toaletowy', 'ręcznik papierowy', 'worki na śmieci', 'chlor', 'dezynfek'],
+}
 
-const SYSTEM_PROMPT = `Jesteś ekspertem od polskich faktur VAT w branży gastronomicznej.
-Przypisz każdej pozycji faktury typ i kategorię.
+const SEMIS_KEYWORDS: Record<string, string[]> = {
+  czynsz:             ['czynsz', 'najem', 'dzierżawa', 'wynajem lokalu'],
+  media:              ['prąd', 'energia', 'gaz', 'woda', 'ścieki', 'internet', 'telefon', 'łącze'],
+  transport:          ['transport', 'dostawa', 'kurier', 'przewóz', 'logistyk', 'przesyłka'],
+  marketing:          ['reklama', 'marketing', 'kampania', 'ulotk', 'banner', 'strona www', 'social media', 'google ads', 'facebook ads', 'pozycjonowanie'],
+  serwis_naprawy:     ['serwis', 'naprawa', 'konserwacja', 'przegląd', 'usługa techniczna', 'instalacja'],
+  ubezpieczenia:      ['ubezpieczenie', 'polisa', 'oc', 'ac'],
+  it_software:        ['oprogramowanie', 'licencja', 'subskrypcja', 'software', 'platforma', 'system', 'aplikacja', 'it', 'hosting', 'chmura'],
+  czystosc_higiena:   ['sprzątanie', 'czyszczenie', 'dezynfekcja', 'higiena', 'pranie', 'pralnia', 'pest control', 'ddd'],
+  administracja:      ['księgowość', 'biuro rachunkowe', 'prawnik', 'notariusz', 'opłata', 'licencja sanepid', 'zus', 'podatek'],
+}
 
-Zasady:
-- Produkty spożywcze, napoje, kawa, mięso, nabiał, warzywa, owoce, słodycze, opakowania → invoice_type: "COS"
-  categories COS: suche | napoje | kawa | mieso | nabiał | warzywa_owoce | opakowania | chemia | inne_cos
-- Usługi, czynsz, media, transport, marketing, IT, serwis → invoice_type: "SEMIS"
-  categories SEMIS: czynsz | media | marketing | serwis_naprawy | ubezpieczenia | it_software | transport | czystosc_higiena | administracja | inne_semis
-- Mieszana faktura → użyj dominującego typu (> 50% wartości netto)
+function categorizeItem(name: string): { invoiceType: 'COS' | 'SEMIS'; category: string } {
+  const lower = name.toLowerCase()
 
-Odpowiedz TYLKO JSON, bez żadnego tekstu poza strukturą:
-{
-  "invoiceType": "COS" | "SEMIS",
-  "items": [
-    { "index": 0, "category": "suche" }
-  ]
-}`
+  for (const [category, keywords] of Object.entries(SEMIS_KEYWORDS)) {
+    if (keywords.some(k => lower.includes(k))) {
+      return { invoiceType: 'SEMIS', category }
+    }
+  }
+
+  for (const [category, keywords] of Object.entries(COS_KEYWORDS)) {
+    if (keywords.some(k => lower.includes(k))) {
+      return { invoiceType: 'COS', category }
+    }
+  }
+
+  return { invoiceType: 'COS', category: 'inne_cos' }
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, supplierName } = await req.json()
+    const { items } = await req.json()
     if (!items?.length) return NextResponse.json({ error: 'No items' }, { status: 400 })
 
-    const itemsText = items.map((it: any, i: number) =>
-      `${i}. ${it.name} (qty: ${it.quantity} ${it.unit}, netto: ${it.netValue} PLN, VAT: ${Math.round((it.vatRate || 0) * 100)}%)`
-    ).join('\n')
-
-    const userMsg = `Dostawca: ${supplierName || 'Nieznany'}\n\nPozycje faktury:\n${itemsText}`
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user',   content: userMsg },
-      ],
+    const categorized = (items as any[]).map((item: any, index: number) => {
+      const { invoiceType, category } = categorizeItem(item.name || '')
+      return { index, category, invoiceType }
     })
 
-    const raw = completion.choices[0]?.message?.content ?? '{}'
-    const parsed = JSON.parse(raw)
+    const cosItems = categorized.filter(i => i.invoiceType === 'COS')
+    const semisItems = categorized.filter(i => i.invoiceType === 'SEMIS')
+    const invoiceType = cosItems.length >= semisItems.length ? 'COS' : 'SEMIS'
 
-    return NextResponse.json({ ok: true, invoiceType: parsed.invoiceType ?? 'COS', items: parsed.items ?? [] })
+    return NextResponse.json({
+      ok: true,
+      invoiceType,
+      items: categorized.map(({ index, category }) => ({ index, category })),
+    })
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 })
   }
