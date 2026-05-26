@@ -110,7 +110,8 @@ export function Sidebar({
         { key: 'reports',    label: pl ? 'Raporty'      : 'Reports',      icon: BarChart3 },
         { key: 'history',    label: pl ? 'Historia'     : 'History',      icon: History },
         { key: 'imported',   label: pl ? 'Import Excel' : 'Excel Import', icon: FileSpreadsheet },
-        { key: 'csv_import', label: 'Import CSV',                         icon: FileSpreadsheet },
+        { key: 'csv_import',              label: 'Import CSV',                                   icon: FileSpreadsheet },
+        { key: 'monthly_revenue_import', label: pl ? 'Import utargów' : 'Revenue Import',       icon: FileSpreadsheet },
       ],
     },
     {

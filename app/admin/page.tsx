@@ -43,6 +43,7 @@ import { WhatIfRoom } from '@/components/what-if-room'
 import { SettingsView } from '@/components/settings-view'
 import { RevenueForecast } from '@/components/revenue-forecast'
 import { CsvImport } from '@/components/csv-import'
+import { MonthlyRevenueImport } from '@/components/monthly-revenue-import'
 import { MenuEngineering } from '@/components/menu-engineering'
 import { ChecklistAdminView } from '@/components/checklist-admin-view'
 import { FoodCostDashboard } from '@/components/food-cost-dashboard'
@@ -69,7 +70,7 @@ function IngredientsSection({ supabase, companyId }: { supabase: SupabaseClient;
   const [search, setSearch] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("name");
-  const [sortDir] = useState<'asc' | 'desc'>('asc');
+   const [sortDir] = useState<'asc' | 'desc'>('asc');
   const [newIngredient, setNewIngredient] = useState<Partial<Record<"name"|"category"|"base_unit"|"min_threshold"|"last_price", string>>>({
     name: "",
     category: "",
@@ -473,6 +474,7 @@ type ActiveView =
   | 'settings'
   | 'revenue_forecast'
   | 'csv_import'
+  | 'monthly_revenue_import'
   | 'menu_engineering'
   | 'checklist'
   | 'food_cost'
@@ -4090,6 +4092,14 @@ export default function AdminDashboard() {
             supabase={supabase}
             companyId={companyId}
             locationId={filterLocationId !== 'all' ? filterLocationId : (locations[0]?.id ?? '')}
+          />
+        )}
+
+        {activeView === 'monthly_revenue_import' && companyId && (
+          <MonthlyRevenueImport
+            supabase={supabase}
+            locations={locations.map(l => ({ id: l.id, name: l.name }))}
+            status="approved"
           />
         )}
 
