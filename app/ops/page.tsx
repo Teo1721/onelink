@@ -47,6 +47,7 @@ import { PurchaseOrders } from '@/components/purchase-orders'
 import { BudgetPlanning } from '@/components/budget-planning'
 import { AllergenRegister } from '@/components/allergen-register'
 import { CashAudit } from '@/components/cash-audit'
+import { MonthlyRevenueImport } from '@/components/monthly-revenue-import'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -133,7 +134,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -5377,6 +5378,16 @@ export default function OpsDashboard() {
             locationId={selectedLocation.location_id}
             locationName={selectedLocation.locations?.name ?? ''}
             supabase={supabase}
+          />
+        )}
+
+        {activeView === 'revenue_import' && selectedLocation && (
+          <MonthlyRevenueImport
+            supabase={supabase}
+            locations={[{ id: selectedLocation.location_id, name: selectedLocation.locations?.name ?? 'Lokal' }]}
+            fixedLocationId={selectedLocation.location_id}
+            fixedLocationName={selectedLocation.locations?.name ?? 'Lokal'}
+            status="submitted"
           />
         )}
 
