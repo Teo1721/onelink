@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import OpenAI from 'openai'
-
 /**
  * GET /api/cron/hr-analysis
  * Vercel Cron: runs every day at 08:00 UTC
@@ -15,8 +13,6 @@ import OpenAI from 'openai'
  * - Labor cost spike vs prior week (from sales_daily)
  */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 function today()            { return new Date().toLocaleDateString('sv-SE') }
 function daysAgo(n: number) {
   const d = new Date(); d.setDate(d.getDate() - n)
@@ -27,25 +23,8 @@ function daysAhead(n: number) {
   return d.toLocaleDateString('sv-SE')
 }
 
-async function explainHRAnomaly(type: string, context: string): Promise<string> {
-  if (!process.env.OPENAI_API_KEY) return context
-  try {
-    const res = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 130,
-      messages: [
-        {
-          role: 'system',
-          content: `Jesteś Martą — Dyrektorem HR AI dla restauracji. Piszesz po polsku, konkretnie i rzeczowo.
-Format (2 zdania max):
-Zdanie 1: co się dzieje z zespołem i jak to oceniasz.
-Zdanie 2: jedno konkretne działanie właściciela, które należy podjąć TERAZ.`,
-        },
-        { role: 'user', content: `Sytuacja: ${type}\nDane: ${context}` },
-      ],
-    })
-    return res.choices[0]?.message?.content?.trim() ?? context
-  } catch { return context }
+function explainHRAnomaly(type: string, context: string): string {
+  return `${type}. ${context}`
 }
 
 async function getTrendDays(

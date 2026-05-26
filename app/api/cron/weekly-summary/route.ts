@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import OpenAI from 'openai'
 
 /**
  * GET /api/cron/weekly-summary
@@ -15,7 +14,6 @@ import OpenAI from 'openai'
  *   4. Sends email to all owner/admin users via Resend
  */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 function daysAgo(n: number) {
   const d = new Date(); d.setDate(d.getDate() - n)
@@ -24,7 +22,7 @@ function daysAgo(n: number) {
 
 function today() { return new Date().toLocaleDateString('sv-SE') }
 
-async function generateWeeklySummary(data: {
+function generateWeeklySummary(data: {
   companyName: string
   revenue7d: number
   revenue14d: number
@@ -34,40 +32,24 @@ async function generateWeeklySummary(data: {
   pendingLeaves: number
   activeAlerts: string[]
   topCOSSuppliers: string[]
-}) {
-  const prompt = `
-Firma: ${data.companyName}
-Okres: ostatnie 7 dni
+}): string {
+  const vsWeek = data.revenue14d > 0
+    ? `${(((data.revenue7d - data.revenue14d) / data.revenue14d) * 100).toFixed(1)}% vs poprzedni tydzień`
+    : 'brak porównania'
 
-Wyniki:
-- Przychód netto: ${data.revenue7d.toFixed(0)} zł (${data.revenue14d > 0 ? (((data.revenue7d - data.revenue14d) / data.revenue14d) * 100).toFixed(1) + '% vs poprzedni tydzień' : 'brak porównania'})
-- Food cost: ${data.foodCostPct !== null ? (data.foodCostPct * 100).toFixed(1) + '%' : 'brak danych'}
-- Koszt pracy: ${data.laborCostPct !== null ? (data.laborCostPct * 100).toFixed(1) + '% przychodów' : 'brak danych'}
-- Faktury oczekujące na zatwierdzenie: ${data.pendingInvoices}
-- Wnioski urlopowe do rozpatrzenia: ${data.pendingLeaves}
-- Aktywne alerty CFO: ${data.activeAlerts.length > 0 ? data.activeAlerts.join('; ') : 'brak'}
-- Główni dostawcy COS: ${data.topCOSSuppliers.join(', ') || 'brak'}
-`.trim()
+  const lines: string[] = [
+    `Tydzień ${data.companyName}: przychód netto ${data.revenue7d.toFixed(0)} zł (${vsWeek}).`,
+    '',
+    `• Food cost: ${data.foodCostPct !== null ? (data.foodCostPct * 100).toFixed(1) + '%' : 'brak danych'}`,
+    `• Koszt pracy: ${data.laborCostPct !== null ? (data.laborCostPct * 100).toFixed(1) + '% przychodów' : 'brak danych'}`,
+    `• Faktury oczekujące: ${data.pendingInvoices}`,
+  ]
 
-  const res = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    max_tokens: 500,
-    messages: [
-      {
-        role: 'system',
-        content: `Jesteś Markiem — CFO AI dla właścicieli restauracji. Piszesz tygodniowy briefing po polsku.
-Format:
-1. Jeden akapit (2-3 zdania) — podsumowanie tygodnia konkretnymi liczbami
-2. 2-3 kluczowe obserwacje (jako lista z bulletami •)
-3. 2 konkretne zalecenia na bieżący tydzień
+  if (data.pendingLeaves > 0) lines.push(`• Wnioski urlopowe do rozpatrzenia: ${data.pendingLeaves}`)
+  if (data.activeAlerts.length > 0) lines.push(`• Aktywne alerty: ${data.activeAlerts.join('; ')}`)
+  if (data.topCOSSuppliers.length > 0) lines.push(`• Główni dostawcy COS: ${data.topCOSSuppliers.join(', ')}`)
 
-Bądź konkretny, używaj liczb, pisz jak doświadczony dyrektor finansowy — nie jak bot. Nie używaj nagłówków.`,
-      },
-      { role: 'user', content: prompt },
-    ],
-  })
-
-  return res.choices[0]?.message?.content ?? 'Brak danych do wygenerowania podsumowania.'
+  return lines.join('\n')
 }
 
 function buildWeeklyEmail(companyName: string, summary: string, dashboardUrl: string): string {
@@ -131,10 +113,6 @@ export async function GET(req: NextRequest) {
   const isVercel = req.headers.get('x-vercel-cron') === '1'
   if (!isVercel && secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY not set' }, { status: 503 })
   }
 
   const admin = createAdminClient()
