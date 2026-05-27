@@ -7,79 +7,164 @@ import { Upload, FileSpreadsheet, Check, AlertTriangle, Loader2, X, Download, In
 
 type LocationRow = { id: string; name: string }
 
-type PreviewRow = {
-  date: string          // YYYY-MM-DD
-  locationId: string
-  locationName: string
-  netRevenue: number
+// One column-group per detected Excel location
+type ExcelLocation = {
+  name: string      // as detected in the Excel file
+  colBrutto: number
+  colGotowka: number
+  colBlik: number
+  colKarta: number
 }
 
-type ImportResult = {
-  inserted: number
-  skipped: number
-  errors: string[]
+type ParsedRow = {
+  date: string        // YYYY-MM-DD
+  excelLocName: string
+  gross: number
+  cash: number
+  blik: number
+  card: number
 }
+
+type ImportResult = { inserted: number; skipped: number; errors: string[] }
 
 interface Props {
   supabase: SupabaseClient
   locations: LocationRow[]
-  /** When provided, locks import to a single location (ops page use case) */
   fixedLocationId?: string
   fixedLocationName?: string
-  /** 'submitted' = goes to admin approval queue; 'approved' = auto-approved (admin import) */
   status?: 'submitted' | 'approved'
 }
 
+/* ── helpers ────────────────────────────────────────────────── */
 function pad(n: number) { return String(n).padStart(2, '0') }
 
-function parseNumber(v: any): number {
-  if (v == null || v === '') return 0
-  const s = String(v).replace(/\s/g, '').replace(',', '.')
-  const n = parseFloat(s)
+function parsePolishNumber(v: any): number {
+  if (v == null) return 0
+  const s = String(v).trim()
+  if (s === '' || s === '-' || s.startsWith('#')) return 0
+  const clean = s.replace(/\s/g, '').replace('zł', '').replace(',', '.').trim()
+  const n = parseFloat(clean)
   return isNaN(n) ? 0 : n
+}
+
+function parseDateCell(v: any): string | null {
+  if (v == null || v === '' || v === '-') return null
+  // JS Date (cellDates: true)
+  if (v instanceof Date) {
+    return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`
+  }
+  const s = String(v).trim()
+  // DD.MM.YYYY
+  const m1 = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+  if (m1) return `${m1[3]}-${pad(+m1[2])}-${pad(+m1[1])}`
+  // DD.MM.YY
+  const m2 = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/)
+  if (m2) return `20${m2[3]}-${pad(+m2[2])}-${pad(+m2[1])}`
+  // YYYY-MM-DD already
+  const m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m3) return s
+  return null
 }
 
 function downloadExampleFile() {
   const wb = XLSX.utils.book_new()
   const rows = [
-    ['Dzień', 'Sklep Centrum', 'Sklep Północ', 'Sklep Południe'],
-    [1, 3200, 1800, 2400],
-    [2, 2900, 1650, 2200],
-    [3, 3100, 1900, 2600],
-    ['...', '', '', ''],
-    [31, 3400, 2000, 2800],
+    ['', '4 LO Toruń', '', '', '', '7 LO Toruń', '', '', ''],
+    ['Data', 'kwota brutto', 'gotówka', 'blik', 'karta', 'kwota brutto', 'gotówka', 'blik', 'karta'],
+    ['01.05.2026', '', '', '', '', '', '', '', ''],
+    ['11.05.2026', '549,00 zł', '32,00 zł', '24,50 zł', '492,50 zł', '400,90 zł', '84,80 zł', '', '316,10 zł'],
+    ['12.05.2026', '771,00 zł', '184,50 zł', '40,00 zł', '546,50 zł', '300,10 zł', '59,50 zł', '', '240,60 zł'],
   ]
   const ws = XLSX.utils.aoa_to_sheet(rows)
-  ws['!cols'] = [{ wch: 8 }, { wch: 16 }, { wch: 16 }, { wch: 16 }]
+  ws['!cols'] = Array(9).fill({ wch: 16 })
   XLSX.utils.book_append_sheet(wb, ws, 'Utargi')
-  XLSX.writeFile(wb, 'szablon_utargi_miesiac.xlsx')
+  XLSX.writeFile(wb, 'szablon_utargi_sklepiki.xlsx')
 }
 
-export function MonthlyRevenueImport({ supabase, locations, fixedLocationId, fixedLocationName, status = 'submitted' }: Props) {
+/* ── main parser ────────────────────────────────────────────── */
+function parseExcelFile(raw: any[][]): { locations: ExcelLocation[]; rows: ParsedRow[] } {
+  if (raw.length < 2) return { locations: [], rows: [] }
+
+  // Find the header row: col 0 should be "Data" (case-insensitive)
+  let headerRowIdx = -1
+  for (let i = 0; i < Math.min(10, raw.length); i++) {
+    const c0 = String(raw[i][0] ?? '').trim().toLowerCase()
+    if (c0 === 'data') { headerRowIdx = i; break }
+    // fallback: row contains "kwota" anywhere
+    if (raw[i].some((c: any) => String(c ?? '').toLowerCase().includes('kwota'))) {
+      headerRowIdx = i; break
+    }
+  }
+  if (headerRowIdx < 0) return { locations: [], rows: [] }
+
+  const headerRow   = raw[headerRowIdx]
+  const locationRow = headerRowIdx > 0 ? raw[headerRowIdx - 1] : []
+
+  // Detect location groups: every column where header contains "kwota" starts a new group
+  const excelLocations: ExcelLocation[] = []
+  let currentLocName = ''
+
+  for (let c = 1; c < headerRow.length; c++) {
+    const h = String(headerRow[c] ?? '').trim().toLowerCase()
+
+    if (h.includes('kwota') || h.includes('brutto')) {
+      // Location name: scan leftward in location row for the nearest non-empty cell
+      let locName = ''
+      for (let lc = c; lc >= 1; lc--) {
+        const candidate = String(locationRow[lc] ?? '').trim()
+        if (candidate) { locName = candidate; break }
+      }
+      currentLocName = locName || `Sklep ${excelLocations.length + 1}`
+      excelLocations.push({
+        name: currentLocName,
+        colBrutto:  c,
+        colGotowka: c + 1,
+        colBlik:    c + 2,
+        colKarta:   c + 3,
+      })
+    }
+  }
+
+  // Parse data rows
+  const dataRows = raw.slice(headerRowIdx + 1)
+  const parsedRows: ParsedRow[] = []
+
+  for (const row of dataRows) {
+    const dateStr = parseDateCell(row[0])
+    if (!dateStr) continue
+
+    for (const loc of excelLocations) {
+      const gross = parsePolishNumber(row[loc.colBrutto])
+      const cash  = parsePolishNumber(row[loc.colGotowka])
+      const blik  = parsePolishNumber(row[loc.colBlik])
+      const card  = parsePolishNumber(row[loc.colKarta])
+
+      if (gross <= 0 && cash <= 0 && blik <= 0 && card <= 0) continue // skip empty day
+
+      parsedRows.push({ date: dateStr, excelLocName: loc.name, gross, cash, blik, card })
+    }
+  }
+
+  return { locations: excelLocations, rows: parsedRows }
+}
+
+/* ── component ──────────────────────────────────────────────── */
+export function MonthlyRevenueImport({
+  supabase, locations, fixedLocationId, fixedLocationName, status = 'submitted',
+}: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const [fileName, setFileName] = useState<string | null>(null)
-  const [year, setYear] = useState(new Date().getFullYear())
-  const [month, setMonth] = useState(new Date().getMonth() + 1) // 1-12
-
-  // Raw sheet data after parsing
-  const [headers, setHeaders] = useState<string[]>([])
-  const [rows, setRows] = useState<any[][]>([])
-
-  // Column mapping: colIndex → locationId ('' = skip)
-  const [colMap, setColMap] = useState<Record<number, string>>({})
-
-  const [preview, setPreview] = useState<PreviewRow[]>([])
-  const [importing, setImporting] = useState(false)
-  const [result, setResult] = useState<ImportResult | null>(null)
+  const [fileName, setFileName]               = useState<string | null>(null)
+  const [excelLocations, setExcelLocations]   = useState<ExcelLocation[]>([])
+  const [parsedRows, setParsedRows]           = useState<ParsedRow[]>([])
+  // mapping: excelLocName → system locationId
+  const [locMap, setLocMap]                   = useState<Record<string, string>>({})
+  const [importing, setImporting]             = useState(false)
+  const [result, setResult]                   = useState<ImportResult | null>(null)
 
   function reset() {
-    setFileName(null)
-    setHeaders([])
-    setRows([])
-    setColMap({})
-    setPreview([])
-    setResult(null)
+    setFileName(null); setExcelLocations([]); setParsedRows([])
+    setLocMap({}); setResult(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -89,121 +174,73 @@ export function MonthlyRevenueImport({ supabase, locations, fixedLocationId, fix
     const reader = new FileReader()
     reader.onload = e => {
       const data = new Uint8Array(e.target?.result as ArrayBuffer)
-      const wb = XLSX.read(data, { type: 'array' })
+      const wb = XLSX.read(data, { type: 'array', cellDates: true })
       const ws = wb.Sheets[wb.SheetNames[0]]
-      const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-      if (raw.length < 2) return
+      const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false })
 
-      // Find header row (first row with more than 1 non-empty cell)
-      let headerIdx = 0
-      for (let i = 0; i < Math.min(5, raw.length); i++) {
-        if (raw[i].filter((c: any) => c !== '').length > 1) { headerIdx = i; break }
-      }
+      const { locations: xlLocs, rows } = parseExcelFile(raw)
+      setExcelLocations(xlLocs)
+      setParsedRows(rows)
 
-      const hdrs = raw[headerIdx].map((h: any) => String(h ?? ''))
-      setHeaders(hdrs)
-      setRows(raw.slice(headerIdx + 1))
-
-      // Auto-map columns: try to match header name to location name
-      const autoMap: Record<number, string> = {}
-      hdrs.forEach((h, i) => {
-        if (!h || i === 0) return // skip first col (usually day/date)
-        if (fixedLocationId) {
-          // Single-location mode: map first data column that looks like numbers
-          const sampleVal = raw.slice(headerIdx + 1).find((r: any[]) => parseNumber(r[i]) > 0)
-          if (sampleVal) autoMap[i] = fixedLocationId
-        } else {
-          const match = locations.find(l =>
-            l.name.toLowerCase().includes(h.toLowerCase()) ||
-            h.toLowerCase().includes(l.name.toLowerCase())
+      // Auto-map: try to match Excel location name → system location
+      const autoMap: Record<string, string> = {}
+      if (fixedLocationId) {
+        // Single-location mode: map everything to the fixed location
+        xlLocs.forEach(l => { autoMap[l.name] = fixedLocationId })
+      } else {
+        xlLocs.forEach(xl => {
+          const match = locations.find(sl =>
+            sl.name.toLowerCase().includes(xl.name.toLowerCase()) ||
+            xl.name.toLowerCase().includes(sl.name.toLowerCase())
           )
-          if (match) autoMap[i] = match.id
-        }
-      })
-      setColMap(autoMap)
+          if (match) autoMap[xl.name] = match.id
+        })
+      }
+      setLocMap(autoMap)
     }
     reader.readAsArrayBuffer(file)
   }
 
-  function buildPreview(mapOverride?: Record<number, string>): PreviewRow[] {
-    const map = mapOverride ?? colMap
-    const locById = Object.fromEntries(locations.map(l => [l.id, l.name]))
-    const results: PreviewRow[] = []
-
-    for (const row of rows) {
-      // First column = day number
-      const dayRaw = row[0]
-      if (!dayRaw && dayRaw !== 0) continue
-      const day = parseInt(String(dayRaw))
-      if (isNaN(day) || day < 1 || day > 31) continue
-
-      // Validate date
-      const dateStr = `${year}-${pad(month)}-${pad(day)}`
-      const dateObj = new Date(dateStr)
-      if (dateObj.getFullYear() !== year || dateObj.getMonth() + 1 !== month) continue
-
-      for (const [colIdx, locId] of Object.entries(map)) {
-        if (!locId) continue
-        const val = parseNumber(row[+colIdx])
-        if (val <= 0) continue
-        results.push({
-          date: dateStr,
-          locationId: locId,
-          locationName: locById[locId] ?? locId,
-          netRevenue: val,
-        })
-      }
-    }
-    return results
-  }
-
-  function handleMapChange(colIdx: number, locId: string) {
-    const newMap = { ...colMap, [colIdx]: locId }
-    setColMap(newMap)
-    setPreview(buildPreview(newMap))
-    setResult(null)
-  }
-
-  function handleGeneratePreview() {
-    setPreview(buildPreview())
-    setResult(null)
-  }
-
   async function runImport() {
-    if (!preview.length) return
+    const mappedRows = parsedRows.filter(r => locMap[r.excelLocName])
+    if (!mappedRows.length) return
     setImporting(true)
     setResult(null)
     const res: ImportResult = { inserted: 0, skipped: 0, errors: [] }
 
-    for (const row of preview) {
+    for (const row of mappedRows) {
+      const locationId = locMap[row.excelLocName]
       const { error } = await supabase.from('sales_daily').upsert({
-        location_id: row.locationId,
-        date: row.date,
-        net_revenue: row.netRevenue,
-        gross_revenue: row.netRevenue,
+        location_id:    locationId,
+        date:           row.date,
+        gross_revenue:  row.gross,
+        net_revenue:    row.gross, // same as gross — no VAT info in file
+        cash_payments:  row.cash,
+        card_payments:  row.card,
+        online_payments: row.blik,
         status,
       }, { onConflict: 'location_id,date' })
 
-      if (error) {
-        res.errors.push(`${row.date} ${row.locationName}: ${error.message}`)
-      } else {
-        res.inserted++
-      }
+      if (error) res.errors.push(`${row.date} ${row.excelLocName}: ${error.message}`)
+      else res.inserted++
     }
 
     setResult(res)
     setImporting(false)
   }
 
-  const MONTHS_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień']
+  // Summary per Excel location for preview
+  const summaryByLoc: Record<string, { days: number; total: number; mapped: boolean }> = {}
+  for (const r of parsedRows) {
+    if (!summaryByLoc[r.excelLocName]) summaryByLoc[r.excelLocName] = { days: 0, total: 0, mapped: !!locMap[r.excelLocName] }
+    summaryByLoc[r.excelLocName].days++
+    summaryByLoc[r.excelLocName].total += r.gross
+    summaryByLoc[r.excelLocName].mapped = !!locMap[r.excelLocName]
+  }
 
-  const mappedCols = Object.entries(colMap).filter(([, v]) => v).length
-  const previewByLoc = preview.reduce((acc, r) => {
-    if (!acc[r.locationName]) acc[r.locationName] = { days: 0, total: 0 }
-    acc[r.locationName].days++
-    acc[r.locationName].total += r.netRevenue
-    return acc
-  }, {} as Record<string, { days: number; total: number }>)
+  const mappedCount  = parsedRows.filter(r => locMap[r.excelLocName]).length
+  const totalRows    = parsedRows.length
+  const allMapped    = excelLocations.length > 0 && excelLocations.every(l => locMap[l.name])
 
   return (
     <div className="space-y-6">
@@ -211,51 +248,28 @@ export function MonthlyRevenueImport({ supabase, locations, fixedLocationId, fix
         <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Import utargów miesięcznych</h1>
         <p className="text-[13px] text-[#6B7280] mt-0.5">
           {fixedLocationId
-            ? `Wgraj plik Excel z utargami — dane zostaną dodane do ${fixedLocationName ?? 'Twojego lokalu'} i wysłane do akceptacji w panelu właściciela.`
-            : 'Wgraj plik Excel z utargami dziennymi sklepów — system automatycznie uzupełni raporty dzienne.'}
+            ? `Wgraj plik Excel — dane zostaną przesłane do akceptacji w panelu właściciela.`
+            : 'Wgraj plik Excel z utargami sklepów — system automatycznie uzupełni raporty dzienne.'}
         </p>
       </div>
 
-      {/* Info box */}
+      {/* Info: expected format */}
       <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
         <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-        <div className="text-[12px] text-blue-800 space-y-1">
-          <p className="font-semibold">Wymagany format pliku Excel:</p>
-          <p>• Pierwsza kolumna: dzień miesiąca (liczba 1–31)</p>
-          <p>• Kolejne kolumny: utarg netto danego sklepu (jedna kolumna = jeden sklep)</p>
-          <p>• Pierwszy wiersz: nagłówki (np. "Dzień", "Sklep Centrum", "Sklep Północ")</p>
+        <div className="text-[12px] text-blue-800 space-y-0.5 flex-1">
+          <p className="font-semibold">Obsługiwany format (taki jak Twój plik Excel):</p>
+          <p>• Wiersz 1: nazwy sklepów (np. "4 LO Toruń", "7 LO Toruń") — scalone komórki</p>
+          <p>• Wiersz 2: nagłówki — <b>Data</b>, kwota brutto, gotówka, blik, karta (powtórzone dla każdego sklepu)</p>
+          <p>• Wiersze 3+: daty w formacie DD.MM.RRRR, kwoty z "zł" lub bez</p>
+          <p>• Puste dni ("-") i błędy "#ARG!" są automatycznie pomijane</p>
         </div>
-        <button onClick={downloadExampleFile} className="ml-auto flex items-center gap-1.5 text-[12px] font-semibold text-blue-700 hover:text-blue-900 whitespace-nowrap shrink-0 transition-colors">
-          <Download className="w-3.5 h-3.5" />
-          Pobierz szablon
+        <button onClick={downloadExampleFile}
+          className="ml-auto flex items-center gap-1.5 text-[12px] font-semibold text-blue-700 hover:text-blue-900 whitespace-nowrap shrink-0 transition-colors">
+          <Download className="w-3.5 h-3.5" /> Pobierz szablon
         </button>
       </div>
 
-      {/* Month / Year selector */}
-      <div className="flex gap-3 items-center">
-        <div className="flex items-center gap-2">
-          <label className="text-[13px] font-semibold text-[#374151]">Miesiąc:</label>
-          <select
-            value={month}
-            onChange={e => setMonth(+e.target.value)}
-            className="h-9 px-3 rounded-xl border border-[#E5E7EB] text-[13px] font-medium text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {MONTHS_PL.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-[13px] font-semibold text-[#374151]">Rok:</label>
-          <select
-            value={year}
-            onChange={e => setYear(+e.target.value)}
-            className="h-9 px-3 rounded-xl border border-[#E5E7EB] text-[13px] font-medium text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* File upload */}
+      {/* Upload zone */}
       {!fileName ? (
         <div
           onClick={() => fileRef.current?.click()}
@@ -265,98 +279,109 @@ export function MonthlyRevenueImport({ supabase, locations, fixedLocationId, fix
         >
           <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] group-hover:text-[#2563EB] mx-auto mb-3 transition-colors" />
           <p className="text-[14px] font-semibold text-[#374151]">Przeciągnij plik Excel lub kliknij aby wybrać</p>
-          <p className="text-[12px] text-[#9CA3AF] mt-1">Obsługiwane formaty: .xlsx, .xls</p>
+          <p className="text-[12px] text-[#9CA3AF] mt-1">Obsługiwane: .xlsx, .xls</p>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }} />
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 space-y-5">
-          {/* File header */}
+          {/* File info */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span className="text-[13px] font-semibold text-[#111827]">{fileName}</span>
-              <span className="text-[11px] text-[#9CA3AF]">{rows.length} wierszy danych</span>
+              <span className="text-[11px] text-[#9CA3AF]">
+                {excelLocations.length} sklep(ów) · {totalRows} dni z danymi
+              </span>
             </div>
             <button onClick={reset} className="text-[#9CA3AF] hover:text-[#374151] transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Column mapping */}
-          {headers.length > 1 && (
+          {excelLocations.length === 0 && (
+            <div className="flex items-center gap-2 text-amber-700 bg-amber-50 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <p className="text-[12px]">Nie znaleziono struktury danych. Sprawdź czy plik zawiera wiersz z nagłówkiem "Data" i "kwota brutto".</p>
+            </div>
+          )}
+
+          {/* Location mapping */}
+          {excelLocations.length > 0 && !fixedLocationId && (
             <div>
-              <p className="text-[13px] font-bold text-[#111827] mb-3">
-                Przypisz kolumny do sklepów:
-              </p>
+              <p className="text-[13px] font-bold text-[#111827] mb-3">Przypisz sklepy z pliku do lokali w systemie:</p>
               <div className="space-y-2">
-                {headers.map((h, i) => {
-                  if (i === 0) return (
-                    <div key={i} className="flex items-center gap-3 py-1.5">
-                      <span className="w-36 text-[12px] font-mono bg-[#F3F4F6] px-2 py-1 rounded text-[#6B7280] truncate">{h || `Kolumna ${i+1}`}</span>
-                      <span className="text-[12px] text-[#9CA3AF] italic">← kolumna dnia (automatyczna)</span>
-                    </div>
-                  )
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className="w-36 text-[12px] font-mono bg-[#F3F4F6] px-2 py-1 rounded text-[#374151] truncate">{h || `Kolumna ${i+1}`}</span>
-                      <span className="text-[#D1D5DB]">→</span>
-                      <select
-                        value={colMap[i] ?? ''}
-                        onChange={e => handleMapChange(i, e.target.value)}
-                        className="h-8 px-2 rounded-lg border border-[#E5E7EB] text-[12px] text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
-                      >
-                        <option value="">— pomiń —</option>
-                        {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                      </select>
-                    </div>
-                  )
-                })}
+                {excelLocations.map(xl => (
+                  <div key={xl.name} className="flex items-center gap-3">
+                    <span className="text-[12px] font-mono bg-[#F3F4F6] px-2 py-1.5 rounded-lg text-[#374151] min-w-[160px] truncate">{xl.name}</span>
+                    <span className="text-[#D1D5DB] text-sm">→</span>
+                    <select
+                      value={locMap[xl.name] ?? ''}
+                      onChange={e => setLocMap(m => ({ ...m, [xl.name]: e.target.value }))}
+                      className={`h-8 px-2 rounded-lg border text-[12px] text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px] ${
+                        locMap[xl.name] ? 'border-emerald-300' : 'border-amber-300'
+                      }`}
+                    >
+                      <option value="">— wybierz lokal —</option>
+                      {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                    {locMap[xl.name]
+                      ? <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                      : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Generate preview button */}
-          {mappedCols > 0 && preview.length === 0 && (
-            <button
-              onClick={handleGeneratePreview}
-              className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[#F3F4F6] text-[#374151] text-[13px] font-semibold hover:bg-[#E5E7EB] transition-colors"
-            >
-              Podgląd danych
-            </button>
+          {/* Fixed location info */}
+          {fixedLocationId && excelLocations.length > 0 && (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <p className="text-[12px] text-emerald-800">
+                Dane zostaną przypisane do: <strong>{fixedLocationName}</strong>
+                {excelLocations.length > 1 && ` · Wykryto ${excelLocations.length} kolumn z danymi — importowana będzie suma dla tego lokalu`}
+              </p>
+            </div>
           )}
 
-          {/* Preview summary */}
-          {preview.length > 0 && (
-            <div className="bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] p-4">
-              <p className="text-[13px] font-bold text-[#111827] mb-3">
-                Podgląd — {MONTHS_PL[month-1]} {year}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                {Object.entries(previewByLoc).map(([name, s]) => (
-                  <div key={name} className="bg-white rounded-xl border border-[#E5E7EB] p-3">
+          {/* Preview cards */}
+          {Object.keys(summaryByLoc).length > 0 && (
+            <div>
+              <p className="text-[13px] font-bold text-[#111827] mb-3">Podgląd danych:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {Object.entries(summaryByLoc).map(([name, s]) => (
+                  <div key={name} className={`rounded-xl border p-3 ${s.mapped ? 'bg-white border-[#E5E7EB]' : 'bg-amber-50 border-amber-200'}`}>
                     <p className="text-[11px] text-[#9CA3AF] truncate">{name}</p>
-                    <p className="text-[15px] font-bold text-[#111827] mt-0.5">{s.total.toLocaleString('pl-PL')} zł</p>
+                    <p className="text-[15px] font-bold text-[#111827] mt-0.5">
+                      {s.total.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                    </p>
                     <p className="text-[11px] text-[#6B7280]">{s.days} dni</p>
+                    {!s.mapped && <p className="text-[10px] text-amber-600 font-semibold mt-1">⚠ Nie przypisano lokalu</p>}
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-[#9CA3AF]">Łącznie {preview.length} wierszy do zaimportowania. Istniejące dane zostaną nadpisane.</p>
             </div>
           )}
         </div>
       )}
 
       {/* Import button */}
-      {preview.length > 0 && !result && (
+      {mappedCount > 0 && !result && (
         <button
           onClick={runImport}
-          disabled={importing}
-          className="flex items-center gap-2 h-11 px-6 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#2563EB] text-white text-[13px] font-bold hover:opacity-90 disabled:opacity-60 transition-all shadow-sm"
+          disabled={importing || !allMapped}
+          className="flex items-center gap-2 h-11 px-6 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#2563EB] text-white text-[13px] font-bold hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
         >
           {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          {importing ? 'Importowanie…' : `Importuj ${preview.length} rekordów do raportów dziennych`}
+          {importing
+            ? 'Importowanie…'
+            : `Importuj ${mappedCount} raportów dziennych`}
         </button>
+      )}
+
+      {!allMapped && mappedCount > 0 && !result && (
+        <p className="text-[12px] text-amber-600">Przypisz wszystkie sklepy do lokali, aby włączyć import.</p>
       )}
 
       {/* Result */}
@@ -370,16 +395,12 @@ export function MonthlyRevenueImport({ supabase, locations, fixedLocationId, fix
               {result.errors.length === 0 ? 'Import zakończony pomyślnie!' : 'Import zakończony z ostrzeżeniami'}
             </p>
           </div>
-          <div className="flex gap-4 text-[13px] mb-3">
-            <span className="text-emerald-700 font-semibold">✓ Zaimportowano: {result.inserted} dni</span>
-            {result.skipped > 0 && <span className="text-[#9CA3AF]">Pominięto: {result.skipped}</span>}
-            {result.errors.length > 0 && <span className="text-red-600 font-semibold">Błędy: {result.errors.length}</span>}
-          </div>
+          <p className="text-[13px] text-emerald-700 font-semibold mb-1">✓ Zaimportowano: {result.inserted} dni</p>
           {result.errors.length === 0 && (
             <p className="text-[12px] text-emerald-700">
               {status === 'submitted'
                 ? 'Raporty zostały przesłane do akceptacji — właściciel zobaczy je w panelu administracyjnym.'
-                : 'Raporty dzienne są gotowe — dane pojawią się w P&L, prognozach i analizach AI.'}
+                : 'Raporty są aktywne — widoczne w P&L, prognozach i analizach AI.'}
             </p>
           )}
           {result.errors.slice(0, 5).map((e, i) => (
