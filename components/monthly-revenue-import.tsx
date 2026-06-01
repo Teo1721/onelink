@@ -27,6 +27,16 @@ type ParsedRow = {
 
 type ImportResult = { inserted: number; skipped: number; errors: string[] }
 
+type SavedRow = {
+  date: string
+  location_id: string
+  gross_revenue: number | null
+  cash_payments: number | null
+  card_payments: number | null
+  online_payments: number | null
+  status: string
+}
+
 interface Props {
   supabase: SupabaseClient
   locations: LocationRow[]
@@ -154,18 +164,49 @@ export function MonthlyRevenueImport({
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [tab, setTab]                         = useState<'import' | 'history'>('import')
+
+  // Import tab state
   const [fileName, setFileName]               = useState<string | null>(null)
   const [excelLocations, setExcelLocations]   = useState<ExcelLocation[]>([])
   const [parsedRows, setParsedRows]           = useState<ParsedRow[]>([])
-  // mapping: excelLocName → system locationId
   const [locMap, setLocMap]                   = useState<Record<string, string>>({})
   const [importing, setImporting]             = useState(false)
   const [result, setResult]                   = useState<ImportResult | null>(null)
+  const [savedRows, setSavedRows]             = useState<SavedRow[]>([])
+  const [verifying, setVerifying]             = useState(false)
+
+  // History tab state
+  const [histYear, setHistYear]               = useState(new Date().getFullYear())
+  const [histMonth, setHistMonth]             = useState(new Date().getMonth() + 1)
+  const [histLocId, setHistLocId]             = useState(fixedLocationId ?? '')
+  const [histRows, setHistRows]               = useState<SavedRow[]>([])
+  const [histLoading, setHistLoading]         = useState(false)
+  const [histLoaded, setHistLoaded]           = useState(false)
 
   function reset() {
     setFileName(null); setExcelLocations([]); setParsedRows([])
-    setLocMap({}); setResult(null)
+    setLocMap({}); setResult(null); setSavedRows([]); setVerifying(false)
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function loadHistory(year: number, month: number, locId: string) {
+    if (!locId) return
+    setHistLoading(true)
+    setHistLoaded(false)
+    setHistRows([])
+    const firstDay = `${year}-${pad(month)}-01`
+    const lastDay  = `${year}-${pad(month)}-31`
+    const { data } = await supabase
+      .from('sales_daily')
+      .select('date, location_id, gross_revenue, cash_payments, card_payments, online_payments, status')
+      .eq('location_id', locId)
+      .gte('date', firstDay)
+      .lte('date', lastDay)
+      .order('date', { ascending: true })
+    setHistRows((data ?? []) as SavedRow[])
+    setHistLoading(false)
+    setHistLoaded(true)
   }
 
   function handleFile(file: File) {
@@ -227,6 +268,24 @@ export function MonthlyRevenueImport({
 
     setResult(res)
     setImporting(false)
+
+    // Auto-fetch saved data to show verification table
+    if (res.inserted > 0) {
+      setVerifying(true)
+      const locationIds = [...new Set(mappedRows.map(r => locMap[r.excelLocName]))]
+      const dates = mappedRows.map(r => r.date).sort()
+      const minDate = dates[0]
+      const maxDate = dates[dates.length - 1]
+      const { data } = await supabase
+        .from('sales_daily')
+        .select('date, location_id, gross_revenue, cash_payments, card_payments, online_payments, status')
+        .in('location_id', locationIds)
+        .gte('date', minDate)
+        .lte('date', maxDate)
+        .order('date', { ascending: true })
+      setSavedRows((data ?? []) as SavedRow[])
+      setVerifying(false)
+    }
   }
 
   // Summary per Excel location for preview
@@ -242,16 +301,152 @@ export function MonthlyRevenueImport({
   const totalRows    = parsedRows.length
   const allMapped    = excelLocations.length > 0 && excelLocations.every(l => locMap[l.name])
 
+  const MONTHS_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień']
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Import utargów miesięcznych</h1>
+        <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">Utargi miesięczne</h1>
         <p className="text-[13px] text-[#6B7280] mt-0.5">
           {fixedLocationId
-            ? `Wgraj plik Excel — dane zostaną przesłane do akceptacji w panelu właściciela.`
-            : 'Wgraj plik Excel z utargami sklepów — system automatycznie uzupełni raporty dzienne.'}
+            ? 'Importuj lub sprawdź wgrane utargi dla tego lokalu.'
+            : 'Importuj lub sprawdź wgrane utargi sklepów.'}
         </p>
       </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-[#F3F4F6] rounded-xl p-1 w-fit">
+        {(['import', 'history'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all ${
+              tab === t ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6B7280] hover:text-[#374151]'
+            }`}>
+            {t === 'import' ? 'Import pliku' : 'Sprawdź wgrane'}
+          </button>
+        ))}
+      </div>
+
+      {/* ── HISTORY TAB ── */}
+      {tab === 'history' && (
+        <div className="space-y-5">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide">Miesiąc</label>
+              <select value={histMonth} onChange={e => setHistMonth(+e.target.value)}
+                className="h-9 px-3 rounded-xl border border-[#E5E7EB] text-[13px] font-medium text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {MONTHS_PL.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide">Rok</label>
+              <select value={histYear} onChange={e => setHistYear(+e.target.value)}
+                className="h-9 px-3 rounded-xl border border-[#E5E7EB] text-[13px] font-medium text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            {!fixedLocationId && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide">Lokal</label>
+                <select value={histLocId} onChange={e => setHistLocId(e.target.value)}
+                  className="h-9 px-3 rounded-xl border border-[#E5E7EB] text-[13px] font-medium text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">— wybierz —</option>
+                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={() => loadHistory(histYear, histMonth, histLocId || fixedLocationId || '')}
+              disabled={histLoading || (!histLocId && !fixedLocationId)}
+              className="h-9 px-4 rounded-xl bg-[#1D4ED8] text-white text-[13px] font-bold hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
+            >
+              {histLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Sprawdź
+            </button>
+          </div>
+
+          {/* Results */}
+          {histLoaded && histRows.length === 0 && (
+            <div className="bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB] p-8 text-center">
+              <FileSpreadsheet className="w-8 h-8 text-[#D1D5DB] mx-auto mb-2" />
+              <p className="text-[14px] font-semibold text-[#374151]">Brak danych za {MONTHS_PL[histMonth-1]} {histYear}</p>
+              <p className="text-[12px] text-[#9CA3AF] mt-1">Ten miesiąc nie został jeszcze zaimportowany.</p>
+            </div>
+          )}
+
+          {histRows.length > 0 && (
+            <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6]">
+                <p className="text-[13px] font-bold text-[#111827]">
+                  {MONTHS_PL[histMonth-1]} {histYear} — {histRows.length} dni
+                </p>
+                <span className="text-[12px] font-bold text-[#111827]">
+                  Suma: {histRows.reduce((s, r) => s + (r.gross_revenue ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+                      <th className="text-left px-4 py-2.5 text-[#6B7280] font-semibold">Data</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Kwota brutto</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Gotówka</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Blik</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Karta</th>
+                      <th className="text-center px-4 py-2.5 text-[#6B7280] font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F3F4F6]">
+                    {histRows.map((r, i) => {
+                      const fmt = (v: number | null) =>
+                        v != null && v > 0
+                          ? v.toLocaleString('pl-PL', { minimumFractionDigits: 2 }) + ' zł'
+                          : '—'
+                      return (
+                        <tr key={i} className="hover:bg-[#F9FAFB] transition-colors">
+                          <td className="px-4 py-2.5 font-medium text-[#111827]">{r.date.split('-').reverse().join('.')}</td>
+                          <td className="px-4 py-2.5 text-right font-semibold text-[#111827]">{fmt(r.gross_revenue)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{fmt(r.cash_payments)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{fmt(r.online_payments)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{fmt(r.card_payments)}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              r.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {r.status === 'approved' ? '✓ Zatwierdzone' : '⏳ Do akceptacji'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-[#F9FAFB] border-t-2 border-[#E5E7EB] font-bold text-[12px]">
+                      <td className="px-4 py-2.5 text-[#374151]">SUMA</td>
+                      <td className="px-4 py-2.5 text-right text-[#111827]">
+                        {histRows.reduce((s, r) => s + (r.gross_revenue ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[#374151]">
+                        {histRows.reduce((s, r) => s + (r.cash_payments ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[#374151]">
+                        {histRows.reduce((s, r) => s + (r.online_payments ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[#374151]">
+                        {histRows.reduce((s, r) => s + (r.card_payments ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── IMPORT TAB ── */}
+      {tab === 'import' && (<>
 
       {/* Info: expected format */}
       <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
@@ -411,6 +606,93 @@ export function MonthlyRevenueImport({
           </button>
         </div>
       )}
+
+      {/* ── Verification table ── */}
+      {result && result.inserted > 0 && (
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6]">
+            <p className="text-[13px] font-bold text-[#111827]">Weryfikacja zapisanych danych</p>
+            {verifying && <Loader2 className="w-4 h-4 animate-spin text-[#9CA3AF]" />}
+          </div>
+
+          {verifying && (
+            <div className="px-5 py-6 text-center text-[13px] text-[#9CA3AF]">Pobieranie danych z bazy…</div>
+          )}
+
+          {!verifying && savedRows.length === 0 && (
+            <div className="px-5 py-6 text-center text-[13px] text-amber-600">Brak danych w bazie dla zaimportowanego zakresu.</div>
+          )}
+
+          {!verifying && savedRows.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+                      <th className="text-left px-4 py-2.5 text-[#6B7280] font-semibold">Data</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Kwota brutto</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Gotówka</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Blik</th>
+                      <th className="text-right px-4 py-2.5 text-[#6B7280] font-semibold">Karta</th>
+                      <th className="text-center px-4 py-2.5 text-[#6B7280] font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F3F4F6]">
+                    {savedRows.map((r, i) => {
+                      const fmt = (v: number | null) =>
+                        v != null && v > 0
+                          ? v.toLocaleString('pl-PL', { minimumFractionDigits: 2 }) + ' zł'
+                          : <span className="text-[#D1D5DB]">—</span>
+                      return (
+                        <tr key={i} className="hover:bg-[#F9FAFB] transition-colors">
+                          <td className="px-4 py-2.5 font-medium text-[#111827]">
+                            {r.date.split('-').reverse().join('.')}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-semibold text-[#111827]">{fmt(r.gross_revenue)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{fmt(r.cash_payments)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{fmt(r.online_payments)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{fmt(r.card_payments)}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              r.status === 'approved'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {r.status === 'approved' ? 'Zatwierdzone' : 'Do akceptacji'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-[#F9FAFB] border-t-2 border-[#E5E7EB]">
+                      <td className="px-4 py-2.5 text-[12px] font-bold text-[#374151]">SUMA ({savedRows.length} dni)</td>
+                      <td className="px-4 py-2.5 text-right text-[12px] font-bold text-[#111827]">
+                        {savedRows.reduce((s, r) => s + (r.gross_revenue ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[12px] font-semibold text-[#374151]">
+                        {savedRows.reduce((s, r) => s + (r.cash_payments ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[12px] font-semibold text-[#374151]">
+                        {savedRows.reduce((s, r) => s + (r.online_payments ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[12px] font-semibold text-[#374151]">
+                        {savedRows.reduce((s, r) => s + (r.card_payments ?? 0), 0).toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p className="px-5 py-3 text-[11px] text-[#9CA3AF] border-t border-[#F3F4F6]">
+                Dane odczytane bezpośrednio z bazy — możesz porównać z plikiem Excel.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+      </>)}
     </div>
   )
 }
