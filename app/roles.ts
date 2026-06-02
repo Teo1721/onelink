@@ -24,7 +24,7 @@ export function getDashboardRoute(role: string): string {
       return '/region' // New Dashboard
       
     case ROLES.EMPLOYEE:
-      return '/employee' // New Dashboard
+      return '/ops'
       
     case ROLES.ACCOUNTING:
       return '/finance' // New Dashboard
