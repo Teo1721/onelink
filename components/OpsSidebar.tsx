@@ -9,7 +9,7 @@ import {
   Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen, Banknote, UserCheck,
   ArrowLeftRight, CheckSquare, NotebookPen, BookUser, Trash2, Thermometer,
   TrendingUp, LineChart, ShoppingCart, PiggyBank,
-  ShieldCheck, Landmark, FileSpreadsheet,
+  ShieldCheck, Landmark, FileSpreadsheet, MessageSquarePlus,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { key: 'inventory',   label: 'Inwent.',     labelFull: 'Inwentaryzacja',   icon: ClipboardList },
   { key: 'scheduling',  label: 'Harmonogram', labelFull: 'Harmonogram',      icon: Calendar },
   { key: 'my_schedule', label: 'Mój grafik',  labelFull: 'Mój grafik',       icon: CalendarDays },
+  { key: 'suggest',     label: 'Sugestie',   labelFull: 'Moje sugestie',    icon: MessageSquarePlus },
   { key: 'employees',   label: 'Pracownicy',  labelFull: 'Pracownicy',       icon: Users },
   { key: 'attendance',  label: 'Ewidencja',   labelFull: 'Ewidencja czasu',  icon: Clock },
   { key: 'leave',       label: 'Urlopy',      labelFull: 'Urlopy',           icon: Umbrella },
@@ -55,7 +56,7 @@ const NAV_ITEMS = [
 ]
 
 // Keys always visible to employees (regardless of extra permissions)
-const EMPLOYEE_BASE_KEYS = new Set(['my_schedule', 'leave', 'swaps', 'certs', 'attendance', 'account'])
+const EMPLOYEE_BASE_KEYS = new Set(['my_schedule', 'suggest', 'leave', 'swaps', 'certs', 'attendance', 'account'])
 
 function useVisibleItems(userRole?: string, extraPermissions?: string[]) {
   if (!userRole || userRole !== 'employee') return NAV_ITEMS

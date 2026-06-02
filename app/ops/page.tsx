@@ -134,7 +134,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'suggest' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -2284,6 +2284,18 @@ export default function OpsDashboard() {
   const [semisReconEntries, setSemisReconEntries] = useState<SemisReconciliationEntry[]>([])
   const [newSemisEntry, setNewSemisEntry] = useState<SemisReconciliationEntry>({ ...emptySemisReconEntry })
   const [semisReconSaving, setSemisReconSaving] = useState(false)
+
+  // ── Suggest state ──
+  const [mySuggestions, setMySuggestions]   = useState<any[]>([])
+  const [suggLoading, setSuggLoading]       = useState(false)
+  const [suggSaving, setSuggSaving]         = useState(false)
+  const [suggError, setSuggError]           = useState<string | null>(null)
+  const [suggType, setSuggType]             = useState<'specific' | 'off' | 'available'>('specific')
+  const [suggSelectedDates, setSuggSelectedDates] = useState<string[]>([])
+  const [suggTimeStart, setSuggTimeStart]   = useState('08:00')
+  const [suggTimeEnd, setSuggTimeEnd]       = useState('16:00')
+  const [suggNote, setSuggNote]             = useState('')
+  const [suggCalMonth, setSuggCalMonth]     = useState(() => new Date().toISOString().slice(0, 7))
 
   // ── Inventory state ──
   const [inventorySubView, setInventorySubView] = useState<'active' | 'fill' | 'history' | 'products'>('active')
@@ -5390,6 +5402,204 @@ export default function OpsDashboard() {
             status="submitted"
           />
         )}
+
+        {/* ── SUGGEST ── */}
+        {activeView === 'suggest' && selectedLocation && (() => {
+          const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10) }
+          const [calY, calM] = suggCalMonth.split('-').map(Number)
+          const daysInMonth = new Date(calY, calM, 0).getDate()
+          const firstDow = new Date(calY, calM - 1, 1).getDay()
+          const today = new Date().toISOString().slice(0,10)
+
+          const toggleDate = (iso: string) => {
+            if (iso <= today) return
+            setSuggSelectedDates(prev =>
+              prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso]
+            )
+          }
+
+          const loadSugg = async () => {
+            setSuggLoading(true)
+            const { data } = await supabase.from('shift_suggestions')
+              .select('id, date, time_start, time_end, note, status, suggestion_type')
+              .eq('user_id', userId).order('date', { ascending: false }).limit(30)
+            setMySuggestions(data ?? [])
+            setSuggLoading(false)
+          }
+
+          const submitSugg = async () => {
+            if (suggSelectedDates.length === 0) { setSuggError('Wybierz co najmniej jeden dzień.'); return }
+            setSuggError(null); setSuggSaving(true)
+            const locId = selectedLocation.location_id
+            const empRes = await supabase.from('employees').select('id').eq('user_id', userId).eq('location_id', locId).maybeSingle()
+            const empId = empRes.data?.id ?? null
+            const rows = suggSelectedDates.map(date => ({
+              user_id: userId, employee_id: empId, location_id: locId,
+              suggestion_type: suggType, date,
+              time_start: suggType === 'specific' ? suggTimeStart : null,
+              time_end:   suggType === 'specific' ? suggTimeEnd   : null,
+              note: suggNote.trim() || null, status: 'pending',
+            }))
+            const { error } = await supabase.from('shift_suggestions').insert(rows)
+            if (error) { setSuggError(error.message) } else {
+              setSuggSelectedDates([]); setSuggNote(''); setSuggType('specific')
+              await loadSugg()
+            }
+            setSuggSaving(false)
+          }
+
+          const deleteSugg = async (id: string) => {
+            await supabase.from('shift_suggestions').delete().eq('id', id)
+            await loadSugg()
+          }
+
+          if (!mySuggestions.length && !suggLoading) loadSugg()
+
+          const SUGG_CFG = {
+            specific:  { label: 'Konkretne godziny', icon: '🕐', color: 'text-blue-700',  bg: 'bg-blue-50',  border: 'border-blue-400' },
+            available: { label: 'Dostępny cały dzień', icon: '✅', color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-400' },
+            off:       { label: 'Niedostępny',       icon: '🚫', color: 'text-red-700',   bg: 'bg-red-50',   border: 'border-red-400'  },
+          }
+
+          return (
+            <div className="max-w-lg space-y-5">
+              <div>
+                <h1 className="text-[22px] font-bold text-[#111827]">Moje sugestie zmian</h1>
+                <p className="text-[13px] text-[#6B7280] mt-0.5">Zaznacz dni w kalendarzu i podaj godziny — manager zobaczy Twoje preferencje.</p>
+              </div>
+
+              {/* Type selector */}
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.entries(SUGG_CFG) as [typeof suggType, typeof SUGG_CFG[keyof typeof SUGG_CFG]][]).map(([t, cfg]) => (
+                  <button key={t} onClick={() => setSuggType(t)}
+                    className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 text-center transition-all
+                      ${suggType === t ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:bg-[#F9FAFB]'}`}>
+                    <span className="text-xl">{cfg.icon}</span>
+                    <span className="text-[11px] font-semibold leading-tight">{cfg.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Multi-day calendar */}
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <button onClick={() => { const [y,m] = suggCalMonth.split('-').map(Number); const d = new Date(y, m-2, 1); setSuggCalMonth(d.toISOString().slice(0,7)) }}
+                    className="w-8 h-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6]">‹</button>
+                  <p className="text-[14px] font-bold text-[#111827]">
+                    {new Date(calY, calM-1, 1).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}
+                  </p>
+                  <button onClick={() => { const [y,m] = suggCalMonth.split('-').map(Number); const d = new Date(y, m, 1); setSuggCalMonth(d.toISOString().slice(0,7)) }}
+                    className="w-8 h-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6]">›</button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['Pn','Wt','Śr','Cz','Pt','So','Nd'].map(d => (
+                    <div key={d} className="text-center text-[10px] font-semibold text-[#9CA3AF]">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: (firstDow === 0 ? 6 : firstDow - 1) }).map((_, i) => <div key={`e${i}`} />)}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1
+                    const iso = `${calY}-${String(calM).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                    const isPast = iso <= today
+                    const isSelected = suggSelectedDates.includes(iso)
+                    return (
+                      <button key={iso} onClick={() => toggleDate(iso)} disabled={isPast}
+                        className={`aspect-square rounded-lg text-[12px] font-semibold transition-all
+                          ${isPast ? 'text-[#D1D5DB] cursor-not-allowed' :
+                            isSelected ? 'bg-[#1D4ED8] text-white shadow-sm' :
+                            'bg-[#F9FAFB] text-[#374151] hover:bg-blue-100 hover:text-blue-700'}`}>
+                        {day}
+                      </button>
+                    )
+                  })}
+                </div>
+                {suggSelectedDates.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {suggSelectedDates.sort().map(d => (
+                      <span key={d} className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">
+                        {d.split('-').reverse().join('.')}
+                        <button onClick={() => setSuggSelectedDates(p => p.filter(x => x !== d))} className="hover:text-red-500 ml-0.5">×</button>
+                      </span>
+                    ))}
+                    <button onClick={() => setSuggSelectedDates([])} className="text-[11px] text-[#9CA3AF] hover:text-red-500 ml-1">wyczyść</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Times (specific only) */}
+              {suggType === 'specific' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#374151] mb-1.5">Od</p>
+                    <input type="time" value={suggTimeStart} onChange={e => setSuggTimeStart(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] text-[14px] text-[#111827] focus:outline-none focus:border-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#374151] mb-1.5">Do</p>
+                    <input type="time" value={suggTimeEnd} onChange={e => setSuggTimeEnd(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] text-[14px] text-[#111827] focus:outline-none focus:border-blue-400" />
+                  </div>
+                </div>
+              )}
+
+              {/* Note */}
+              <div>
+                <p className="text-[12px] font-semibold text-[#374151] mb-1.5">Uwaga (opcjonalnie)</p>
+                <textarea value={suggNote} onChange={e => setSuggNote(e.target.value)}
+                  placeholder="np. mogę wcześniej/później, proszę o ten dział..."
+                  rows={2}
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] text-[13px] text-[#111827] resize-none focus:outline-none focus:border-blue-400" />
+              </div>
+
+              {suggError && <p className="text-[12px] text-red-600">{suggError}</p>}
+
+              <button onClick={submitSugg} disabled={suggSaving || suggSelectedDates.length === 0}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-[#1D4ED8] to-[#2563EB] text-white text-[14px] font-bold hover:opacity-90 disabled:opacity-50 transition-all">
+                {suggSaving ? 'Zapisywanie...' : `Wyślij sugestie (${suggSelectedDates.length} ${suggSelectedDates.length === 1 ? 'dzień' : 'dni'})`}
+              </button>
+
+              {/* Sent suggestions list */}
+              <div>
+                <p className="text-[14px] font-bold text-[#111827] mb-3">Wysłane sugestie</p>
+                {suggLoading ? (
+                  <p className="text-[13px] text-[#9CA3AF]">Ładowanie…</p>
+                ) : mySuggestions.length === 0 ? (
+                  <p className="text-[13px] text-[#9CA3AF]">Brak wysłanych sugestii.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {mySuggestions.map(s => {
+                      const cfg = SUGG_CFG[s.suggestion_type as keyof typeof SUGG_CFG] ?? SUGG_CFG.specific
+                      return (
+                        <div key={s.id} className="bg-white rounded-xl border border-[#E5E7EB] p-3 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{cfg.icon}</span>
+                            <div>
+                              <p className="text-[13px] font-semibold text-[#111827]">
+                                {s.date.split('-').reverse().join('.')}
+                                {s.suggestion_type === 'specific' && s.time_start && ` · ${s.time_start.slice(0,5)}–${s.time_end?.slice(0,5)}`}
+                              </p>
+                              {s.note && <p className="text-[11px] text-[#6B7280]">{s.note}</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              s.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                              s.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                            }`}>{s.status === 'approved' ? '✓ Zaakceptowano' : s.status === 'rejected' ? '✗ Odrzucono' : '⏳ Oczekuje'}</span>
+                            {s.status === 'pending' && (
+                              <button onClick={() => deleteSugg(s.id)} className="text-[#D1D5DB] hover:text-red-500 transition-colors text-sm">✕</button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
       </main>
 
