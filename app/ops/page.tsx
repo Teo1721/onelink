@@ -2683,6 +2683,15 @@ export default function OpsDashboard() {
     fetchSemisRecon()
   }, [selectedLocation, activeView, invoiceSubView, supabase])
 
+  useEffect(() => {
+    if (!userId || activeView !== 'suggest') return
+    setSuggLoading(true)
+    supabase.from('shift_suggestions')
+      .select('id, date, time_start, time_end, note, status, suggestion_type')
+      .eq('user_id', userId).order('date', { ascending: false }).limit(30)
+      .then(({ data }) => { setMySuggestions(data ?? []); setSuggLoading(false) })
+  }, [userId, activeView, supabase])
+
   // ═══════════════════════════════════════════════════════════════════
   // DERIVED KPI VALUES
   // ═══════════════════════════════════════════════════════════════════
@@ -5405,26 +5414,24 @@ export default function OpsDashboard() {
 
         {/* ── SUGGEST ── */}
         {activeView === 'suggest' && selectedLocation && (() => {
-          const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10) }
           const [calY, calM] = suggCalMonth.split('-').map(Number)
           const daysInMonth = new Date(calY, calM, 0).getDate()
           const firstDow = new Date(calY, calM - 1, 1).getDay()
           const today = new Date().toISOString().slice(0,10)
+
+          const refetchSugg = () => {
+            setSuggLoading(true)
+            supabase.from('shift_suggestions')
+              .select('id, date, time_start, time_end, note, status, suggestion_type')
+              .eq('user_id', userId).order('date', { ascending: false }).limit(30)
+              .then(({ data }) => { setMySuggestions(data ?? []); setSuggLoading(false) })
+          }
 
           const toggleDate = (iso: string) => {
             if (iso <= today) return
             setSuggSelectedDates(prev =>
               prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso]
             )
-          }
-
-          const loadSugg = async () => {
-            setSuggLoading(true)
-            const { data } = await supabase.from('shift_suggestions')
-              .select('id, date, time_start, time_end, note, status, suggestion_type')
-              .eq('user_id', userId).order('date', { ascending: false }).limit(30)
-            setMySuggestions(data ?? [])
-            setSuggLoading(false)
           }
 
           const submitSugg = async () => {
@@ -5443,17 +5450,15 @@ export default function OpsDashboard() {
             const { error } = await supabase.from('shift_suggestions').insert(rows)
             if (error) { setSuggError(error.message) } else {
               setSuggSelectedDates([]); setSuggNote(''); setSuggType('specific')
-              await loadSugg()
+              refetchSugg()
             }
             setSuggSaving(false)
           }
 
           const deleteSugg = async (id: string) => {
             await supabase.from('shift_suggestions').delete().eq('id', id)
-            await loadSugg()
+            refetchSugg()
           }
-
-          if (!mySuggestions.length && !suggLoading) loadSugg()
 
           const SUGG_CFG = {
             specific:  { label: 'Konkretne godziny', icon: '🕐', color: 'text-blue-700',  bg: 'bg-blue-50',  border: 'border-blue-400' },
