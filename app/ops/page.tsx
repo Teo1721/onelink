@@ -48,6 +48,7 @@ import { BudgetPlanning } from '@/components/budget-planning'
 import { AllergenRegister } from '@/components/allergen-register'
 import { CashAudit } from '@/components/cash-audit'
 import { MonthlyRevenueImport } from '@/components/monthly-revenue-import'
+import { AiWeekPlanner } from '@/components/ai-week-planner'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -134,7 +135,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'suggest' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'suggest' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import' | 'week_plan'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -5399,6 +5400,13 @@ export default function OpsDashboard() {
             locationId={selectedLocation.location_id}
             locationName={selectedLocation.locations?.name ?? ''}
             supabase={supabase}
+          />
+        )}
+
+        {activeView === 'week_plan' && selectedLocation && (
+          <AiWeekPlanner
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
           />
         )}
 

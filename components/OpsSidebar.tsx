@@ -9,7 +9,7 @@ import {
   Umbrella, LayoutGrid, GitCompare, GraduationCap, FolderOpen, Banknote, UserCheck,
   ArrowLeftRight, CheckSquare, NotebookPen, BookUser, Trash2, Thermometer,
   TrendingUp, LineChart, ShoppingCart, PiggyBank,
-  ShieldCheck, Landmark, FileSpreadsheet, MessageSquarePlus,
+  ShieldCheck, Landmark, FileSpreadsheet, MessageSquarePlus, Sparkles,
 } from 'lucide-react'
 
 type OpsSidebarProps = {
@@ -45,6 +45,7 @@ const NAV_ITEMS = [
   { key: 'waste',         label: 'Odpady',      labelFull: 'Ewidencja odpadów',   icon: Trash2 },
   { key: 'haccp',         label: 'HACCP',       labelFull: 'Kontrola HACCP',      icon: Thermometer },
   { key: 'forecast',        label: 'Prognoza',    labelFull: 'Prognoza przychodów', icon: TrendingUp },
+  { key: 'week_plan',       label: '✨ Plan AI',  labelFull: '✨ Plan Tygodnia AI', icon: Sparkles },
   { key: 'price_tracking',  label: 'Ceny',        labelFull: 'Historia cen',        icon: LineChart },
   { key: 'purchase_orders', label: 'Zamówienia',  labelFull: 'Zamówienia do dostawców', icon: ShoppingCart },
   { key: 'budget',          label: 'Budżet',      labelFull: 'Budżet miesięczny',   icon: PiggyBank },
