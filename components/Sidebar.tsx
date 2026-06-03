@@ -67,7 +67,7 @@ export function Sidebar({
         { key: 'investor_director',label: pl ? 'Inwestorski AI'    : 'Investor Director', icon: BarChart3 },
         { key: 'what_if',         label: pl ? 'Co jeśli…'          : 'What if…',          icon: Sparkles },
         { key: 'revenue_forecast',label: pl ? 'Prognoza'           : 'Forecast',          icon: TrendingUp },
-        { key: 'week_plan',       label: pl ? '✨ Plan Tygodnia AI' : '✨ AI Week Plan',    icon: Sparkles },
+        { key: 'week_plan',       label: pl ? 'Plan Tygodnia AI'   : 'AI Week Plan',      icon: Sparkles },
       ],
     },
     {

@@ -1228,7 +1228,7 @@ export default function AdminDashboard() {
       .update({ status: 'actioned', actioned_at: new Date().toISOString() })
       .eq('reference_id', selectedDailyReport.id)
     
-    alert('✅ Raport zatwierdzony')
+    alert('Raport zatwierdzony')
     setSelectedDailyReport(null)
     setActiveView('daily_reports')
     fetchPendingDailyReports()
@@ -1245,7 +1245,7 @@ export default function AdminDashboard() {
       .update({ status: 'rejected', rejection_note: note })
       .eq('id', selectedDailyReport.id)
     
-    alert('❌ Raport odrzucony')
+    alert('Raport odrzucony')
     setSelectedDailyReport(null)
     setActiveView('daily_reports')
     fetchPendingDailyReports()
@@ -1314,7 +1314,7 @@ export default function AdminDashboard() {
     setSelectedDailyReport({ ...selectedDailyReport, ...editReportForm } as DailyReport)
     setEditingReport(false)
     fetchHistoryReports()
-    alert('✅ Raport zaktualizowany')
+    alert('Raport zaktualizowany')
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1506,13 +1506,13 @@ export default function AdminDashboard() {
       await fetchDashboard()
       await fetchNotifications()
 
-      alert(`✅ Faktura ${status === 'approved' ? 'zatwierdzona' : 'odrzucona'}`)
+      alert(`Faktura ${status === 'approved' ? 'zatwierdzona' : 'odrzucona'}`)
       setLoading(false)
       return updated
     } catch (err: any) {
       console.error('Error updating invoice:', err)
       const msg = err?.message || (err?.error && err.error.message) || String(err)
-      alert('❌ Błąd podczas aktualizacji faktury: ' + msg)
+      alert('Błąd podczas aktualizacji faktury: ' + msg)
       setLoading(false)
     }
   }
@@ -1587,7 +1587,7 @@ export default function AdminDashboard() {
       .eq('type', 'semis_reconciliation')
       .eq('status', 'unread')
     
-    alert(`✅ ${pendingSemisEntries.length} pozycji ${status === 'verified' ? 'zweryfikowanych' : 'odrzuconych'}`)
+    alert(`${pendingSemisEntries.length} pozycji ${status === 'verified' ? 'zweryfikowanych' : 'odrzuconych'}`)
     fetchPendingSemisEntries()
     fetchDashboard() // Updates history
     fetchNotifications()
@@ -1813,7 +1813,7 @@ export default function AdminDashboard() {
       }
       if (data) setExistingMonthlyJobs(data.map((j: any) => ({ ...j, location_name: j.locations?.name || '?' })))
     } catch (err) {
-      console.error('❌ Error in fetchExistingMonthly:', err)
+      console.error('Error in fetchExistingMonthly:', err)
       setExistingMonthlyJobs([])
     }
   }
@@ -1836,7 +1836,7 @@ export default function AdminDashboard() {
       await supabase.from('inventory_job_items').insert(products.map(p => ({ job_id: job.id, product_id: p.id })))
       created++
     }
-    alert(`✅ Utworzono ${created} inwentaryzacji (${products.length} prod. każda)`)
+    alert(`Utworzono ${created} inwentaryzacji (${products.length} prod. każda)`)
     setMonthlyGenerating(false); fetchExistingMonthly()
   }
 
@@ -1864,7 +1864,7 @@ export default function AdminDashboard() {
       await supabase.from('inventory_job_items').insert(weeklyProducts.map(pid => ({ job_id: job.id, product_id: pid })))
       created++
     }
-    alert(`✅ Utworzono ${created} inwentaryzacji tygodniowych`)
+    alert(`Utworzono ${created} inwentaryzacji tygodniowych`)
     setWeeklyCreating(false); setWeeklyLocations([]); setWeeklyProducts([]); setWeeklyNote('')
   }
 
@@ -1978,7 +1978,7 @@ export default function AdminDashboard() {
       .update({ status: 'actioned', actioned_at: new Date().toISOString() })
       .eq('reference_id', selectedReviewJob.id)
     
-    alert('✅ Zatwierdzona'); setSelectedReviewJob(null); setActiveView('inv_approvals'); fetchSubmittedJobs(); fetchNotifications()
+    alert('Zatwierdzona'); setSelectedReviewJob(null); setActiveView('inv_approvals'); fetchSubmittedJobs(); fetchNotifications()
   }
 
   const sendForCorrection = async () => {
@@ -2003,14 +2003,14 @@ export default function AdminDashboard() {
   const handleCloseMonth = async () => {
     if (!closeLocationId || !closeMonth) { alert('Wybierz lokalizację i miesiąc'); return }
     setClosing(true)
-    if (closedMonths.find(c => c.location_id === closeLocationId && c.month === closeMonth && c.year === closeYear)) { alert('⚠ Już zamknięty'); setClosing(false); return }
+    if (closedMonths.find(c => c.location_id === closeLocationId && c.month === closeMonth && c.year === closeYear)) { alert('Miesiąc już zamknięty'); setClosing(false); return }
     const ms = `${closeYear}-${closeMonth}-01`, me = new Date(closeYear, Number(closeMonth), 0).toISOString().split('T')[0]
     const { data: pi } = await supabase.from('invoices').select('id').eq('location_id', closeLocationId).eq('status', 'submitted').gte('service_date', ms).lte('service_date', me)
-    if (pi?.length) { alert(`⚠ ${pi.length} faktur oczekuje`); setClosing(false); return }
+    if (pi?.length) { alert(`${pi.length} faktur oczekuje na zatwierdzenie`); setClosing(false); return }
     const { data: pj } = await supabase.from('inventory_jobs').select('id').eq('location_id', closeLocationId).in('status', ['draft', 'submitted']).eq('type', 'MONTHLY').gte('due_date', ms).lte('due_date', me)
-    if (pj?.length) { alert('⚠ Inwentaryzacja niezatwierdzona'); setClosing(false); return }
+    if (pj?.length) { alert('Inwentaryzacja niezatwierdzona'); setClosing(false); return }
     const { error } = await supabase.from('closed_months').insert({ location_id: closeLocationId, month: closeMonth, year: closeYear, closed_by: adminName })
-    if (error) alert('Błąd: ' + error.message); else { alert('✅ Zamknięto'); fetchClosedMonths() }
+    if (error) alert('Błąd: ' + error.message); else { alert('Zamknięto'); fetchClosedMonths() }
     setClosing(false)
   }
 
@@ -2776,15 +2776,15 @@ export default function AdminDashboard() {
               <CardContent>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-slate-50 rounded p-3 text-center">
-                    <p className="text-xs text-slate-500 uppercase">🌅 Rano</p>
+                    <p className="text-xs text-slate-500 uppercase">Rano</p>
                     <p className="text-2xl font-bold">{selectedDailyReport.staff_morning || 0}</p>
                   </div>
                   <div className="bg-slate-50 rounded p-3 text-center">
-                    <p className="text-xs text-slate-500 uppercase">☀️ Popołudnie</p>
+                    <p className="text-xs text-slate-500 uppercase">Popołudnie</p>
                     <p className="text-2xl font-bold">{selectedDailyReport.staff_afternoon || 0}</p>
                   </div>
                   <div className="bg-slate-50 rounded p-3 text-center">
-                    <p className="text-xs text-slate-500 uppercase">🌙 Wieczór</p>
+                    <p className="text-xs text-slate-500 uppercase">Wieczór</p>
                     <p className="text-2xl font-bold">{selectedDailyReport.staff_evening || 0}</p>
                   </div>
                 </div>
@@ -3438,14 +3438,14 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between mb-2"><Label className="font-semibold">1. Lokalizacje ({weeklyLocations.length})</Label>
                   <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setWeeklyLocations(locations.map(l => l.id))}>Wszystkie</Button><Button size="sm" variant="outline" onClick={() => setWeeklyLocations([])}>Odznacz</Button></div></div>
                 <div className="grid grid-cols-4 gap-2">{locations.map(l => (
-                  <button key={l.id} onClick={() => toggleWeeklyLoc(l.id)} className={`text-left p-3 rounded border text-sm ${weeklyLocations.includes(l.id) ? 'border-blue-500 bg-blue-50 font-medium' : 'border-gray-200 hover:border-gray-400'}`}>📍 {l.name}</button>
+                  <button key={l.id} onClick={() => toggleWeeklyLoc(l.id)} className={`text-left p-3 rounded border text-sm ${weeklyLocations.includes(l.id) ? 'border-blue-500 bg-blue-50 font-medium' : 'border-gray-200 hover:border-gray-400'}`}>{l.name}</button>
                 ))}</div>
               </div>
               <div><Label className="font-semibold mb-2 block">2. Produkty ({weeklyProducts.length})</Label>
                 <div className="relative mb-3"><Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" /><Input placeholder="Szukaj…" value={weeklyProductSearch} onChange={e => setWeeklyProductSearch(e.target.value)} className="pl-10" /></div>
                 <div className="max-h-60 overflow-y-auto border rounded p-2 space-y-1">{filteredWeeklyProducts.map(p => (
                   <button key={p.id} onClick={() => toggleWeeklyProd(p.id)} className={`w-full text-left px-3 py-2 rounded text-sm ${weeklyProducts.includes(p.id) ? 'bg-blue-50 border border-blue-300 font-medium' : 'hover:bg-gray-50'}`}>
-                    {weeklyProducts.includes(p.id) ? '☑' : '☐'} {p.name} <span className="text-xs text-slate-400">({p.category})</span></button>
+                    {weeklyProducts.includes(p.id) ? '[x]' : '[ ]'} {p.name} <span className="text-xs text-slate-400">({p.category})</span></button>
                 ))}</div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -3488,7 +3488,7 @@ export default function AdminDashboard() {
                   submittedJobs.map(job => (
                     <div key={job.id} className="flex items-center justify-between border rounded-lg p-4 mb-3 hover:bg-slate-50 cursor-pointer" onClick={() => openReviewJob(job)}>
                       <div><p className="font-bold">{job.location_name}</p>
-                        <p className="text-sm text-slate-500">{job.type === 'MONTHLY' ? '📅' : '📋'} {job.type} • {job.due_date} • {job.item_count} poz.</p>
+                        <p className="text-sm text-slate-500">{job.type === 'MONTHLY' ? 'Miesięczna' : 'Tygodniowa'} {job.type} • {job.due_date} • {job.item_count} poz.</p>
                         {job.submitted_by && <p className="text-xs text-slate-400">Wysłana przez: {job.submitted_by}</p>}</div>
                       <ChevronRight className="w-5 h-5 text-slate-400" />
                     </div>
@@ -3515,7 +3515,7 @@ export default function AdminDashboard() {
                         {inventoryHistoryJobs.map(job => (
                           <tr key={job.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => openReviewJob(job)}>
                             <td className="py-3 pr-2 font-medium">{job.location_name}</td>
-                            <td className="py-3 pr-2">{job.type === 'MONTHLY' ? '📅 Miesięczna' : '📋 Tygodniowa'}</td>
+                            <td className="py-3 pr-2">{job.type === 'MONTHLY' ? 'Miesięczna' : 'Tygodniowa'}</td>
                             <td className="py-3 pr-2 text-slate-600">{job.due_date}</td>
                             <td className="py-3 pr-2">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -3935,7 +3935,7 @@ export default function AdminDashboard() {
                             <div className="text-xs text-slate-500">Cel: {foodCostTargetPct.toFixed(0)}%</div>
                           </div>
                           <div className={`text-xs mt-1 ${currentFoodCostPct <= foodCostTargetPct ? 'text-green-600' : currentFoodCostPct <= foodCostTargetPct + 5 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {currentFoodCostPct <= foodCostTargetPct ? '✓ OK' : currentFoodCostPct <= foodCostTargetPct + 5 ? '⚠ Ostrzeżenie' : '✗ Przekroczenie'}
+                            {currentFoodCostPct <= foodCostTargetPct ? '✓ OK' : currentFoodCostPct <= foodCostTargetPct + 5 ? 'Ostrzeżenie' : '✗ Przekroczenie'}
                           </div>
                         </div>
                         

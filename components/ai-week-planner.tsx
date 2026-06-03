@@ -147,7 +147,7 @@ export function AiWeekPlanner({ companyId, locationId, locationName }: Props) {
               { label: 'Prognoza tygodnia', value: `${plan.weekTotal.toLocaleString('pl-PL')} zł`, icon: TrendingUp, color: 'bg-blue-50 text-blue-700 border-blue-100' },
               { label: 'Najlepszy dzień', value: plan.bestDay, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
               { label: 'Najsłabszy dzień', value: plan.worstDay, icon: TrendingDown, color: 'bg-amber-50 text-amber-700 border-amber-100' },
-              { label: 'Trend', value: plan.trendFactor > 1.05 ? '📈 Rosnący' : plan.trendFactor < 0.95 ? '📉 Malejący' : '➡️ Stabilny', icon: Minus, color: plan.trendFactor > 1.05 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : plan.trendFactor < 0.95 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-[#F9FAFB] text-[#374151] border-[#E5E7EB]' },
+              { label: 'Trend', value: plan.trendFactor > 1.05 ? 'Rosnący' : plan.trendFactor < 0.95 ? 'Malejący' : 'Stabilny', icon: Minus, color: plan.trendFactor > 1.05 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : plan.trendFactor < 0.95 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-[#F9FAFB] text-[#374151] border-[#E5E7EB]' },
             ].map((chip, i) => (
               <div key={i} className={`rounded-xl border p-3 ${chip.color}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70 mb-0.5">{chip.label}</p>
