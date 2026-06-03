@@ -44,6 +44,7 @@ import { SettingsView } from '@/components/settings-view'
 import { RevenueForecast } from '@/components/revenue-forecast'
 import { CsvImport } from '@/components/csv-import'
 import { MonthlyRevenueImport } from '@/components/monthly-revenue-import'
+import { AiWeekPlanner } from '@/components/ai-week-planner'
 import { MenuEngineering } from '@/components/menu-engineering'
 import { ChecklistAdminView } from '@/components/checklist-admin-view'
 import { FoodCostDashboard } from '@/components/food-cost-dashboard'
@@ -478,6 +479,7 @@ type ActiveView =
   | 'menu_engineering'
   | 'checklist'
   | 'food_cost'
+  | 'week_plan'
 
 /* ================================================================== */
 /*  HELPERS                                                            */
@@ -4193,6 +4195,10 @@ export default function AdminDashboard() {
             supabase={supabase}
             locations={locations}
           />
+        )}
+
+        {activeView === 'week_plan' && companyId && (
+          <AiWeekPlanner companyId={companyId} />
         )}
 
         </>}
