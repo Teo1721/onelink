@@ -49,6 +49,7 @@ import { AllergenRegister } from '@/components/allergen-register'
 import { CashAudit } from '@/components/cash-audit'
 import { MonthlyRevenueImport } from '@/components/monthly-revenue-import'
 import { AiWeekPlanner } from '@/components/ai-week-planner'
+import { AiAutoSchedule } from '@/components/ai-auto-schedule'
 
 /* ================================================================== */
 /* TYPES                                                               */
@@ -135,7 +136,7 @@ type ExcelProductRow = {
   name: string; unit: string; category: string; last_price: string; is_food: boolean
 }
 
-type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'suggest' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import' | 'week_plan'
+type ActiveView = 'reporting' | 'invoices' | 'inventory' | 'scheduling' | 'employees' | 'account' | 'my_schedule' | 'suggest' | 'kiosk' | 'attendance' | 'leave' | 'dashboard' | 'swaps' | 'certs' | 'documents' | 'tips' | 'onboarding' | 'checklist' | 'handover' | 'suppliers' | 'waste' | 'haccp' | 'forecast' | 'price_tracking' | 'purchase_orders' | 'budget' | 'allergens' | 'cash_audit' | 'revenue_import' | 'week_plan' | 'ai_schedule'
 type ShiftCell = {
   id?: string
   user_id: string
@@ -705,7 +706,7 @@ function AttendanceView({ locationId, locationName, supabase }: { locationId: st
                                   {/* Photos count badge */}
                                   <span className="text-center">
                                     {(r.clock_in_photo_url || r.clock_out_photo_url)
-                                      ? <span className="text-[10px] text-blue-500">📷</span>
+                                      ? <span className="text-[10px] text-blue-500">Foto</span>
                                       : <span className="text-[10px] text-slate-300">—</span>}
                                   </span>
                                   <span>
@@ -944,7 +945,7 @@ function KioskView({ locationId, locationName }: { locationId: string; locationN
       <div className="mt-4 space-y-3">
         {qrData && (
           <div className="p-3 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
-            <p className="text-[11px] text-[#9CA3AF] mb-1">🔲 Kiosk QR — pracownicy skanują własnym telefonem</p>
+            <p className="text-[11px] text-[#9CA3AF] mb-1">Kiosk QR — pracownicy skanują własnym telefonem</p>
             <a href={`/kiosk?location=${locationId}`} target="_blank" rel="noopener noreferrer"
               className="text-[13px] text-blue-600 hover:underline break-all">
               {typeof window !== 'undefined' ? `${window.location.origin}/kiosk?location=${locationId}` : `/kiosk?location=${locationId}`}
@@ -952,7 +953,7 @@ function KioskView({ locationId, locationName }: { locationId: string; locationN
           </div>
         )}
         <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-          <p className="text-[11px] text-purple-600 font-semibold mb-1">🔢 Kiosk PIN — pracownicy wpisują PIN na urządzeniu firmowym</p>
+          <p className="text-[11px] text-purple-600 font-semibold mb-1">Kiosk PIN — pracownicy wpisują PIN na urządzeniu firmowym</p>
           <p className="text-[11px] text-[#9CA3AF] mb-1.5">Otwórz na firmowym tablecie/telefonie. Zaloguj się raz — pracownicy odbijają się PINem.</p>
           <a href={`/kiosk-pin?location=${locationId}`} target="_blank" rel="noopener noreferrer"
             className="text-[13px] text-purple-700 hover:underline break-all font-medium">
@@ -3014,7 +3015,7 @@ export default function OpsDashboard() {
         }
       }
 
-      alert(`✅ Faktura COS zapisana (${valid.length} pozycji)`)
+      alert(`Faktura COS zapisana (${valid.length} pozycji)`)
     }
 
     if (invoiceType === 'SEMIS') {
@@ -3051,7 +3052,7 @@ export default function OpsDashboard() {
       const { data: invRows, error: e } = await supabase.from('invoices').insert([semisRow]).select('id')
       if (e) { alert('Błąd: ' + e.message); setUploading(false); return }
       invoiceId = invRows?.[0]?.id
-      alert(`✅ Faktura SEMIS zapisana (${validItems.length} pozycji)`)
+      alert(`Faktura SEMIS zapisana (${validItems.length} pozycji)`)
     }
 
     // Create notification for admin
@@ -5400,6 +5401,14 @@ export default function OpsDashboard() {
             locationId={selectedLocation.location_id}
             locationName={selectedLocation.locations?.name ?? ''}
             supabase={supabase}
+          />
+        )}
+
+        {activeView === 'ai_schedule' && selectedLocation && (
+          <AiAutoSchedule
+            supabase={supabase}
+            locationId={selectedLocation.location_id}
+            locationName={selectedLocation.locations?.name ?? ''}
           />
         )}
 
