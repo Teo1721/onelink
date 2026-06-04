@@ -2193,6 +2193,7 @@ export default function OpsDashboard() {
   const [scheduleWeekStart, setScheduleWeekStart] = useState('')
   const [myShifts, setMyShifts] = useState<any[]>([])
   const [myShiftsWeekStart, setMyShiftsWeekStart] = useState('')
+  const [dayRoster, setDayRoster] = useState<Record<string, { name: string; time: string; position?: string | null }[]>>({})
   const [reportingSubView, setReportingSubView] = useState<'form' | 'history'>('form')
   const [dailyReportHistory, setDailyReportHistory] = useState<DailyReportHistoryItem[]>([])
 
@@ -2395,10 +2396,13 @@ export default function OpsDashboard() {
       const { data: profile } = await supabase
         .from('user_profiles').select('role, full_name, company_id, extra_permissions').eq('id', user.id).single()
       const role = profile?.role || 'employee'
+      const extraPerms: string[] = (profile as any)?.extra_permissions ?? []
       setUserRole(role)
-      setExtraPermissions((profile as any)?.extra_permissions ?? [])
+      setExtraPermissions(extraPerms)
       setClosingPersonName(profile?.full_name || user.email || 'Nieznany')
       if (['regional_manager', 'accounting', 'employee'].includes(role)) setIsReadOnly(true)
+      // Employees land on their personal schedule, not the company dashboard
+      if (role === 'employee') setActiveView('my_schedule')
       fetchAiTasks()
 
       // Owners/superadmins: check for explicit user_access rows first.
@@ -2595,20 +2599,38 @@ export default function OpsDashboard() {
   useEffect(() => {
     if (!userId || !myShiftsWeekStart) return
     const fetchMyShifts = async () => {
-      const { data: emp } = await supabase.from('employees').select('id').eq('user_id', userId).maybeSingle()
+      const { data: emp } = await supabase.from('employees').select('id, location_id').eq('user_id', userId).maybeSingle()
       const empId = emp?.id
       const filter = empId ? `user_id.eq.${userId},employee_id.eq.${empId}` : `user_id.eq.${userId}`
       const today = new Date().toISOString().split('T')[0]
       const startDate = myShiftsWeekStart < today ? myShiftsWeekStart : today
-      const { data } = await supabase
-        .from('shifts')
-        .select('id, date, time_start, time_end, break_minutes, position, locations(name)')
-        .or(filter)
-        .eq('is_posted', true)
-        .gte('date', startDate)
-        .order('date')
-        .limit(90)
-      setMyShifts(data ?? [])
+      const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 90)
+      const endISO = endDate.toISOString().slice(0, 10)
+
+      const [{ data: myData }, { data: allData }] = await Promise.all([
+        supabase.from('shifts')
+          .select('id, date, time_start, time_end, break_minutes, position, locations(name)')
+          .or(filter).eq('is_posted', true)
+          .gte('date', startDate).order('date').limit(90),
+        // Load all coworkers at same location
+        emp?.location_id ? supabase.from('shifts')
+          .select('date, time_start, time_end, position, employees(full_name)')
+          .eq('location_id', emp.location_id).eq('is_posted', true)
+          .gte('date', startDate).lte('date', endISO).order('time_start') : Promise.resolve({ data: null }),
+      ])
+
+      setMyShifts(myData ?? [])
+
+      // Build day roster (coworkers only — exclude current employee)
+      const fmt = (t?: string | null) => (t ?? '').slice(0, 5)
+      const roster: Record<string, { name: string; time: string; position?: string | null }[]> = {}
+      for (const s of (allData ?? [])) {
+        const name = (s.employees as any)?.full_name
+        if (!name) continue
+        if (!roster[s.date]) roster[s.date] = []
+        roster[s.date].push({ name, time: `${fmt(s.time_start)}–${fmt(s.time_end)}`, position: s.position })
+      }
+      setDayRoster(roster)
     }
     fetchMyShifts()
   }, [userId, myShiftsWeekStart, supabase])
@@ -3504,7 +3526,11 @@ export default function OpsDashboard() {
       <OpsSidebar
         locationName={selectedLocation.locations.name}
         activeView={activeView}
-        onNavigate={(v: string) => setActiveView(v as ActiveView)}
+        onNavigate={(v: string) => {
+          const EMPLOYEE_ALLOWED = new Set(['my_schedule', 'suggest', 'leave', 'swaps', 'certs', 'attendance', 'account', 'inventory', 'checklist'])
+          if (userRole === 'employee' && !EMPLOYEE_ALLOWED.has(v) && !extraPermissions.includes(v)) return
+          setActiveView(v as ActiveView)
+        }}
         onLogout={async () => { await supabase.auth.signOut(); router.push('/auth/login') }}
         onSwitchLocation={() => setSelectedLocation(null)}
         canSwitchToAdmin={['owner', 'superadmin'].includes(userRole)}
@@ -3660,30 +3686,46 @@ export default function OpsDashboard() {
               <div className="space-y-2">
                 {myShifts.length === 0 ? (
                   <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center">
-                    <p className="text-2xl mb-2">📅</p>
                     <p className="font-bold text-blue-800 text-sm">Brak nadchodzących zmian</p>
                     <p className="text-xs text-blue-600 mt-1">Grafik nie został jeszcze opublikowany.</p>
                   </div>
                 ) : myShifts.filter(s => s.date >= today).map(shift => {
                   const isToday = shift.date === today
                   const hrs = calcH(fmtT(shift.time_start), fmtT(shift.time_end), shift.break_minutes ?? 0)
+                  const coworkers = (dayRoster[shift.date] ?? []).filter(r => r.name !== (closingPersonName))
                   return (
-                    <div key={shift.id} className={`bg-white rounded-xl overflow-hidden flex border ${isToday ? 'border-blue-400' : 'border-gray-100'} shadow-sm`}>
-                      <div className="w-1.5 shrink-0 bg-blue-500" />
-                      <div className="flex-1 p-3 flex items-center justify-between gap-3">
-                        <div>
-                          <p className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
-                            {isToday ? 'DZIŚ · ' : ''}{new Date(shift.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
-                          </p>
-                          <p className="text-base font-bold text-gray-900 tabular-nums">{fmtT(shift.time_start)} – {fmtT(shift.time_end)}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{hrs.toFixed(1)}h{shift.locations ? ` · ${(shift.locations as any)?.name ?? (Array.isArray(shift.locations) ? shift.locations[0]?.name : '')}` : ''}</p>
+                    <div key={shift.id} className={`bg-white rounded-xl overflow-hidden border ${isToday ? 'border-blue-400' : 'border-gray-100'} shadow-sm`}>
+                      <div className="flex">
+                        <div className="w-1.5 shrink-0 bg-blue-500" />
+                        <div className="flex-1 p-3 flex items-center justify-between gap-3">
+                          <div>
+                            <p className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                              {isToday ? 'DZIŚ · ' : ''}{new Date(shift.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </p>
+                            <p className="text-base font-bold text-gray-900 tabular-nums">{fmtT(shift.time_start)} – {fmtT(shift.time_end)}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{hrs.toFixed(1)}h{shift.locations ? ` · ${(shift.locations as any)?.name ?? (Array.isArray(shift.locations) ? shift.locations[0]?.name : '')}` : ''}</p>
+                          </div>
+                          {shift.position && (
+                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full capitalize shrink-0 ${posColor(shift.position)}`}>
+                              {shift.position}
+                            </span>
+                          )}
                         </div>
-                        {shift.position && (
-                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full capitalize shrink-0 ${posColor(shift.position)}`}>
-                            {shift.position}
-                          </span>
-                        )}
                       </div>
+                      {coworkers.length > 0 && (
+                        <div className="px-4 pb-3 pt-0 border-t border-gray-50">
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Razem na zmianie</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {coworkers.map((r, i) => (
+                              <span key={i} className="inline-flex items-center text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                                <span className="font-semibold">{r.name}</span>
+                                {r.position && <span className="text-gray-400 ml-1 capitalize">· {r.position}</span>}
+                                <span className="text-gray-400 ml-1">{r.time}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
