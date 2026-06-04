@@ -306,6 +306,108 @@ type AccountViewProps = {
 }
 
 /* ================================================================== */
+/* PERSONAL ATTENDANCE VIEW (employee)                                 */
+/* ================================================================== */
+function PersonalAttendanceView({ locationId, userId, employeeName, supabase }: {
+  locationId: string; userId: string; employeeName: string; supabase: any
+}) {
+  const [month, setMonth] = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [records, setRecords] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const fmtT = (iso: string | null) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+  }
+  const calcMin = (r: any) => {
+    if (!r.clock_in_at || !r.clock_out_at) return 0
+    return Math.round((new Date(r.clock_out_at).getTime() - new Date(r.clock_in_at).getTime()) / 60_000)
+  }
+  const fmtHM = (min: number) => `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, '0')}min`
+
+  useEffect(() => {
+    if (!userId || !locationId) return
+    setLoading(true)
+    const [y, m] = month.split('-').map(Number)
+    const start  = `${month}-01`
+    const end    = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+
+    supabase.from('shift_clock_ins')
+      .select('id, work_date, clock_in_at, clock_out_at')
+      .or(`user_id.eq.${userId}`)
+      .gte('work_date', start).lte('work_date', end)
+      .order('work_date')
+      .then(({ data }: { data: any[] | null }) => { setRecords(data ?? []); setLoading(false) })
+  }, [userId, locationId, month, supabase])
+
+  const totalMin  = records.reduce((s, r) => s + calcMin(r), 0)
+  const workedDays = records.filter(r => r.clock_in_at).length
+  const [y, m]    = month.split('-').map(Number)
+  const MONTHS_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień']
+
+  return (
+    <div className="max-w-2xl space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[22px] font-bold text-[#111827]">Moja ewidencja czasu</h1>
+          <p className="text-[13px] text-[#6B7280] mt-0.5">{employeeName}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => { const d = new Date(y, m - 2, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`) }}
+            className="w-8 h-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6]">‹</button>
+          <span className="px-3 text-[14px] font-semibold text-[#111827] min-w-[120px] text-center">{MONTHS_PL[m-1]} {y}</span>
+          <button onClick={() => { const d = new Date(y, m, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`) }}
+            className="w-8 h-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6]">›</button>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4">
+          <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Dni pracy</p>
+          <p className="text-[28px] font-black text-[#111827] mt-1">{workedDays}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4">
+          <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Godziny łącznie</p>
+          <p className="text-[28px] font-black text-[#111827] mt-1">{fmtHM(totalMin)}</p>
+        </div>
+      </div>
+
+      {/* Records list */}
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 text-center text-[13px] text-[#9CA3AF]">Ładowanie…</div>
+      ) : records.length === 0 ? (
+        <div className="bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB] p-8 text-center">
+          <p className="text-[14px] font-semibold text-[#374151]">Brak wpisów w {MONTHS_PL[m-1]}</p>
+          <p className="text-[12px] text-[#9CA3AF] mt-1">Nie zarejestrowano żadnych odbić w tym miesiącu.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {records.map(r => {
+            const min = calcMin(r)
+            const dateLabel = new Date(r.work_date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })
+            return (
+              <div key={r.id} className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-semibold text-[#111827] capitalize">{dateLabel}</p>
+                  <p className="text-[12px] text-[#6B7280] mt-0.5">
+                    {r.clock_in_at ? fmtT(r.clock_in_at) : '—'} → {r.clock_out_at ? fmtT(r.clock_out_at) : 'aktywna'}
+                  </p>
+                </div>
+                <span className={`text-[14px] font-bold tabular-nums ${min > 0 ? 'text-[#111827]' : 'text-[#9CA3AF]'}`}>
+                  {min > 0 ? fmtHM(min) : '—'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ATTENDANCE VIEW                                                     */
 /* ================================================================== */
 type ClockEntry = {
@@ -3527,7 +3629,7 @@ export default function OpsDashboard() {
         locationName={selectedLocation.locations.name}
         activeView={activeView}
         onNavigate={(v: string) => {
-          const EMPLOYEE_ALLOWED = new Set(['my_schedule', 'suggest', 'leave', 'swaps', 'certs', 'attendance', 'account', 'inventory', 'checklist'])
+          const EMPLOYEE_ALLOWED = new Set(['my_schedule', 'suggest', 'leave', 'swaps', 'attendance', 'account', 'inventory', 'checklist'])
           if (userRole === 'employee' && !EMPLOYEE_ALLOWED.has(v) && !extraPermissions.includes(v)) return
           setActiveView(v as ActiveView)
         }}
@@ -3659,7 +3761,7 @@ export default function OpsDashboard() {
                 </div>
 
                 {/* 7-day grid */}
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
                   {weekDays.map(d => {
                     const dayShifts = weekShifts.filter(s => s.date === d.iso)
                     const isToday = d.iso === today
@@ -3768,11 +3870,20 @@ export default function OpsDashboard() {
         {/* ║  ATTENDANCE / TIME RECORDS                              ║ */}
         {/* ╚══════════════════════════════════════════════════════════╝ */}
         {activeView === 'attendance' && selectedLocation && (
-          <AttendanceView
-            locationId={selectedLocation.location_id}
-            locationName={selectedLocation.locations?.name ?? ''}
-            supabase={supabase}
-          />
+          userRole === 'employee' ? (
+            <PersonalAttendanceView
+              locationId={selectedLocation.location_id}
+              userId={userId}
+              employeeName={closingPersonName}
+              supabase={supabase}
+            />
+          ) : (
+            <AttendanceView
+              locationId={selectedLocation.location_id}
+              locationName={selectedLocation.locations?.name ?? ''}
+              supabase={supabase}
+            />
+          )
         )}
 
         {/* ╔══════════════════════════════════════════════════════════╗ */}
@@ -5520,9 +5631,9 @@ export default function OpsDashboard() {
           }
 
           const SUGG_CFG = {
-            specific:  { label: 'Konkretne godziny', icon: '🕐', color: 'text-blue-700',  bg: 'bg-blue-50',  border: 'border-blue-400' },
-            available: { label: 'Dostępny cały dzień', icon: '✅', color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-400' },
-            off:       { label: 'Niedostępny',       icon: '🚫', color: 'text-red-700',   bg: 'bg-red-50',   border: 'border-red-400'  },
+            specific:  { label: 'Konkretne godziny', color: 'text-blue-700',  bg: 'bg-blue-50',  border: 'border-blue-400' },
+            available: { label: 'Dostępny',           color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-400' },
+            off:       { label: 'Niedostępny',        color: 'text-red-700',   bg: 'bg-red-50',   border: 'border-red-400'  },
           }
 
           return (
@@ -5536,10 +5647,9 @@ export default function OpsDashboard() {
               <div className="grid grid-cols-3 gap-2">
                 {(Object.entries(SUGG_CFG) as [typeof suggType, typeof SUGG_CFG[keyof typeof SUGG_CFG]][]).map(([t, cfg]) => (
                   <button key={t} onClick={() => setSuggType(t)}
-                    className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 text-center transition-all
-                      ${suggType === t ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:bg-[#F9FAFB]'}`}>
-                    <span className="text-xl">{cfg.icon}</span>
-                    <span className="text-[11px] font-semibold leading-tight">{cfg.label}</span>
+                    className={`flex items-center justify-center px-2 py-3 rounded-xl border-2 text-center transition-all active:scale-95
+                      ${suggType === t ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-[#E5E7EB] bg-white text-[#6B7280]'}`}>
+                    <span className="text-[12px] font-semibold leading-tight">{cfg.label}</span>
                   </button>
                 ))}
               </div>
@@ -5569,10 +5679,10 @@ export default function OpsDashboard() {
                     const isSelected = suggSelectedDates.includes(iso)
                     return (
                       <button key={iso} onClick={() => toggleDate(iso)} disabled={isPast}
-                        className={`aspect-square rounded-lg text-[12px] font-semibold transition-all
+                        className={`aspect-square rounded-xl text-[13px] font-semibold transition-all active:scale-95 min-h-[40px]
                           ${isPast ? 'text-[#D1D5DB] cursor-not-allowed' :
                             isSelected ? 'bg-[#1D4ED8] text-white shadow-sm' :
-                            'bg-[#F9FAFB] text-[#374151] hover:bg-blue-100 hover:text-blue-700'}`}>
+                            'bg-[#F9FAFB] text-[#374151] active:bg-blue-100'}`}>
                         {day}
                       </button>
                     )
@@ -5637,7 +5747,6 @@ export default function OpsDashboard() {
                       return (
                         <div key={s.id} className="bg-white rounded-xl border border-[#E5E7EB] p-3 flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <span className="text-lg">{cfg.icon}</span>
                             <div>
                               <p className="text-[13px] font-semibold text-[#111827]">
                                 {s.date.split('-').reverse().join('.')}
@@ -5650,7 +5759,7 @@ export default function OpsDashboard() {
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               s.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
                               s.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                            }`}>{s.status === 'approved' ? '✓ Zaakceptowano' : s.status === 'rejected' ? '✗ Odrzucono' : '⏳ Oczekuje'}</span>
+                            }`}>{s.status === 'approved' ? 'Zaakceptowano' : s.status === 'rejected' ? 'Odrzucono' : 'Oczekuje'}</span>
                             {s.status === 'pending' && (
                               <button onClick={() => deleteSugg(s.id)} className="text-[#D1D5DB] hover:text-red-500 transition-colors text-sm">✕</button>
                             )}

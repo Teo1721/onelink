@@ -58,13 +58,27 @@ const NAV_ITEMS = [
 ]
 
 // Keys always visible to employees (regardless of extra permissions)
-const EMPLOYEE_BASE_KEYS = new Set(['my_schedule', 'suggest', 'leave', 'swaps', 'certs', 'attendance', 'account'])
+const EMPLOYEE_BASE_KEYS = new Set(['my_schedule', 'suggest', 'leave', 'swaps', 'attendance', 'account'])
+
+// Priority order for employee bottom nav bar (most used first)
+const EMPLOYEE_BOTTOM_PRIORITY = ['my_schedule', 'attendance', 'leave', 'account']
 
 function useVisibleItems(userRole?: string, extraPermissions?: string[]) {
   if (!userRole || userRole !== 'employee') return NAV_ITEMS
   return NAV_ITEMS.filter(({ key }) =>
     EMPLOYEE_BASE_KEYS.has(key) || (extraPermissions ?? []).includes(key)
   )
+}
+
+function useBottomItems(visibleItems: typeof NAV_ITEMS, userRole?: string) {
+  if (userRole !== 'employee') {
+    return { main: visibleItems.slice(0, 4), more: visibleItems.slice(4) }
+  }
+  // For employees: show priority items in bottom bar, rest in More
+  const priority = visibleItems.filter(i => EMPLOYEE_BOTTOM_PRIORITY.includes(i.key))
+    .sort((a, b) => EMPLOYEE_BOTTOM_PRIORITY.indexOf(a.key) - EMPLOYEE_BOTTOM_PRIORITY.indexOf(b.key))
+  const rest = visibleItems.filter(i => !EMPLOYEE_BOTTOM_PRIORITY.includes(i.key))
+  return { main: priority.slice(0, 4), more: rest }
 }
 
 export function OpsSidebar({
@@ -81,8 +95,7 @@ export function OpsSidebar({
   const router = useRouter()
 
   const visibleItems = useVisibleItems(userRole, extraPermissions)
-  const bottomMain = visibleItems.slice(0, 4)
-  const bottomMore = visibleItems.slice(4)
+  const { main: bottomMain, more: bottomMore } = useBottomItems(visibleItems, userRole)
 
   const navigate = (key: string) => {
     onNavigate(key)
@@ -162,16 +175,24 @@ export function OpsSidebar({
       ══════════════════════════════════════════════════ */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#0F172A] border-b border-[#1E293B] h-14 flex items-center justify-between px-4 shadow-lg">
         <OneLinkLogo iconSize={18} textSize="text-[13px]" dark={true} />
-        <button
-          onClick={onSwitchLocation}
-          className="flex items-center gap-1.5 text-[12px] text-[#94A3B8] bg-[#1E293B] border border-[#334155] rounded-lg px-2.5 py-1.5"
-        >
-          <MapPin className="w-3 h-3 text-[#475569]" />
-          <span className="max-w-[120px] truncate font-medium">{locationName}</span>
-        </button>
+        {/* Employees: show location name as plain text. Managers: show as tappable switcher */}
+        {userRole === 'employee' ? (
+          <span className="text-[12px] text-[#94A3B8] font-medium flex items-center gap-1.5">
+            <MapPin className="w-3 h-3 text-[#475569]" />
+            <span className="max-w-[130px] truncate">{locationName}</span>
+          </span>
+        ) : (
+          <button
+            onClick={onSwitchLocation}
+            className="flex items-center gap-1.5 text-[12px] text-[#94A3B8] bg-[#1E293B] border border-[#334155] rounded-lg px-2.5 py-1.5"
+          >
+            <MapPin className="w-3 h-3 text-[#475569]" />
+            <span className="max-w-[120px] truncate font-medium">{locationName}</span>
+          </button>
+        )}
         <button
           onClick={onLogout}
-          className="flex items-center gap-1 text-[12px] text-[#F87171] bg-[#2D1B1B] border border-[#7F1D1D]/40 rounded-lg px-2.5 py-1.5"
+          className="flex items-center gap-1 text-[12px] text-[#F87171] bg-[#2D1B1B] border border-[#7F1D1D]/40 rounded-lg px-2.5 py-1.5 active:opacity-70"
         >
           <LogOut className="w-3 h-3" />
           Wyloguj
@@ -188,7 +209,7 @@ export function OpsSidebar({
             <button
               key={key}
               onClick={() => navigate(key)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors active:bg-[#1E293B] ${
                 isActive ? 'text-[#60A5FA]' : 'text-[#475569]'
               }`}
             >
