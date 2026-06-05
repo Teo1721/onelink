@@ -2400,7 +2400,7 @@ export default function OpsDashboard() {
   const [suggTimeStart, setSuggTimeStart]   = useState('08:00')
   const [suggTimeEnd, setSuggTimeEnd]       = useState('16:00')
   const [suggNote, setSuggNote]             = useState('')
-  const [suggCalMonth, setSuggCalMonth]     = useState(() => new Date().toISOString().slice(0, 7))
+  const [suggCalMonth, setSuggCalMonth]     = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
 
   // ── Inventory state ──
   const [inventorySubView, setInventorySubView] = useState<'active' | 'fill' | 'history' | 'products'>('active')
@@ -5657,12 +5657,12 @@ export default function OpsDashboard() {
               {/* Multi-day calendar */}
               <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <button onClick={() => { const [y,m] = suggCalMonth.split('-').map(Number); const d = new Date(y, m-2, 1); setSuggCalMonth(d.toISOString().slice(0,7)) }}
+                  <button onClick={() => { const [y,m] = suggCalMonth.split('-').map(Number); const d = new Date(y, m-2, 1); setSuggCalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`) }}
                     className="w-8 h-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6]">‹</button>
                   <p className="text-[14px] font-bold text-[#111827]">
                     {new Date(calY, calM-1, 1).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}
                   </p>
-                  <button onClick={() => { const [y,m] = suggCalMonth.split('-').map(Number); const d = new Date(y, m, 1); setSuggCalMonth(d.toISOString().slice(0,7)) }}
+                  <button onClick={() => { const [y,m] = suggCalMonth.split('-').map(Number); const d = new Date(y, m, 1); setSuggCalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`) }}
                     className="w-8 h-8 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6]">›</button>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mb-1">
