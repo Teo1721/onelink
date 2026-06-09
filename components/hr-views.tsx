@@ -197,6 +197,10 @@ export function AttendanceView({
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
+  const [filterMode, setFilterMode] = useState<'month' | 'day' | 'range'>('month')
+  const [filterDay,  setFilterDay]  = useState(() => new Date().toLocaleDateString('sv-SE'))
+  const [filterFrom, setFilterFrom] = useState(() => new Date().toLocaleDateString('sv-SE'))
+  const [filterTo,   setFilterTo]   = useState(() => new Date().toLocaleDateString('sv-SE'))
   const [records,        setRecords]        = useState<ClockEntry[]>([])
   const [employees,      setEmployees]      = useState<AttEmp[]>([])
   const [leaveData,      setLeaveData]      = useState<{ id: string; employee_id: string; leave_type: string; date_from: string; date_to: string; status: string; note: string | null }[]>([])
@@ -241,10 +245,20 @@ export function AttendanceView({
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [y, m]  = month.split('-').map(Number)
-    const lastDay = new Date(y, m, 0).getDate()
-    const start   = `${month}-01`
-    const end     = `${month}-${String(lastDay).padStart(2, '0')}`
+    let start: string
+    let end: string
+    if (filterMode === 'day') {
+      start = filterDay
+      end   = filterDay
+    } else if (filterMode === 'range') {
+      start = filterFrom
+      end   = filterTo || filterFrom
+    } else {
+      const [y, m]  = month.split('-').map(Number)
+      const lastDay = new Date(y, m, 0).getDate()
+      start = `${month}-01`
+      end   = `${month}-${String(lastDay).padStart(2, '0')}`
+    }
 
     const { data: empData } = await supabase.from('employees')
       .select('id, full_name, position, user_id, base_rate')
@@ -270,7 +284,7 @@ export function AttendanceView({
     setRecords((clockData ?? []) as ClockEntry[])
     setLeaveData((leaveRes ?? []) as any)
     setLoading(false)
-  }, [locationId, month, supabase])
+  }, [locationId, month, supabase, filterMode, filterDay, filterFrom, filterTo])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -334,6 +348,11 @@ export function AttendanceView({
   function monthLabel() {
     const [y, m] = month.split('-').map(Number)
     return new Date(y, m - 1, 1).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })
+  }
+  function periodLabel() {
+    if (filterMode === 'day')   return new Date(filterDay + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
+    if (filterMode === 'range') return `${filterFrom} — ${filterTo}`
+    return monthLabel()
   }
   function recMin(r: ClockEntry) {
     if (!r.clock_in_at || !r.clock_out_at) return 0
@@ -626,11 +645,36 @@ export function AttendanceView({
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <h2 className="text-[22px] font-bold text-[#111827]">Ewidencja czasu pracy</h2>
-          <p className="text-[13px] text-[#9CA3AF]">{locationName} — {monthLabel()}</p>
+          <p className="text-[13px] text-[#9CA3AF]">{locationName} — {periodLabel()}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          {/* Filter mode toggle */}
+          <div className="flex rounded-lg border border-[#E5E7EB] overflow-hidden text-[12px] font-semibold">
+            {(['month', 'day', 'range'] as const).map(mode => (
+              <button key={mode} onClick={() => setFilterMode(mode)}
+                className={`px-3 py-2 transition-colors ${filterMode === mode ? 'bg-blue-600 text-white' : 'bg-white text-[#6B7280] hover:bg-[#F9FAFB]'}`}>
+                {mode === 'month' ? 'Miesiąc' : mode === 'day' ? 'Dzień' : 'Zakres'}
+              </button>
+            ))}
+          </div>
+          {/* Date picker(s) */}
+          {filterMode === 'month' && (
+            <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          )}
+          {filterMode === 'day' && (
+            <input type="date" value={filterDay} onChange={e => setFilterDay(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          )}
+          {filterMode === 'range' && (
+            <div className="flex items-center gap-1.5">
+              <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <span className="text-[12px] text-[#9CA3AF] font-medium">—</span>
+              <input type="date" value={filterTo} min={filterFrom} onChange={e => setFilterTo(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-[13px] font-medium text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+          )}
           <button onClick={() => openAdd()} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold transition-colors">
             <Plus className="w-4 h-4" /> Dodaj wpis
           </button>
@@ -689,7 +733,11 @@ export function AttendanceView({
       {/* Late/absent today */}
       {(() => {
         const todayStr = new Date().toLocaleDateString('sv-SE')
-        if (month !== todayStr.slice(0, 7)) return null
+        const todayInPeriod =
+          filterMode === 'month' ? month === todayStr.slice(0, 7) :
+          filterMode === 'day'   ? filterDay === todayStr :
+          filterFrom <= todayStr && todayStr <= (filterTo || filterFrom)
+        if (!todayInPeriod) return null
         const notClockedIn = employees.filter(emp =>
           !records.some(r =>
             r.work_date === todayStr &&
@@ -740,7 +788,7 @@ export function AttendanceView({
             <Loader2 className="w-5 h-5 animate-spin" /> Ładowanie…
           </div>
         ) : summary.length === 0 ? (
-          <div className="py-16 text-center text-[#9CA3AF] text-[14px]">Brak danych dla wybranego miesiąca</div>
+          <div className="py-16 text-center text-[#9CA3AF] text-[14px]">Brak danych dla wybranego okresu</div>
         ) : (
           <table className="w-full">
             <thead>
